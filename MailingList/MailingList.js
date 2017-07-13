@@ -98,7 +98,7 @@ if (typeof MailingList === "undefined") {
                 }).then(text => {
                     sessionStorage.setItem(storageKey, JSON.stringify(text));
                     return text;
-                }) : new Promise((resolve) => resolve(JSON.parse(sessionStorage.getItem(storageKey)))).then(text => {
+                }) : new Promise((resolve) => resolve(JSON.parse(sessionStorage.getItem(storageKey))))).then(text => {
                 let a = document.createElement('contracts');
                 a.innerHTML = text;
                 let allies = [];
