@@ -1,6 +1,6 @@
 /**
  * Created by Izomorfizom on 2017-06-22.
- *
+ * Revisited on 2017-07-13.
  * Generowanie listy mailingowej do wzywania pomocy.
  */
 
