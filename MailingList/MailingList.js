@@ -91,9 +91,14 @@ if (typeof MailingList === "undefined") {
             OpenWindow.addEventListener('load', MailingListTemplate, true);
         },
         fetchDiplomacy: () => {
-            return fetch('/game.php?screen=ally&mode=contracts', {credentials: 'include'}).then(response => {
-                return response.text();
-            }).then(text => {
+            let storageKey = game_data.world  + 'contracts';
+            return ((sessionStorage.getItem(storageKey) === null) ?
+                fetch('/game.php?screen=ally&mode=contracts', {credentials: 'include'}).then(response => {
+                    return response.text();
+                }).then(text => {
+                    sessionStorage.setItem(storageKey, JSON.stringify(text));
+                    return text;
+                }) : new Promise((resolve) => resolve(JSON.parse(sessionStorage.getItem(storageKey)))).then(text => {
                 let a = document.createElement('contracts');
                 a.innerHTML = text;
                 let allies = [];
@@ -130,32 +135,34 @@ if (typeof MailingList === "undefined") {
                 catch (err) {
                 }
                 return {allies: allies, nop: nop, enemies: enemies};
-            }).catch(err => console.log('Diplomacy request failed ', err));
+            }).catch(error => console.log('Processing contracts failed ', error));
         },
         fetchOwnTribe: () => {
-            return fetch('/game.php?screen=ally&mode=properties', {credentials: 'include'}).then(response => {
-                return response.text();
-            }).then(text => {
-                    let a = document.createElement('properties');
-                    a.innerHTML = text;
-                    let tribe = {};
-                    try {
-                        tribe = {
-                            tag: $(a).find('#ally_content').find('.vis')[0].rows[2].cells[1].innerText,
-                            id: game_data.player.ally
-                        };
-                    }
-                    catch (err) {
-                        tribe = {
-                            tag: 'BRAK PLEMIENIA',
-                            id: -1
-                        };
-                    }
-                    return tribe;
+            let storageKey = game_data.world  + 'properties';
+            return ((sessionStorage.getItem(storageKey) === null) ?
+                fetch('/game.php?screen=ally&mode=properties', {credentials: 'include'}).then(response => {
+                    return response.text();
+                }).then(text => {
+                    sessionStorage.setItem(storageKey, JSON.stringify(text));
+                    return text;
+                }) : new Promise((resolve) => resolve(JSON.parse(sessionStorage.getItem(storageKey))))).then(text => {
+                let a = document.createElement('properties');
+                a.innerHTML = text;
+                let tribe = {};
+                try {
+                    tribe = {
+                        tag: $(a).find('#ally_content').find('.vis')[0].rows[2].cells[1].innerText,
+                        id: game_data.player.ally
+                    };
                 }
-            ).catch(function (error) {
-                console.log('Diplomacy request failed ', error)
-            });
+                catch (err) {
+                    tribe = {
+                        tag: 'BRAK PLEMIENIA',
+                        id: -1
+                    };
+                }
+                return tribe;
+            }).catch(error => console.log('Processing properties failed ', error));
         },
         init: () => {
             MailingList._createGUI().then((GUI) => {
@@ -209,13 +216,14 @@ if (typeof MailingList === "undefined") {
             $('#MailingListTribes')[0].value = MailingList.diplomacy.allies.reduce((a, b) => a += " " + b.tag, MailingList.ownTribe.tag);
         },
         fetchPlayers: () => {
-            return ((sessionStorage.getItem(game_data.world + 'player') === null) ?
+            let storageKey = game_data.world  + 'player';
+            return ((sessionStorage.getItem(storageKey) === null) ?
                 fetch('/map/player.txt', {credentials: 'omit'}).then(response => {
                     return response.text();
                 }).then(text => {
-                    sessionStorage.setItem(game_data.world + 'player', JSON.stringify(text));
+                    sessionStorage.setItem(storageKey, JSON.stringify(text));
                     return text;
-                }) : new Promise((resolve) => resolve(JSON.parse(sessionStorage.getItem(game_data.world + 'player'))))).then(text => {
+                }) : new Promise((resolve) => resolve(JSON.parse(sessionStorage.getItem(storageKey))))).then(text => {
                 let Players = new Map();
                 let playersRaw = text.split('\n');
                 for (const playerRaw of playersRaw) {
@@ -233,13 +241,14 @@ if (typeof MailingList === "undefined") {
             }).catch(error => console.log('Processing players failed ', error));
         },
         fetchTribes: () => {
-            return ((sessionStorage.getItem(game_data.world + 'ally') === null) ?
+            let storageKey = game_data.world  + 'ally';
+            return ((sessionStorage.getItem(storageKey) === null) ?
                 fetch('/map/ally.txt', {credentials: 'omit'}).then(response => {
                     return response.text();
                 }).then(text => {
-                    sessionStorage.setItem(game_data.world + 'ally', JSON.stringify(text));
+                    sessionStorage.setItem(storageKey, JSON.stringify(text));
                     return text;
-                }) : new Promise((resolve) => resolve(JSON.parse(sessionStorage.getItem(game_data.world + 'ally'))))).then(text => {
+                }) : new Promise((resolve) => resolve(JSON.parse(sessionStorage.getItem(storageKey))))).then(text => {
                 let Allies = new Map();
                 let alliesRaw = text.split('\n');
                 for (const allyRaw of alliesRaw) {
@@ -259,13 +268,14 @@ if (typeof MailingList === "undefined") {
             }).catch(error => console.log('Processing allies failed ', error));
         },
         fetchVillages: () => {
-            return ((sessionStorage.getItem(game_data.world + 'village') === null) ?
+            let storageKey = game_data.world  + 'village';
+            return ((sessionStorage.getItem(storageKey) === null) ?
                 fetch('/map/village.txt', {credentials: 'omit'}).then(response => {
                     return response.text();
                 }).then(text => {
-                    sessionStorage.setItem(game_data.world + 'village', JSON.stringify(text));
+                    sessionStorage.setItem(storageKey, JSON.stringify(text));
                     return text;
-                }) : new Promise((resolve) => resolve(JSON.parse(sessionStorage.getItem(game_data.world + 'village'))))).then(text => {
+                }) : new Promise((resolve) => resolve(JSON.parse(sessionStorage.getItem(storageKey))))).then(text => {
                 let Villages = new Map();
                 let villagesRaw = text.split('\n');
                 for (const villageRaw of villagesRaw) {
