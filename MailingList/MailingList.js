@@ -26,6 +26,8 @@ if (typeof MailingList === "undefined") {
             let chosenOnes = new Set();
             let coords = $('#MailingListCoordinates')[0].value;
             let impactTime = $('#MailingListTime')[0].value;
+            if (impactTime.length === 5)
+                impactTime += ":00";
             let velocity = $("#MailingListVelocity")[0];
             let amulet = $("#MailingListAmulet")[0];
             let X = Number(coords.split('|')[0]);
