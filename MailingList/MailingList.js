@@ -1,6 +1,7 @@
 /**
  * Created by Izomorfizom on 2017-06-22.
  * Revisited on 2017-07-13.
+ * Revisited on 2017-09-22. : obsolute selector
  * Generowanie listy mailingowej do wzywania pomocy.
  */
 
@@ -93,7 +94,7 @@ if (typeof MailingList === "undefined") {
             OpenWindow.addEventListener('load', MailingListTemplate, true);
         },
         fetchDiplomacy: () => {
-            let storageKey = game_data.world  + 'contracts';
+            let storageKey = game_data.world + 'contracts';
             return ((sessionStorage.getItem(storageKey) === null) ?
                 fetch('/game.php?screen=ally&mode=contracts', {credentials: 'include'}).then(response => {
                     return response.text();
@@ -140,7 +141,7 @@ if (typeof MailingList === "undefined") {
             }).catch(error => console.log('Processing contracts failed ', error));
         },
         fetchOwnTribe: () => {
-            let storageKey = game_data.world  + 'properties';
+            let storageKey = game_data.world + 'properties';
             return ((sessionStorage.getItem(storageKey) === null) ?
                 fetch('/game.php?screen=ally&mode=properties', {credentials: 'include'}).then(response => {
                     return response.text();
@@ -218,7 +219,7 @@ if (typeof MailingList === "undefined") {
             $('#MailingListTribes')[0].value = MailingList.diplomacy.allies.reduce((a, b) => a += " " + b.tag, MailingList.ownTribe.tag);
         },
         fetchPlayers: () => {
-            let storageKey = game_data.world  + 'player';
+            let storageKey = game_data.world + 'player';
             return ((sessionStorage.getItem(storageKey) === null) ?
                 fetch('/map/player.txt', {credentials: 'omit'}).then(response => {
                     return response.text();
@@ -243,7 +244,7 @@ if (typeof MailingList === "undefined") {
             }).catch(error => console.log('Processing players failed ', error));
         },
         fetchTribes: () => {
-            let storageKey = game_data.world  + 'ally';
+            let storageKey = game_data.world + 'ally';
             return ((sessionStorage.getItem(storageKey) === null) ?
                 fetch('/map/ally.txt', {credentials: 'omit'}).then(response => {
                     return response.text();
@@ -270,7 +271,7 @@ if (typeof MailingList === "undefined") {
             }).catch(error => console.log('Processing allies failed ', error));
         },
         fetchVillages: () => {
-            let storageKey = game_data.world  + 'village';
+            let storageKey = game_data.world + 'village';
             return ((sessionStorage.getItem(storageKey) === null) ?
                 fetch('/map/village.txt', {credentials: 'omit'}).then(response => {
                     return response.text();
@@ -343,7 +344,7 @@ if (typeof MailingList === "undefined") {
                         c = r.insertCell(-1);
                         c.innerHTML = arrivalTime;
                         c = r.insertCell(-1);
-                        c.innerHTML = '<span style="cursor: pointer; display: block; width: 16px; height: 22px; overflow: hidden; background: transparent url(' + image_base + 'index/group-jump.png) no-repeat;"><img src=' + image_base + '/blank-16x22.png onclick="MailingList._selectCommand(' + enemiesIncomings + ');"></span>'
+                        c.innerHTML = '<span style="cursor: pointer; display: block; width: 16px; height: 22px; overflow: hidden; background: transparent url(' + image_base + 'index/group-jump.png) no-repeat;"><img src=' + image_base + '/blank-16x22.png onclick="MailingList._selectCommand(' + enemiesIncomings + ');"></span>';
                         enemiesIncomings++;
                         c = r.insertCell(-1);
                     }
@@ -381,21 +382,21 @@ if (typeof MailingList === "undefined") {
             let output = '';
             for (let i = 0; i < MailingList._commandCount; i++) {
                 let containsSnob = false;
+                let unitName = "";
                 if (MailingList._attacks[i].unitType !== null) {
-                    let unitType = MailingList._attacks[i].unitType.match(/tiny\/.*(?=\.png)/);
-                    if (unitType[0].split('/')[1] === 'snob')
+                    let unitType = MailingList._attacks[i].unitType.match(/command\/.+(?=\.png)/);
+                    if (unitType !== null)
+                        unitName = unitType[0].split('/')[1];
+                    if (unitName === 'snob')
                         containsSnob = true;
                 }
                 if (containsSnob)
                     output += '[b]';
                 let times = MailingList._attacks[i].arrival.split(':');
-                output += times[0] + ':' + times[1] + ':' + times[2] + ':[color=grey]' + times[3] + '[/color] [unit]';
-                if (MailingList._attacks[i].unitType !== null)
-                    output += MailingList._attacks[i].unitType.match(/tiny\/.*(?=\.png)/)[0].split('/')[1];
-                output += '[/unit] ' + MailingList._attacks[i].name + '\n';
+                output += times[0] + ':' + times[1] + ':' + times[2] + ':[color=grey]' + times[3] + '[/color]' +
+                    '[unit]' + unitName + '[/unit] ' + MailingList._attacks[i].name + '\n';
                 if (containsSnob)
                     output += '[/b]';
-
             }
             return output;
         },
