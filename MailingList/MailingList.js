@@ -334,7 +334,7 @@ if (typeof MailingList === "undefined") {
                         }
                         attacks.push({
                             unitType: unitIcon,
-                            arrival: arrivalTime.match(/\d+:\d+:\d+:\d+/)[0],
+                            arrival: arrivalTime.match(/\d+:\d+:\d+[:\d+]?/)[0],
                             name: name
                         });
                         let r = table.insertRow(-1);
@@ -389,7 +389,10 @@ if (typeof MailingList === "undefined") {
                 if (containsSnob)
                     output += '[b]';
                 let times = MailingList._attacks[i].arrival.split(':');
-                output += times[0] + ':' + times[1] + ':' + times[2] + ':[color=grey]' + times[3] + '[/color] [unit]';
+                output += times[0] + ':' + times[1] + ':' + times[2];
+                if (times.length > 3)
+                    output += ':[color=grey]' + times[3] + '[/color]';
+                output += ' [unit]';
                 if (MailingList._attacks[i].unitType !== null)
                     output += MailingList._attacks[i].unitType.match(/tiny\/.*(?=\.png)/)[0].split('/')[1];
                 output += '[/unit] ' + MailingList._attacks[i].name + '\n';
