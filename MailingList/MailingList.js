@@ -1,8 +1,14 @@
 /**
  * Created by Izomorfizom on 2017-06-22.
- * Revisited on 2017-07-13.
  * Generowanie listy mailingowej do wzywania pomocy.
+ * Changelog:
+ * Revisited on 2017-07-13. :
+ * Revisited on 2017-09-22. : obsolute selector
+ * Revisited on 2017-10-15. : fixed attack info on worlds without milliseconds AND AGAIN SELECTOR
+ * Revisited on 2017-10-24. : initial support for mobile devices
+ * Revisited on 2017-11-04. : end of support for mobile devices
  */
+
 
 if (typeof MailingList === "undefined") {
     var MailingList = {
@@ -93,9 +99,9 @@ if (typeof MailingList === "undefined") {
             OpenWindow.addEventListener('load', MailingListTemplate, true);
         },
         fetchDiplomacy: () => {
-            let storageKey = game_data.world  + 'contracts';
+            let storageKey = game_data.world + 'contracts';
             return ((sessionStorage.getItem(storageKey) === null) ?
-                fetch('/game.php?screen=ally&mode=contracts', {credentials: 'include'}).then(response => {
+                fetch(TribalWars.buildURL('','ally',{mode:'contracts'}), {credentials: 'include'}).then(response => {
                     return response.text();
                 }).then(text => {
                     sessionStorage.setItem(storageKey, JSON.stringify(text));
@@ -140,9 +146,9 @@ if (typeof MailingList === "undefined") {
             }).catch(error => console.log('Processing contracts failed ', error));
         },
         fetchOwnTribe: () => {
-            let storageKey = game_data.world  + 'properties';
+            let storageKey = game_data.world + 'properties';
             return ((sessionStorage.getItem(storageKey) === null) ?
-                fetch('/game.php?screen=ally&mode=properties', {credentials: 'include'}).then(response => {
+                fetch(TribalWars.buildURL('','ally',{mode:'properties'}), {credentials: 'include'}).then(response => {
                     return response.text();
                 }).then(text => {
                     sessionStorage.setItem(storageKey, JSON.stringify(text));
@@ -151,9 +157,10 @@ if (typeof MailingList === "undefined") {
                 let a = document.createElement('properties');
                 a.innerHTML = text;
                 let tribe = {};
+                let selector = mobile ? '#content_value' : '#ally_content';
                 try {
                     tribe = {
-                        tag: $(a).find('#ally_content').find('.vis')[0].rows[2].cells[1].innerText,
+                        tag: $(a).find(selector).find('.vis')[0].rows[2].cells[1].innerText,
                         id: game_data.player.ally
                     };
                 }
@@ -188,8 +195,10 @@ if (typeof MailingList === "undefined") {
                 if (game_data.screen === "overview") {
                     Promise.all([MailingList.fetchTroopsMovements()]).then(response => {
                         if (response[0].attacks.length !== 0) {
-                            $('#MailingList').css('height', '400px');
-                            $('#MailingListIncomingTable').css('display', 'inline');
+                            $('#MailingListIncomingTable').css('display', 'table');
+                            //$('#MailingListIncomingTable').css('display', 'block');
+                            //$('#MailingListIncomingTable').css('width', '100%');
+                            //$
                             MailingList._selectedCommand = response[0].selected;
                             MailingList._attacks = response[0].attacks;
                             MailingList._commandCount = response[0].attacks.length;
@@ -218,7 +227,7 @@ if (typeof MailingList === "undefined") {
             $('#MailingListTribes')[0].value = MailingList.diplomacy.allies.reduce((a, b) => a += " " + b.tag, MailingList.ownTribe.tag);
         },
         fetchPlayers: () => {
-            let storageKey = game_data.world  + 'player';
+            let storageKey = game_data.world + 'player';
             return ((sessionStorage.getItem(storageKey) === null) ?
                 fetch('/map/player.txt', {credentials: 'omit'}).then(response => {
                     return response.text();
@@ -243,7 +252,7 @@ if (typeof MailingList === "undefined") {
             }).catch(error => console.log('Processing players failed ', error));
         },
         fetchTribes: () => {
-            let storageKey = game_data.world  + 'ally';
+            let storageKey = game_data.world + 'ally';
             return ((sessionStorage.getItem(storageKey) === null) ?
                 fetch('/map/ally.txt', {credentials: 'omit'}).then(response => {
                     return response.text();
@@ -270,7 +279,7 @@ if (typeof MailingList === "undefined") {
             }).catch(error => console.log('Processing allies failed ', error));
         },
         fetchVillages: () => {
-            let storageKey = game_data.world  + 'village';
+            let storageKey = game_data.world + 'village';
             return ((sessionStorage.getItem(storageKey) === null) ?
                 fetch('/map/village.txt', {credentials: 'omit'}).then(response => {
                     return response.text();
@@ -334,7 +343,7 @@ if (typeof MailingList === "undefined") {
                         }
                         attacks.push({
                             unitType: unitIcon,
-                            arrival: arrivalTime.match(/\d+:\d+:\d+[:\d+]?/)[0],
+                            arrival: arrivalTime.match(/\d+:\d+:\d+(:\d+)?/)[0],
                             name: name
                         });
                         let r = table.insertRow(-1);
@@ -343,7 +352,7 @@ if (typeof MailingList === "undefined") {
                         c = r.insertCell(-1);
                         c.innerHTML = arrivalTime;
                         c = r.insertCell(-1);
-                        c.innerHTML = '<span style="cursor: pointer; display: block; width: 16px; height: 22px; overflow: hidden; background: transparent url(' + image_base + 'index/group-jump.png) no-repeat;"><img src=' + image_base + '/blank-16x22.png onclick="MailingList._selectCommand(' + enemiesIncomings + ');"></span>'
+                        c.innerHTML = '<span style="cursor: pointer; display: block; width: 16px; height: 22px; overflow: hidden; background: transparent url(' + image_base + 'index/group-jump.png) no-repeat;"><img src=' + image_base + '/blank-16x22.png onclick="MailingList._selectCommand(' + enemiesIncomings + ');"></span>';
                         enemiesIncomings++;
                         c = r.insertCell(-1);
                     }
@@ -381,9 +390,12 @@ if (typeof MailingList === "undefined") {
             let output = '';
             for (let i = 0; i < MailingList._commandCount; i++) {
                 let containsSnob = false;
+                let unitName = "";
                 if (MailingList._attacks[i].unitType !== null) {
-                    let unitType = MailingList._attacks[i].unitType.match(/tiny\/.*(?=\.png)/);
-                    if (unitType[0].split('/')[1] === 'snob')
+                    let unitType = MailingList._attacks[i].unitType.match(/((tiny)|(command))\/\w+(?=\.png)/);
+                    if (unitType !== null)
+                        unitName = unitType[0].split('/')[1];
+                    if (unitName === 'snob')
                         containsSnob = true;
                 }
                 if (containsSnob)
@@ -392,20 +404,16 @@ if (typeof MailingList === "undefined") {
                 output += times[0] + ':' + times[1] + ':' + times[2];
                 if (times.length > 3)
                     output += ':[color=grey]' + times[3] + '[/color]';
-                output += ' [unit]';
-                if (MailingList._attacks[i].unitType !== null)
-                    output += MailingList._attacks[i].unitType.match(/tiny\/.*(?=\.png)/)[0].split('/')[1];
-                output += '[/unit] ' + MailingList._attacks[i].name + '\n';
+                output += '[unit]' + unitName + '[/unit] ' + MailingList._attacks[i].name + '\n';
                 if (containsSnob)
                     output += '[/b]';
-
             }
             return output;
         },
         _createGUI: () => {
             return new Promise(resolve => {
                 let gui =
-                    '<div id="MailingList" style="overflow:auto; height: 100px; width:550px;" >' +
+                    '<div id="MailingList">' +
                     '<table>' +
                     '<tr>' +
                     '<th width="50">Cel</th>' +
@@ -447,10 +455,10 @@ if (typeof MailingList === "undefined") {
                     '<td><button class="btn" id="MailingListGenerate" onclick="MailingList.generateMailingList()" disabled="true">Generuj</td>' +
                     '</tr>' +
                     '</table> ' +
-                    '<table id="MailingListIncomingTable" class="vis" style="display:none">' +
+                    '<table id="MailingListIncomingTable" style="display:none; width:100%;">' +
                     '<tr>' +
-                    '<th width="65%">Przybywające (<span id="MailingListIncomingCount">0</span>)</th>' +
-                    '<th width="35%">Przybycie</th><th></th></tr>' +
+                    '<th>Przybywające (<span id="MailingListIncomingCount">0</span>)</th>' +
+                    '<th>Przybycie</th><th></th></tr>' +
                     '<tbody id="MailingListIncoming"></tbody></table>' +
                     '</div>';
                 resolve(gui);
