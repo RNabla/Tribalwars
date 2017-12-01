@@ -94,3 +94,80 @@ function getOriginPlayer() {
     }
     return undefined;
 }
+
+function getChurch() {
+    "use strict";
+    let table = $('#attack_spy_building_data');
+    if (table.length !== 1) {
+        return undefined;
+    }
+    let buildings = JSON.parse(table.val());
+    for (const building of buildings) {
+        if (building.id === 'church' || building.id === 'church_f') {
+            return building.name + " " + building.level;
+        }
+    }
+    return undefined;
+}
+
+function getUnitsAway() {
+    let table = $('#attack_spy_away');
+    let unitsAway = table.find('.unit-item');
+    let units = [];
+    for (let i = 0; i < unitsAway.length; i++) {
+        let count = Number(unitsAway[i].innerText);
+        if (count === 0)
+            continue;
+        let name = $(unitsAway[i]).attr('class').match('unit-item-[a-z]+')[0].substr(10);
+        units[name] = count;
+    }
+    return units;
+}
+
+function parseUnitsAway() {
+    let units = getUnitsAway();
+    let offCount = 0;
+    let deffCount = 0;
+    let miscCount = 0;
+
+    let offUnits = [
+        {name: 'axe', population: 1},
+        {name: 'light', population: 4},
+        {name: 'marcher', population: 5},
+        {name: 'ram', population: 5}
+    ];
+    let deffUnits = [
+        {name: 'spear', population: 1},
+        {name: 'sword', population: 1},
+        {name: 'archer', population: 1},
+        {name: 'heavy', population: 6}
+    ];
+    let miscUnits = [
+        {name: 'spy', population: 2},
+        {name: 'catapult', population: 8},
+        {name: 'knight', population: 10},
+        {name: 'snob', population: 100}
+    ];
+
+    offCount = accumulateCount(units, offUnits);
+    deffCount = accumulateCount(units, deffUnits);
+    miscCount = accumulateCount(units, miscUnits);
+    return {
+        offCount: offCount,
+        deffCount : deffCount,
+        miscCount : miscCount,
+        allCount: offCount + deffCount + miscCount
+    };
+}
+
+function accumulateCount(units, typeUnits) {
+    let acc = 0;
+    for (let i = 0; i < typeUnits.length; i++) {
+        let name = typeUnits[i].name;
+        let count = units[name];
+        if (count === undefined)
+            continue;
+        acc += typeUnits[i].population * count;
+    }
+    return acc;
+}
