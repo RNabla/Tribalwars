@@ -31,7 +31,7 @@ namespace TribalWars
         public int Points;
         public enum Modifier
         {
-            Normal = 0,
+            None = 0,
             Wood = 1,
             Stone = 2,
             Iron = 3,
@@ -39,7 +39,7 @@ namespace TribalWars
             Barracks = 5,
             Stable = 6,
             Workshop = 7,
-            Eko = 8,
+            Eco = 8,
             Market = 9
         }
         public Modifier Bonus;
