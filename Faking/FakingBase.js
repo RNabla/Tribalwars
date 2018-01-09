@@ -13,4 +13,4 @@ var HermitowskieFejki = {
     skipVillages: true,
     version: "guava"
 };
-$.getScript('https://pages.mini.pw.edu.pl/~nowikowskia/dev/Faking.js');
+(typeof(Faker) === 'undefined') ? $.getScript('https://pages.mini.pw.edu.pl/~nowikowskia/dev/Faking.js') : Faker.init();

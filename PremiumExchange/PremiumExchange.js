@@ -26,7 +26,7 @@ var PremiumExchangeTracker;
                 iconId = 3;
             PremiumExchangeTracker.icon = `${image_base}big_buildings/market${iconId}.png`;
         },
-        SpawnNotification: function (theBody, theTitle) {
+        SpawnNotification: function (theBody) {
             let options = {
                 body: theBody,
                 icon: PremiumExchangeTracker.icon

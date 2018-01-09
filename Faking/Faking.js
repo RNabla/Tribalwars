@@ -1,5 +1,5 @@
 if (typeof(WorldInfo) !== 'undefined') {
-    ExecuteScript(WorldInfo);
+    ExecuteScript();
 }
 else {
     let url = 'https://pages.mini.pw.edu.pl/~nowikowskia/dev/MapFiles.js';
@@ -9,20 +9,20 @@ else {
     }).then(() => {
         GetWorldInfo().then(worldInfo => {
             WorldInfo = worldInfo;
-            ExecuteScript(worldInfo);
+            ExecuteScript();
         }).catch(HandleError);
     });
 }
 
 
-function ExecuteScript(worldInfo) {
-    let obj = CreateFaker(worldInfo);
-    obj.init();
+function ExecuteScript() {
+    Faker = CreateFaker(WorldInfo);
+    Faker.init();
 }
 
 function HandleError(error) {
     console.log(error);
-    Dialog.show('scriptError', `<h2>Blad podczas wykonywania skryptu</h2><p>Komunikat o bledzie: <br/><textarea>${error}</textarea></p>`);
+    Dialog.show('scriptError', `<h2>B\u0142\u0105d podczas wykonywania skryptu</h2><p>Komunikat o b\u0142\u0119dzie: <br/><textarea>${error}</textarea></p>`)
 }
 
 function CreateFaker(worldInfo) {

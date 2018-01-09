@@ -11,7 +11,7 @@ function GetWorldInfo() {
     if (debugMode)
         console.log("Start time:", startTime);
     return Promise.all([
-        DownloadData(world, 'map/player.txt', 2).then(text => {
+        DownloadData(world, 'map/player.txt', 6).then(text => {
             return Parser(text, ParsePlayer);
         }),
         DownloadData(world, 'map/ally.txt', 6).then(text => {
@@ -47,7 +47,7 @@ function GetWorldInfo() {
             }
         };
     }).catch(e => {
-        Dialog.show('scriptError', `<h2>Blad podczas wykonywania skryptu</h2><p>Komunikat o bledzie: <br/><textarea>${e}</textarea></p>`)
+        Dialog.show('scriptError', `<h2>B\u0142\u0105d podczas wykonywania skryptu</h2><p>Komunikat o b\u0142\u0119dzie: <br/><textarea>${e}</textarea></p>`)
     });
 
     function DownloadData(server, path, expirationTime) {
