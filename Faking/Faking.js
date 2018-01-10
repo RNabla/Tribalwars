@@ -84,7 +84,7 @@ function CreateFaker(worldInfo) {
             this._clearPlace();
             let place = this._getAvailableUnits();
 
-            for (const template of this._settings.templates) {
+            for (let template of this._settings.templates) {
                 if (this._isEnough(template, place)) {
                     if (this._fill(template, place)) {
                         return template;
@@ -221,7 +221,10 @@ function CreateFaker(worldInfo) {
                 if (!this._settings.fillExact) {
                     minimum = Math.min(minimum, Math.ceil(left / pop));
                 }
-                minimum = Math.min(place[name], minimum);
+                let selected = 0;
+                if (!!template[name])
+                    selected = template[name];
+                minimum = Math.min(place[name] - selected, minimum);
                 if (!template[name])
                     template[name] = minimum;
                 else
