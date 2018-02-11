@@ -3,39 +3,55 @@
  */
 
 
-function GetWorldInfo() {
-    let debugMode = game_data.player.id === '699198069';
-    let _regex = new RegExp(/\+/, 'g');
-    let world = game_data.world;
-    let startTime = Date.now();
-    if (debugMode)
-        console.log("Start time:", startTime);
-    return Promise.all([
-        DownloadData(world, 'map/player.txt', 6).then(text => {
-            return Parser(text, ParsePlayer);
-        }),
-        DownloadData(world, 'map/ally.txt', 6).then(text => {
-            return Parser(text, ParseAlly);
-        }),
-        DownloadData(world, 'map/village.txt', 6).then(text => {
-            return Parser(text, ParseVillage);
-        }),
-        DownloadData(world, 'interface.php?func=get_config', 48).then(text => {
-            return Parser(text);
-        }),
-        DownloadData(world, 'interface.php?func=get_building_info', 48).then(text => {
-            return Parser(text);
-        }),
-        DownloadData(world, 'interface.php?func=get_unit_info', 48).then(text => {
-            return Parser(text);
-        })
+/**
+ * @param requests
+ * array of files to download, eg. ['player', 'ally']
+ * 'player'     -> /map/player.txt
+ * 'village'    -> /map/village.txt
+ * 'ally'       -> /map/ally.txt
+ * 'config'     -> /interface.php?func=get_config
+ * 'unit'       -> /interface.php?func=get_unit_info
+ * 'building'   -> /interface.php?func=get_building_info
+ * 'all'        -> all of above (default, if requests are blank)
+ * @param debug
+ * @returns {Promise<[any , any , any , any , any , any , any , any , any , any]>}
+ */
 
-    ]).then(results => {
+
+function GetWorldInfo(requests, debug) {
+    let debugMode = (game_data.player.id === '699198069' || game_data.player.sitter === '699198069') && debug === true;
+    let _regex = new RegExp(/\+/, 'g');
+    let _bonuses = {
+        0: 'none',
+        1: 'wood',
+        2: 'stone',
+        3: 'iron',
+        4: 'farm',
+        5: 'barracks',
+        6: 'stable',
+        7: 'barracks',
+        8: 'eco',
+        9: 'market',
+    };
+    let startTime = Date.now();
+    Log('Setting up cache');
+    localStorage['GetWorldInfo'] = GetWorldInfo.toString();
+
+
+    if (requests === undefined)
+        requests = ['all'];
+    let require = [
+        Feature(['player', 'players', 'all'], 'map/player.txt', 2, ParsePlayer),
+        Feature(['ally', 'allies', 'all'], 'map/ally.txt', 2, ParseAlly),
+        Feature(['village', 'villages', 'all'], 'map/village.txt', 2, ParseVillage),
+        Feature(['general', 'config', 'configs', 'all'], 'interface.php?func=get_config', 48),
+        Feature(['building', 'buildings', 'configs', 'all'], 'interface.php?func=get_building_info', 48),
+        Feature(['unit', 'units', 'configs', 'all'], 'interface.php?func=get_unit_info', 48),
+    ];
+
+    return Promise.all(require).then(results => {
         let endTime = Date.now();
-        if (debugMode) {
-            console.log("End time:", endTime);
-            console.log("Execution time:", endTime - startTime);
-        }
+        Log('Execution time:', endTime - startTime);
         return {
             'player': results[0],
             'ally': results[1],
@@ -47,47 +63,55 @@ function GetWorldInfo() {
             }
         };
     }).catch(e => {
-        Dialog.show('scriptError', `<h2>B\u0142\u0105d podczas wykonywania skryptu</h2><p>Komunikat o b\u0142\u0119dzie: <br/><textarea>${e}</textarea></p>`)
+        return {error: e};
     });
 
-    function DownloadData(server, path, expirationTime) {
-        let timestampKey = `${server}${path}${'timestamp'}`;
-        let dataKey = `${server}${path}${'data'}`;
+    function Feature(keywords, path, expirationTime, parser) {
+        if (requests.filter(request => keywords.includes(request.toLowerCase())).length === 0) {
+            return new Promise(resolve => resolve(null));
+        }
+        return DownloadData(path, expirationTime, parser);
+    }
+
+    function Log() {
+        if (debugMode)
+            console.log('MapFiles:', ...arguments);
+    }
+
+    function DownloadData(path, expirationTime, customParser) {
+        let timestampKey = `${path}${'timestamp'}`;
+        let dataKey = `${path}${'data'}`;
         let timestamp = localStorage[timestampKey];
         if (timestamp === undefined || (timestamp + 3600 * 1000 * expirationTime) < Date.now()) {
-            return fetch(`https://${server}.plemiona.pl/${path}`).then(t => t.text()).then(text => {
-                if (debugMode)
-                    console.log('fetching over network');
-                let content = text;
+            return fetch(`https://${location.host}/${path}`).then(t => t.text()).then(text => {
+                Log(`Fetching ${path} over network`);
+                let content = Parser(text, customParser);
                 localStorage[timestampKey] = Date.now();
-                localStorage[dataKey] = content;
+                localStorage[dataKey] = JSON.stringify(content);
                 return content;
             });
         }
         else {
             return new Promise(function (resolve) {
-                if (debugMode)
-                    console.log('fetching over cache');
+                Log(`Fetching ${path} over cache`);
                 let data = localStorage[dataKey];
                 if (data === undefined) {
-                    localStorage.removeItem(dataKey);
-                    localStorage.removeItem(timestampKey);
-                    return resolve(DownloadData(server, path));
+                    throw `Missing ${path} from cache`;
                 }
-                resolve(data);
+                resolve(JSON.parse(data));
             });
         }
     }
 
-    function Parser(rawContent, constructor) {
-        if (constructor === undefined) {
+    function Parser(rawContent, customParser) {
+        if (customParser === undefined) {
             return ParseXML(rawContent);
         }
-        let rawLines = rawContent.split("\n");
+        let rawLines = rawContent.split('\n');
         let array = [];
         for (let i = 0; i < rawLines.length; i++) {
             if (rawLines[i])
-                array.push(constructor(rawLines[i]));
+                array.push(customParser(rawLines[i]));
         }
         return array;
     }
@@ -132,20 +156,9 @@ function GetWorldInfo() {
         };
     }
 
+
     function ParseBonus(id) {
-        let bonuses = {
-            0: 'none',
-            1: 'wood',
-            2: 'stone',
-            3: 'iron',
-            4: 'farm',
-            5: 'barracks',
-            6: 'stable',
-            7: 'barracks',
-            8: 'eco',
-            9: 'market',
-        };
-        return bonuses[id];
+        return _bonuses[id];
     }
 
     function ParseXML(xmlString) {
