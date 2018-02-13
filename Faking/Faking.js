@@ -1,18 +1,6 @@
-var HermitowskieFejki = {
-    coords: '',
-    version: 'Keleris'
-};
-
-if (localStorage['Faking'] !== undefined) {
-    eval(localStorage['Faking']);
-    Faking(true);
-}
-else {
-    $.ajax({
-        url: 'https://pages.mini.pw.edu.pl/~nowikowskia/dev/FakingLocalCache.js',
-        dataType: 'script',
-    }).then(Faking);
-}
+/*
+ *  Selecting troops and coordinates based on many factors
+ */
 
 function Faking(debug) {
     let debugMode = (game_data.player.id === '699198069' || game_data.player.sitter === '699198069') && debug === true;
@@ -30,9 +18,8 @@ function Faking(debug) {
     }
     else {
         Log('Fetching GetWorldInfo from network');
-        let url = 'https://pages.mini.pw.edu.pl/~nowikowskia/dev/MapFilesCache.js';
         $.ajax({
-            url: url,
+            url: '',
             dataType: 'script',
         }).then(ExecuteScript);
     }
@@ -59,6 +46,7 @@ function Faking(debug) {
 
     function HandleError(error) {
         console.log(error);
+        localStorage.clear();
         Dialog.show('scriptError', `<h2>B\u0142\u0105d podczas wykonywania skryptu</h2><p>Komunikat o b\u0142\u0119dzie: <br/><textarea>${error}</textarea></p>`)
     }
 
@@ -391,4 +379,3 @@ function Faking(debug) {
         };
     }
 }
-
