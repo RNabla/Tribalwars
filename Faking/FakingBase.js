@@ -1,15 +1,4 @@
-var HermitowskieFejki = {
-    coords: '',
-    version: 'Keleris'
-};
+let HermitowskieFejki = {version: 'Keleris'};
 
-if (localStorage['Faking'] !== undefined) {
-    eval(localStorage['Faking']);
-    Faking(true);
-}
-else {
-    $.ajax({
-        url: '',
-        dataType: 'script',
-    }).then(Faking);
-}
+
+eval(localStorage['Faking']) || $.getScript();

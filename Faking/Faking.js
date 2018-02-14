@@ -1,5 +1,8 @@
 /*
- *  Selecting troops and coordinates based on many factors
+ * Selecting troops and coordinates based on many factors
+ * Created by: Hermitowski
+ * Modified on: 13/02/2017 - version 2.2 - added targeting specific players/allies
+ * Modified on: 14/02/2018 - version 2.3 - added minimum village points threshold
  */
 
 function Faking(debug) {
@@ -7,7 +10,7 @@ function Faking(debug) {
     let startTime = Date.now();
     if (localStorage['Faking'] === undefined) {
         Log('Setting up cache');
-        localStorage['Faking'] = Faking.toString();
+        localStorage['Faking'] = '(' + Faking.toString() + ')()';
         localStorage['FakingTimestamp'] = Date.now();
     }
     let getWorldInfo = localStorage['GetWorldInfo'];
@@ -18,11 +21,14 @@ function Faking(debug) {
     }
     else {
         Log('Fetching GetWorldInfo from network');
+        UI.SuccessMessage('Pobieranie skryptu... ');
         $.ajax({
             url: '',
             dataType: 'script',
         }).then(ExecuteScript);
     }
+
+    return true;
 
     function Log() {
         if (debugMode)
@@ -30,8 +36,13 @@ function Faking(debug) {
     }
 
     function ExecuteScript() {
+        if (typeof(Faker) !== 'undefined') {
+            Faker.init();
+            return;
+        }
         GetWorldInfo(['all'], debug).then(worldInfo => {
-            CreateFaker(worldInfo).init();
+            Faker = CreateFaker(worldInfo);
+            Faker.init();
             let endTime = Date.now();
             Log('Execution time: ' + (endTime - startTime));
             if (localStorage['FakingTimestamp'] === undefined || Number(localStorage['FakingTimestamp']) + 24 * 3600 * 1000 < Date.now()) {
@@ -62,7 +73,8 @@ function Faking(debug) {
                 coords: '',
                 target: {
                     players: undefined,
-                    allies: undefined
+                    allies: undefined,
+                    minimumVillagePoints: 0,
                 },
                 days: ['1-31'],
                 intervals: ['0:00-23:59'],
@@ -340,9 +352,6 @@ function Faking(debug) {
                 return true;
             },
             _targeting: function (poll) {
-                if (this._settings.target === undefined)
-                    return poll;
-
                 if (this._settings.target.allies === undefined &&
                     this._settings.target.players === undefined)
                     return poll;
@@ -368,8 +377,14 @@ function Faking(debug) {
 
                 Log('Targeted (players): ', playerIds);
 
+                let minimumPoints = this._defaultSettings.target.minimumVillagePoints;
+                if (this._settings.target.minimumVillagePoints !== undefined) {
+                    minimumPoints = this._settings.target.minimumVillagePoints;
+                }
+
                 let villages = worldInfo.village.filter(v =>
-                    playerIds.some(target => target === v.playerId)
+                    playerIds.some(target => target === v.playerId) &&
+                    v.points >= minimumPoints
                 ).map(v => v.coords);
 
                 Log('Targeted villages: ', villages);
@@ -379,3 +394,5 @@ function Faking(debug) {
         };
     }
 }
+
+Faking(true);

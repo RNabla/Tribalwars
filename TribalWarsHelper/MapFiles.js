@@ -1,5 +1,7 @@
 /**
- * Helper for downloading world info in tribalwars - browser game
+ * Helper for downloading world info in TribalWars - browser game
+ * Created by: Hermitowski
+ * Modified on: 14/02/2018 - version 1.0
  */
 
 
@@ -85,6 +87,7 @@ function GetWorldInfo(requests, debug) {
         if (timestamp === undefined || (timestamp + 3600 * 1000 * expirationTime) < Date.now()) {
             return fetch(`https://${location.host}/${path}`).then(t => t.text()).then(text => {
                 Log(`Fetching ${path} over network`);
+                UI.SuccessMessage('Pobieranie danych...');
                 let content = Parser(text, customParser);
                 localStorage[timestampKey] = Date.now();
                 localStorage[dataKey] = JSON.stringify(content);
