@@ -83,7 +83,7 @@ if (typeof MailingList === "undefined") {
                         }
                     }
                     let mood = $('#show_mood')[0].innerText.match(/\d+/);
-                    if (mood != null) {
+                    if (mood != null){
                         message += `\nPoparcie: [b]${mood[0]}[/b]`;
                     }
                     message += '\nPotrzebna pomoc na: ' + impactTime;
@@ -106,7 +106,7 @@ if (typeof MailingList === "undefined") {
         fetchDiplomacy: () => {
             let storageKey = game_data.world + 'contracts';
             return ((sessionStorage.getItem(storageKey) === null) ?
-                fetch(TribalWars.buildURL('', 'ally', {mode: 'contracts'}), {credentials: 'include'}).then(response => {
+                fetch(TribalWars.buildURL('','ally',{mode:'contracts'}), {credentials: 'include'}).then(response => {
                     return response.text();
                 }).then(text => {
                     sessionStorage.setItem(storageKey, JSON.stringify(text));
@@ -153,7 +153,7 @@ if (typeof MailingList === "undefined") {
         fetchOwnTribe: () => {
             let storageKey = game_data.world + 'properties';
             return ((sessionStorage.getItem(storageKey) === null) ?
-                fetch(TribalWars.buildURL('', 'ally', {mode: 'properties'}), {credentials: 'include'}).then(response => {
+                fetch(TribalWars.buildURL('','ally',{mode:'properties'}), {credentials: 'include'}).then(response => {
                     return response.text();
                 }).then(text => {
                     sessionStorage.setItem(storageKey, JSON.stringify(text));
