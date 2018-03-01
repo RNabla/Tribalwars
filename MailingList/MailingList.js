@@ -73,6 +73,7 @@ if (typeof MailingList === "undefined") {
                 if (game_data.screen === "overview") {
                     message += '\nPoziom muru: [b]' + game_data.village.buildings.wall + '[/b]';
                     message += '\nWojska: ';
+
                     let unitsInVillage = $('#show_units').find('.unit_link');
                     for (let i = 0, j = 0; i < game_data.units.length; i++) {
                         if ($(unitsInVillage[j]).attr('data-unit') === game_data.units[i]) {
@@ -80,6 +81,10 @@ if (typeof MailingList === "undefined") {
                             message += $(unitsInVillage[j])[0].parentNode.innerText.match(/\d+/)[0];
                             j++;
                         }
+                    }
+                    let mood = $('#show_mood')[0].innerText.match(/\d+/);
+                    if (mood != null) {
+                        message += `\nPoparcie: [b]${mood[0]}[/b]`;
                     }
                     message += '\nPotrzebna pomoc na: ' + impactTime;
                     if (jutro)
@@ -101,7 +106,7 @@ if (typeof MailingList === "undefined") {
         fetchDiplomacy: () => {
             let storageKey = game_data.world + 'contracts';
             return ((sessionStorage.getItem(storageKey) === null) ?
-                fetch(TribalWars.buildURL('','ally',{mode:'contracts'}), {credentials: 'include'}).then(response => {
+                fetch(TribalWars.buildURL('', 'ally', {mode: 'contracts'}), {credentials: 'include'}).then(response => {
                     return response.text();
                 }).then(text => {
                     sessionStorage.setItem(storageKey, JSON.stringify(text));
@@ -148,7 +153,7 @@ if (typeof MailingList === "undefined") {
         fetchOwnTribe: () => {
             let storageKey = game_data.world + 'properties';
             return ((sessionStorage.getItem(storageKey) === null) ?
-                fetch(TribalWars.buildURL('','ally',{mode:'properties'}), {credentials: 'include'}).then(response => {
+                fetch(TribalWars.buildURL('', 'ally', {mode: 'properties'}), {credentials: 'include'}).then(response => {
                     return response.text();
                 }).then(text => {
                     sessionStorage.setItem(storageKey, JSON.stringify(text));
