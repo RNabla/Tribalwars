@@ -82,7 +82,7 @@ function GetWorldInfo(requests, debug) {
         let timestampKey = `${path}${'timestamp'}`;
         let dataKey = `${path}${'data'}`;
         let timestamp = localStorage[timestampKey];
-        if (timestamp === undefined || (timestamp + 3600 * 1000 * expirationTime) < Date.now()) {
+        if (timestamp === undefined || (Number(timestamp) + 3600 * 1000 * expirationTime) < Date.now()) {
             return fetch(`https://${location.host}/${path}`).then(t => t.text()).then(text => {
                 Log(`Fetching ${path} over network`);
                 let content = Parser(text, customParser);
