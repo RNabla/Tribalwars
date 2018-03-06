@@ -124,6 +124,7 @@ function Faking(debug) {
                 let link = ($('#village_switch_right')[0] && $('#village_switch_right')[0].href) ||
                     ($('.jump_link')[0] && $('.jump_link')[0].href);
                 window.location = link;
+                throw 'Przechodz\u0119 do nast\u0119pnej wioski z grupy';
             },
             selectTroops: function () {
                 this._clearPlace();
