@@ -118,10 +118,12 @@ function Faking(debug) {
                 }
             },
             isVillageOutOfGroup: function () {
-                return $('.jump_link')[0] !== undefined;
+                return $('.jump_link')[0] !== undefined && this._settings.skipVillages;
             },
             goToNextVillage: function () {
-                window.location = $('#village_switch_right')[0].href;
+                let link = ($('#village_switch_right')[0] && $('#village_switch_right')[0].href) ||
+                    ($('.jump_link')[0] && $('.jump_link')[0].href);
+                window.location = link;
             },
             selectTroops: function () {
                 this._clearPlace();
