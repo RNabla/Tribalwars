@@ -298,10 +298,10 @@ function Faking(debug) {
                     if (this._defaultSettings.hasOwnProperty(property)) {
                         if (userConfig[property] === undefined) {
                             Log(`${property} not found, using default value : ${this._defaultSettings[property]}`);
-                            this._settings[property] = this._defaultSettings[property];
+                            this._settings[property] = JSON.parse(JSON.stringify(this._defaultSettings[property]));
                         }
                         else
-                            this._settings[property] = userConfig[property];
+                            this._settings[property] = JSON.parse(JSON.stringify(userConfig[property]));
                     }
                 }
             },
