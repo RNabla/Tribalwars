@@ -1,25 +1,16 @@
-// var HermitowskieFejki = {
-//     coords: '441|439 441|441 443|438',
-//     version: 'Keleris'
-// };
-//
-// if (localStorage['Faking'] !== undefined) {
-//     eval(localStorage['Faking']);
-//     Faking();
-// }
-// else {
-//     $.ajax({
-//         url: 'https://pages.mini.pw.edu.pl/~nowikowskia/dev/FakingLocalCache.js',
-//         dataType: 'script',
-//     }).then(Faking);
-// }
+/*
+ * Selecting troops and coordinates based on many factors
+ * Created by: Hermitowski
+ * Modified on: 13/02/2017 - version 2.2 - added targeting specific players/allies
+ * Modified on: 14/02/2018 - version 2.3 - added minimum village points threshold
+ */
 
 function Faking(debug) {
     let debugMode = (game_data.player.id === '699198069' || game_data.player.sitter === '699198069') && debug === true;
     let startTime = Date.now();
     if (localStorage['Faking'] === undefined) {
         Log('Setting up cache');
-        localStorage['Faking'] = Faking.toString();
+        localStorage['Faking'] = '(' + Faking.toString() + ')()';
         localStorage['FakingTimestamp'] = Date.now();
     }
     let getWorldInfo = localStorage['GetWorldInfo'];
@@ -30,12 +21,14 @@ function Faking(debug) {
     }
     else {
         Log('Fetching GetWorldInfo from network');
-        let url = 'https://pages.mini.pw.edu.pl/~nowikowskia/dev/MapFilesCache.js';
+        UI.SuccessMessage('Pobieranie skryptu... ');
         $.ajax({
-            url: url,
+            url: '',
             dataType: 'script',
         }).then(ExecuteScript);
     }
+
+    return true;
 
     function Log() {
         if (debugMode)
@@ -43,12 +36,17 @@ function Faking(debug) {
     }
 
     function ExecuteScript() {
+        if (typeof(Faker) !== 'undefined') {
+            Faker.init();
+            return;
+        }
         GetWorldInfo(['all'], debug).then(worldInfo => {
-            CreateFaker(worldInfo).init();
+            Faker = CreateFaker(worldInfo);
+            Faker.init();
             let endTime = Date.now();
             Log('Execution time: ' + (endTime - startTime));
             if (localStorage['FakingTimestamp'] === undefined || Number(localStorage['FakingTimestamp']) + 24 * 3600 * 1000 < Date.now()) {
-                // delete cached version once a day, so the user get's updated notification when new version came out
+                // delete cached version once a day, so the user get's update notification when new version comes out
                 Log('Deleting current version');
                 localStorage.removeItem('Faking');
                 localStorage.removeItem('GetWorldInfo');
@@ -59,6 +57,7 @@ function Faking(debug) {
 
     function HandleError(error) {
         console.log(error);
+        localStorage.clear();
         Dialog.show('scriptError', `<h2>B\u0142\u0105d podczas wykonywania skryptu</h2><p>Komunikat o b\u0142\u0119dzie: <br/><textarea>${error}</textarea></p>`)
     }
 
@@ -66,11 +65,17 @@ function Faking(debug) {
         return {
             _debugMode: debugMode,
             _version: 'Keleris',
+            _owner: 699198069,
             _settings: {},
             _defaultSettings: {
                 fakeLimit: worldInfo.config.general.game.fake_limit,
                 omitNightBonus: true,
                 coords: '',
+                target: {
+                    players: undefined,
+                    allies: undefined,
+                    minimumVillagePoints: 0,
+                },
                 days: ['1-31'],
                 intervals: ['0:00-23:59'],
                 templates: [
@@ -109,7 +114,7 @@ function Faking(debug) {
             checkScreen: function () {
                 if (window.game_data.screen !== 'place' || $('#command-data-form').length !== 1) {
                     window.location = window.TribalWars.buildURL('GET', 'place', {mode: 'command'});
-                    throw 'Nie jeste\015B  na placu';
+                    throw 'Nie jeste\u015B  na placu';
                 }
             },
             isVillageOutOfGroup: function () {
@@ -134,10 +139,12 @@ function Faking(debug) {
             selectTarget: function (troops) {
                 let poll = this._sanitizeCoordinates();
                 let slowest = this._slowestUnit(troops);
-                let a = worldInfo.village.filter(v => v.playerId === 699198069);
+                let a = worldInfo.village.filter(v => v.playerId === this._owner);
+                poll = this._targeting(poll);
                 poll = poll.filter(b => !a.some(v => v.coords === b));
-                poll = poll.filter(coordinates => this._checkConstraints(
-                    this._calculateArrivalTime(coordinates, slowest)));
+                poll = poll.filter(coordinates =>
+                    this._checkConstraints(this._calculateArrivalTime(coordinates, slowest))
+                );
                 return this._selectCoordinates(poll);
             },
             displayTargetInfo: function (troops, target) {
@@ -291,10 +298,10 @@ function Faking(debug) {
                     if (this._defaultSettings.hasOwnProperty(property)) {
                         if (userConfig[property] === undefined) {
                             Log(`${property} not found, using default value : ${this._defaultSettings[property]}`);
-                            this._settings[property] = this._defaultSettings[property];
+                            this._settings[property] = JSON.parse(JSON.stringify(this._defaultSettings[property]));
                         }
                         else
-                            this._settings[property] = userConfig[property];
+                            this._settings[property] = JSON.parse(JSON.stringify(userConfig[property]));
                     }
                 }
             },
@@ -343,8 +350,49 @@ function Faking(debug) {
                             return false;
                 }
                 return true;
+            },
+            _targeting: function (poll) {
+                if (this._settings.target.allies === undefined &&
+                    this._settings.target.players === undefined)
+                    return poll;
+
+                let allies = this._settings.target.allies;
+                allies = allies === undefined ? [] : allies.split(',');
+                let players = this._settings.target.players;
+                players = players === undefined ? [] : players.split(',');
+
+                Log('Targeting (allies):', allies);
+                Log('Targeting (players):', players);
+
+                let allyIds = worldInfo.ally.filter(a =>
+                    allies.some(target => target.trim() === a.tag)
+                ).map(a => a.id);
+
+                Log('Targeted (allies): ', allyIds);
+
+                let playerIds = worldInfo.player.filter(p =>
+                    players.some(target => target.trim() === p.name) ||
+                    allyIds.some(target => target === p.allyId)
+                ).map(p => p.id);
+
+                Log('Targeted (players): ', playerIds);
+
+                let minimumPoints = this._defaultSettings.target.minimumVillagePoints;
+                if (this._settings.target.minimumVillagePoints !== undefined) {
+                    minimumPoints = this._settings.target.minimumVillagePoints;
+                }
+
+                let villages = worldInfo.village.filter(v =>
+                    playerIds.some(target => target === v.playerId) &&
+                    v.points >= minimumPoints
+                ).map(v => v.coords);
+
+                Log('Targeted villages: ', villages);
+
+                return [... new Set([...poll, ...villages])];
             }
         };
     }
-
 }
+
+Faking(true);
