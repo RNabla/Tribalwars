@@ -41,6 +41,10 @@ function Faking(debug) {
             return;
         }
         GetWorldInfo(['all'], debug).then(worldInfo => {
+            if (worldInfo.error !== undefined) {
+                // some failure getting worldInfo data, e.g. QUOTA
+                throw worldInfo.error;
+            }
             Faker = CreateFaker(worldInfo);
             Faker.init();
             let endTime = Date.now();
@@ -57,8 +61,8 @@ function Faking(debug) {
 
     function HandleError(error) {
         console.log(error);
-        localStorage.clear();
-        Dialog.show('scriptError', `<h2>B\u0142\u0105d podczas wykonywania skryptu</h2><p>Komunikat o b\u0142\u0119dzie: <br/><textarea>${error}</textarea></p>`)
+        localStorage.removeItem('Faking');
+        Dialog.show('scriptError', `<h2>WTF - What a Terrible Failure</h2><p>Komunikat o b\u0142\u0119dzie: <br/><textarea rows="5" cols="42">${error}</textarea></p>`)
     }
 
     function CreateFaker(worldInfo) {
@@ -69,24 +73,22 @@ function Faking(debug) {
             _settings: {},
             _defaultSettings: {
                 fakeLimit: worldInfo.config.general.game.fake_limit,
-                omitNightBonus: true,
+                omitNightBonus: 'true',
                 coords: '',
-                target: {
-                    players: undefined,
-                    allies: undefined,
-                    minimumVillagePoints: 0,
-                },
-                days: ['1-31'],
-                intervals: ['0:00-23:59'],
+                players: '',
+                allies: '',
+                minimumVillagePoints: '0',
+                days: '1-31',
+                intervals: '0:00-23:59',
                 templates: [
                     {spy: 1, ram: 1},
                     {spy: 1, catapult: 1},
                     {ram: 1},
                     {catapult: 1}
                 ],
-                fillWith: window.game_data.units.filter(unit => unit !== 'militia').join(','),
-                fillExact: false,
-                skipVillages: true,
+                fillWith: window.game_data.units.filter(unit => ['militia', 'snob'].indexOf(unit) === -1).join(','),
+                fillExact: 'false',
+                skipVillages: 'true',
             },
             init: function () {
                 try {
@@ -102,6 +104,7 @@ function Faking(debug) {
                         }
                     }
                 } catch (err) {
+                    console.log(err);
                     UI.ErrorMessage(err, '1e3');
                 }
             },
@@ -116,14 +119,17 @@ function Faking(debug) {
                     window.location = window.TribalWars.buildURL('GET', 'place', {mode: 'command'});
                     throw 'Nie jeste\u015B  na placu';
                 }
+                // disable executing script on screen with command confirmation
+                if ($('#troop_confirm_go').length !== 0)
+                    throw 'Skrypt jest zablokowany tym przegl\u0105dzie';
             },
             isVillageOutOfGroup: function () {
-                return $('.jump_link')[0] !== undefined && this._settings.skipVillages;
+                return $('.jump_link')[0] !== undefined && this._toBoolean(this._settings.skipVillages);
             },
             goToNextVillage: function () {
-                let link = ($('#village_switch_right')[0] && $('#village_switch_right')[0].href) ||
-                    ($('.jump_link')[0] && $('.jump_link')[0].href);
-                window.location = link;
+                let switchRight = $('#village_switch_right')[0];
+                let jumpLink = $('.jump_link')[0];
+                window.location = (switchRight && switchRight.href) || (jumpLink && jumpLink.href);
                 throw 'Przechodz\u0119 do nast\u0119pnej wioski z grupy';
             },
             selectTroops: function () {
@@ -189,16 +195,14 @@ function Faking(debug) {
                 return output;
             },
             _checkConstraints: function (arrivalTime) {
-                let daysIntervals = this._settings.days;
+                let daysIntervals = this._settings.days.split(',');
                 /* days: ['1-23','23-30'], */
-                let hoursIntervals = this._settings.intervals;
+                let hoursIntervals = this._settings.intervals.split(',');
                 /* ['7:00-8:00','23:00-23:59'], */
                 if (this._isInInterval(arrivalTime, daysIntervals, this._parseDailyDate) === false)
                     return false;
-                if (this._settings.omitNightBonus) {
-                    if (this._isInNightBonus(arrivalTime))
-                        return false;
-                }
+                if (this._toBoolean(this._settings.omitNightBonus) && this._isInNightBonus(arrivalTime))
+                    return false;
                 return this._isInInterval(arrivalTime, hoursIntervals, this._parseTime);
             },
             _isInNightBonus: function (arrivalTime) {
@@ -236,10 +240,11 @@ function Faking(debug) {
             _countPopulations: function (units) {
                 let sum = 0;
                 for (const unitName in units) {
-                    if (!units.hasOwnProperty(unitName)) continue;
-                    let pop = Number(worldInfo.config.unit[unitName].pop);
-                    let quantity = units[unitName];
-                    sum += pop * quantity;
+                    if (units.hasOwnProperty(unitName)) {
+                        let pop = Number(worldInfo.config.unit[unitName].pop);
+                        let quantity = units[unitName];
+                        sum += pop * quantity;
+                    }
                 }
                 return sum;
             },
@@ -259,16 +264,17 @@ function Faking(debug) {
                 return fillTable;
             },
             _fill: function (template, place) {
-                let left = Math.floor(game_data.village.points * this._settings.fakeLimit * 0.01);
+                let left = Math.floor(game_data.village.points * Number(this._settings.fakeLimit) * 0.01);
                 left -= this._countPopulations(template);
-                if (left <= 0 && !this._settings.fillExact)
+                if (left <= 0 && !this._toBoolean(this._settings.fillExact))
                     return true;
                 let fillTable = this._getFillTable();
                 for (const entry of fillTable) {
                     let name = entry[0];
+                    if (!worldInfo.config.unit.hasOwnProperty(name)) continue;
                     let minimum = entry[1];
-                    let pop = Number(worldInfo.config.unit[entry[0]].pop);
-                    if (!this._settings.fillExact) {
+                    let pop = Number(worldInfo.config.unit[name].pop);
+                    if (!this._toBoolean(this._settings.fillExact)) {
                         minimum = Math.min(minimum, Math.ceil(left / pop));
                     }
                     let selected = 0;
@@ -280,7 +286,7 @@ function Faking(debug) {
                     else
                         template[name] += minimum;
                     left -= minimum * pop;
-                    if (left <= 0 && !this._settings.fillExact)
+                    if (left <= 0 && !this._toBoolean(this._settings.fillExact))
                         break;
                 }
                 return left <= 0;
@@ -288,7 +294,8 @@ function Faking(debug) {
             _slowestUnit: function (units) {
                 let speed = 0;
                 for (const unitName in units) {
-                    speed = Math.max(Number(worldInfo.config.unit[unitName].speed), speed);
+                    if (units.hasOwnProperty(unitName) && units[unitName] !== 0)
+                        speed = Math.max(Number(worldInfo.config.unit[unitName].speed), speed);
                 }
                 return speed;
             },
@@ -303,10 +310,17 @@ function Faking(debug) {
                             Log(`${property} not found, using default value : ${this._defaultSettings[property]}`);
                             this._settings[property] = JSON.parse(JSON.stringify(this._defaultSettings[property]));
                         }
-                        else
+                        else {
+                            Log(`${property} found, using user's value : ${userConfig[property]}`);
                             this._settings[property] = JSON.parse(JSON.stringify(userConfig[property]));
+                        }
                     }
                 }
+            },
+            _toBoolean: function (input) {
+                if (typeof(input) === 'boolean')
+                    return input;
+                return (input.toLowerCase() === 'true');
             },
             _calculateArrivalTime: function (coordinates, slowestUnitSpeed) {
                 let dx = window.game_data.village.x - Number(coordinates.split('|')[0]);
@@ -348,43 +362,40 @@ function Faking(debug) {
             },
             _isEnough: function (template, placeUnits) {
                 for (let unit in template) {
-                    if (template.hasOwnProperty(unit))
-                        if (template[unit] > placeUnits[unit])
+                    if (template.hasOwnProperty(unit)) {
+                        if (!worldInfo.config.unit.hasOwnProperty(unit) || template[unit] > placeUnits[unit])
                             return false;
+                    }
                 }
                 return true;
             },
             _targeting: function (poll) {
-                if (this._settings.target.allies === undefined &&
-                    this._settings.target.players === undefined)
+                if (this._settings.allies === '' && this._settings.players === '')
                     return poll;
 
-                let allies = this._settings.target.allies;
-                allies = allies === undefined ? [] : allies.split(',');
-                let players = this._settings.target.players;
-                players = players === undefined ? [] : players.split(',');
+                let allies = this._settings.allies.split(',').map(entry => entry.trim());
+                let players = this._settings.players.split(',').map(entry => entry.trim());
 
                 Log('Targeting (allies):', allies);
                 Log('Targeting (players):', players);
 
                 let allyIds = worldInfo.ally.filter(a =>
-                    allies.some(target => target.trim() === a.tag)
+                    allies.some(target => target === a.tag)
                 ).map(a => a.id);
 
                 Log('Targeted (allies): ', allyIds);
 
                 let playerIds = worldInfo.player.filter(p =>
-                    players.some(target => target.trim() === p.name) ||
+                    players.some(target => target === p.name) ||
                     allyIds.some(target => target === p.allyId)
                 ).map(p => p.id);
 
                 Log('Targeted (players): ', playerIds);
 
-                let minimumPoints = this._defaultSettings.target.minimumVillagePoints;
-                if (this._settings.target.minimumVillagePoints !== undefined) {
-                    minimumPoints = this._settings.target.minimumVillagePoints;
+                let minimumPoints = Number(this._settings.minimumVillagePoints);
+                if (isNaN(minimumPoints)) {
+                    minimumPoints = Number(this._defaultSettings.minimumVillagePoints);
                 }
-
                 let villages = worldInfo.village.filter(v =>
                     playerIds.some(target => target === v.playerId) &&
                     v.points >= minimumPoints
