@@ -86,8 +86,8 @@ function GetWorldInfo(requests, debug) {
             return fetch(`https://${location.host}/${path}`).then(t => t.text()).then(text => {
                 Log(`Fetching ${path} over network`);
                 let content = Parser(text, customParser);
-                localStorage[timestampKey] = Date.now();
                 localStorage[dataKey] = JSON.stringify(content);
+                localStorage[timestampKey] = Date.now();
                 return content;
             });
         }
