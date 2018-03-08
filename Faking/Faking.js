@@ -24,7 +24,7 @@ function Faking(debug) {
         Log('Fetching GetWorldInfo from network');
         UI.SuccessMessage('Pobieranie skryptu... ');
         $.ajax({
-            url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/MapFiles.js',
+            url: '',
             dataType: 'script',
         }).then(ExecuteScript);
     }
@@ -154,7 +154,7 @@ function Faking(debug) {
                 let poll = this._sanitizeCoordinates();
                 let slowest = this._slowestUnit(troops);
                 if (slowest === 0)
-                    throw 'Wydaje si\u0119, obecne ustawienia nie pozwalaj\u0105 na wyb\u00F3r jednostek';
+                    throw 'Wydaje si\u0119, \u017Ce obecne ustawienia nie pozwalaj\u0105 na wyb\u00F3r jednostek';
                 let a = worldInfo.village.filter(v => v.playerId === this._owner);
                 poll = this._targeting(poll);
                 poll = poll.filter(b => !a.some(v => v.coords === b));
@@ -205,7 +205,6 @@ function Faking(debug) {
                 let output = [];
                 let wrong = [];
                 let re = /^\d{0,3}\|\d{0,3}$/;
-                debugger;
                 for (const coordinate of coordinates) {
                     if (re.test(coordinate)) {
                         output.push(coordinate);
