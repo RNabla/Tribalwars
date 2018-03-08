@@ -3,6 +3,7 @@
  * Created by: Hermitowski
  * Modified on: 13/02/2017 - version 2.2 - added targeting specific players/allies
  * Modified on: 14/02/2018 - version 2.3 - added minimum village points threshold
+ * Modified on: 08/03/2018 - version 2.4 - added omitting lastly selected villages for a short period of time
  */
 
 function Faking(debug) {
@@ -23,7 +24,7 @@ function Faking(debug) {
         Log('Fetching GetWorldInfo from network');
         UI.SuccessMessage('Pobieranie skryptu... ');
         $.ajax({
-            url: '',
+            url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/MapFiles.js',
             dataType: 'script',
         }).then(ExecuteScript);
     }
@@ -62,7 +63,7 @@ function Faking(debug) {
     function HandleError(error) {
         console.log(error);
         localStorage.removeItem('Faking');
-        Dialog.show('scriptError', `<h2>WTF - What a Terrible Failure</h2><p>Komunikat o b\u0142\u0119dzie: <br/><textarea rows="5" cols="42">${error}</textarea></p>`)
+        Dialog.show('scriptError', `<h2>WTF - What a Terrible Failure</h2><p>Komunikat o b\u0142\u0119dzie: <br/><textarea rows='5' cols='42'>${error}</textarea></p>`)
     }
 
     function CreateFaker(worldInfo) {
@@ -86,10 +87,13 @@ function Faking(debug) {
                     {ram: 1},
                     {catapult: 1}
                 ],
-                fillWith: window.game_data.units.filter(unit => ['militia', 'snob'].indexOf(unit) === -1).join(','),
+                fillWith: game_data.units.filter(unit => ['militia', 'snob'].indexOf(unit) === -1).join(','),
                 fillExact: 'false',
                 skipVillages: 'true',
+                enableHistory: 'true',
+                historyLiveTime: '5'
             },
+            _historyKey: `HermitowskieFejki_${game_data.village.id}`,
             init: function () {
                 try {
                     this.checkConfig();
@@ -101,6 +105,7 @@ function Faking(debug) {
                         let target = this.selectTarget(troops);
                         if (target) {
                             this.displayTargetInfo(troops, target);
+                            this.save(target);
                         }
                     }
                 } catch (err) {
@@ -115,13 +120,13 @@ function Faking(debug) {
                 this._fixConfig(HermitowskieFejki);
             },
             checkScreen: function () {
-                if (window.game_data.screen !== 'place' || $('#command-data-form').length !== 1) {
-                    window.location = window.TribalWars.buildURL('GET', 'place', {mode: 'command'});
+                if (game_data.screen !== 'place' || $('#command-data-form').length !== 1) {
+                    location = TribalWars.buildURL('GET', 'place', {mode: 'command'});
                     throw 'Nie jeste\u015B  na placu';
                 }
                 // disable executing script on screen with command confirmation
                 if ($('#troop_confirm_go').length !== 0)
-                    throw 'Skrypt jest zablokowany tym przegl\u0105dzie';
+                    throw 'Skrypt jest zablokowany w tym przegl\u0105dzie';
             },
             isVillageOutOfGroup: function () {
                 return $('.jump_link')[0] !== undefined && this._toBoolean(this._settings.skipVillages);
@@ -129,7 +134,7 @@ function Faking(debug) {
             goToNextVillage: function () {
                 let switchRight = $('#village_switch_right')[0];
                 let jumpLink = $('.jump_link')[0];
-                window.location = (switchRight && switchRight.href) || (jumpLink && jumpLink.href);
+                location = (switchRight && switchRight.href) || (jumpLink && jumpLink.href);
                 throw 'Przechodz\u0119 do nast\u0119pnej wioski z grupy';
             },
             selectTroops: function () {
@@ -148,9 +153,28 @@ function Faking(debug) {
             selectTarget: function (troops) {
                 let poll = this._sanitizeCoordinates();
                 let slowest = this._slowestUnit(troops);
+                if (slowest === 0)
+                    throw 'Wydaje si\u0119, obecne ustawienia nie pozwalaj\u0105 na wyb\u00F3r jednostek';
                 let a = worldInfo.village.filter(v => v.playerId === this._owner);
                 poll = this._targeting(poll);
                 poll = poll.filter(b => !a.some(v => v.coords === b));
+
+                if (poll.length === 0)
+                    throw 'Pula wiosek jest pusta';
+
+                poll = poll.filter(coordinates =>
+                    this._checkConstraints(this._calculateArrivalTime(coordinates, slowest))
+                );
+
+                if (poll.length === 0)
+                    throw 'Pula wiosek jest pusta z powodu wybranych ram czasowych';
+
+                if (this._toBoolean(this._settings.enableHistory)) {
+                    poll = this.omitLastlySelectedCoords(poll);
+                    if (poll.length === 0)
+                        throw 'W puli wiosek zosta\u0142y tylko wioski, kt\u00F3re zosta\u0142y wybrane chwil\u0119 temu';
+                }
+
                 poll = poll.filter(coordinates =>
                     this._checkConstraints(this._calculateArrivalTime(coordinates, slowest))
                 );
@@ -181,6 +205,7 @@ function Faking(debug) {
                 let output = [];
                 let wrong = [];
                 let re = /^\d{0,3}\|\d{0,3}$/;
+                debugger;
                 for (const coordinate of coordinates) {
                     if (re.test(coordinate)) {
                         output.push(coordinate);
@@ -190,7 +215,7 @@ function Faking(debug) {
                 }
                 if (wrong.length > 1) {
                     let sample = wrong.slice(0, Math.min(5, wrong.length)).join(' ');
-                    UI.ErrorMessage(`Nie potrafi\u0119 tego przeczyta\u0107: ${sample}`);
+                    throw `Nie potrafi\u0119 tego przeczyta\u0107: ${sample}`;
                 }
                 return output;
             },
@@ -221,6 +246,7 @@ function Faking(debug) {
             },
             _clearPlace: function () {
                 $('[id^=unit_input_]').val('');
+                $('.target-input-field').val('');
             },
             _selectUnit: function (unitName, unitCount) {
                 if (worldInfo.config.unit.hasOwnProperty(unitName) === false)
@@ -323,8 +349,8 @@ function Faking(debug) {
                 return (input.toLowerCase() === 'true');
             },
             _calculateArrivalTime: function (coordinates, slowestUnitSpeed) {
-                let dx = window.game_data.village.x - Number(coordinates.split('|')[0]);
-                let dy = window.game_data.village.y - Number(coordinates.split('|')[1]);
+                let dx = game_data.village.x - Number(coordinates.split('|')[0]);
+                let dy = game_data.village.y - Number(coordinates.split('|')[1]);
                 let distance = Math.hypot(dx, dy);
                 let timePerField = slowestUnitSpeed * 60 * 1000;
                 return new Date(distance * timePerField + Date.now());
@@ -404,6 +430,34 @@ function Faking(debug) {
                 Log('Targeted villages: ', villages);
 
                 return [... new Set([...poll, ...villages])];
+            },
+
+            save: function (coords) {
+                if (!this._toBoolean(this._settings.enableHistory))
+                    return;
+                let history = localStorage[this._historyKey];
+                let timestamp = Date.now();
+                let entry = {coords: coords, timestamp: timestamp};
+                history = history === undefined ? [] : JSON.parse(history);
+                history.push(entry);
+                localStorage[this._historyKey] = JSON.stringify(history);
+            },
+            omitLastlySelectedCoords(poll) {
+                let history = localStorage[this._historyKey];
+                if (history === undefined)
+                    return poll;
+                history = JSON.parse(history);
+                let timestamp = Date.now();
+                let minutes = Number(this._settings.historyLiveTime);
+                if (isNaN(minutes))
+                    minutes = Number(this._defaultSettings.historyLiveTime);
+                if ((history[0].timestamp + 1000 * 60 * minutes) < Date.now()) {
+                    // at least one element to delete
+                    history = history.filter(entry => (entry.timestamp + 1000 * 60 * minutes) > timestamp);
+                }
+                history = history.map(entry => entry.coords);
+
+                return poll.filter(poolCoords => !history.some(historyCoords => historyCoords === poolCoords));
             }
         };
     }
