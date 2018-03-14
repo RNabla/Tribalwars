@@ -4,6 +4,7 @@
  * Modified on: 13/02/2017 - version 2.2 - added targeting specific players/allies
  * Modified on: 14/02/2018 - version 2.3 - added minimum village points threshold
  * Modified on: 08/03/2018 - version 2.4 - added omitting lastly selected villages for a short period of time
+ * Modified on: 14/03/2018 - version 2.4 - improved performance
  */
 
 function Faking(debug) {
@@ -11,7 +12,7 @@ function Faking(debug) {
     let startTime = Date.now();
     if (localStorage['Faking'] === undefined) {
         Log('Setting up cache');
-        localStorage['Faking'] = '(' + Faking.toString() + ')()';
+        localStorage['Faking'] = '(' + Faking.toString() + ')(true)';
         localStorage['FakingTimestamp'] = Date.now();
     }
     let getWorldInfo = localStorage['GetWorldInfo'];
@@ -37,17 +38,24 @@ function Faking(debug) {
     }
 
     function ExecuteScript() {
-        if (typeof(Faker) !== 'undefined') {
-            Faker.init();
-            return;
+        let files = ['unit', 'config'];
+        if (typeof HermitowskieFejki !== 'undefined') {
+            let requirePlayerFiles = HermitowskieFejki.players !== undefined && HermitowskieFejki.players !== '';
+            let requireAlliesFiles = HermitowskieFejki.allies !== undefined && HermitowskieFejki.allies !== '';
+            if (requireAlliesFiles || requirePlayerFiles) {
+                files.push('villages');
+                if (requireAlliesFiles)
+                    files.push('allies');
+                if (requirePlayerFiles)
+                    files.push('player');
+            }
         }
-        GetWorldInfo(['all'], debug).then(worldInfo => {
+        GetWorldInfo(files, debug).then(worldInfo => {
             if (worldInfo.error !== undefined) {
                 // some failure getting worldInfo data, e.g. QUOTA
                 throw worldInfo.error;
             }
-            Faker = CreateFaker(worldInfo);
-            Faker.init();
+            CreateFaker(worldInfo).init();
             let endTime = Date.now();
             Log('Execution time: ' + (endTime - startTime));
             if (localStorage['FakingTimestamp'] === undefined || Number(localStorage['FakingTimestamp']) + 24 * 3600 * 1000 < Date.now()) {
@@ -90,7 +98,7 @@ function Faking(debug) {
                 fillWith: game_data.units.filter(unit => ['militia', 'snob'].indexOf(unit) === -1).join(','),
                 fillExact: 'false',
                 skipVillages: 'true',
-                enableHistory: 'true',
+                enableHistory: 'false',
                 historyLiveTime: '5'
             },
             _historyKey: `HermitowskieFejki_${game_data.village.id}`,
@@ -101,13 +109,8 @@ function Faking(debug) {
                     if (this.isVillageOutOfGroup())
                         this.goToNextVillage();
                     let troops = this.selectTroops();
-                    if (troops) {
-                        let target = this.selectTarget(troops);
-                        if (target) {
-                            this.displayTargetInfo(troops, target);
-                            this.save(target);
-                        }
-                    }
+                    let target = this.selectTarget(troops);
+                    this.displayTargetInfo(troops, target);
                 } catch (err) {
                     console.log(err);
                     UI.ErrorMessage(err, '1e3');
@@ -155,9 +158,8 @@ function Faking(debug) {
                 let slowest = this._slowestUnit(troops);
                 if (slowest === 0)
                     throw 'Wydaje si\u0119, \u017Ce obecne ustawienia nie pozwalaj\u0105 na wyb\u00F3r jednostek';
-                let a = worldInfo.village.filter(v => v.playerId === this._owner);
+
                 poll = this._targeting(poll);
-                poll = poll.filter(b => !a.some(v => v.coords === b));
 
                 if (poll.length === 0)
                     throw 'Pula wiosek jest pusta';
@@ -175,13 +177,17 @@ function Faking(debug) {
                         throw 'W puli wiosek zosta\u0142y tylko wioski, kt\u00F3re zosta\u0142y wybrane chwil\u0119 temu';
                 }
 
-                poll = poll.filter(coordinates =>
-                    this._checkConstraints(this._calculateArrivalTime(coordinates, slowest))
-                );
                 return this._selectCoordinates(poll);
             },
             displayTargetInfo: function (troops, target) {
-                $('.target-input-field').val(target);
+                let defaultTargetInput = $('.target-input-field');
+                if (defaultTargetInput.length === 1) {
+                    $('.target-input-field').val(target);
+                }
+                else { // mobile devices
+                    $('#inputx').val(target.split('|')[0]);
+                    $('#inputy').val(target.split('|')[1]);
+                }
                 this._selectUnits(troops);
                 let arrivalTime = this._calculateArrivalTime(target, this._slowestUnit(troops));
                 let travelTime = (arrivalTime - Date.now()) / (1000 * 3600);
@@ -204,7 +210,7 @@ function Faking(debug) {
                 let coordinates = this._settings.coords.replace(/\s\s+/g, ' ').split(' ');
                 let output = [];
                 let wrong = [];
-                let re = /^\d{0,3}\|\d{0,3}$/;
+                let re = /^\d{1,3}\|\d{1,3}$/;
                 for (const coordinate of coordinates) {
                     if (re.test(coordinate)) {
                         output.push(coordinate);
@@ -212,17 +218,17 @@ function Faking(debug) {
                     else
                         wrong.push(coordinate);
                 }
-                if (wrong.length > 1) {
+                if (wrong.length > 0) {
                     let sample = wrong.slice(0, Math.min(5, wrong.length)).join(' ');
-                    throw `Nie potrafi\u0119 tego przeczyta\u0107: ${sample}`;
+                    throw `coords: Nie potrafi\u0119 tego przeczyta\u0107: ${sample}`;
                 }
                 return output;
             },
             _checkConstraints: function (arrivalTime) {
                 let daysIntervals = this._settings.days.split(',');
-                /* days: ['1-23','23-30'], */
+                /* daysIntervals: ['1-23','23-30'], */
                 let hoursIntervals = this._settings.intervals.split(',');
-                /* ['7:00-8:00','23:00-23:59'], */
+                /* hoursIntervals: ['7:00-8:00','23:00-23:59'], */
                 if (this._isInInterval(arrivalTime, daysIntervals, this._parseDailyDate) === false)
                     return false;
                 if (this._toBoolean(this._settings.omitNightBonus) && this._isInNightBonus(arrivalTime))
@@ -241,7 +247,9 @@ function Faking(debug) {
             _selectCoordinates: function (poll) {
                 if (poll.length === 0)
                     throw 'Lista wiosek spe\u0142niaj\u0105ce wymagania jest pusta';
-                return poll[Math.floor(Math.random() * poll.length)];
+                let target = poll[Math.floor(Math.random() * poll.length)]
+                this.save(target);
+                return target;
             },
             _clearPlace: function () {
                 $('[id^=unit_input_]').val('');
@@ -395,22 +403,23 @@ function Faking(debug) {
                 return true;
             },
             _targeting: function (poll) {
-                if (this._settings.allies === '' && this._settings.players === '')
+                if (this._settings.allies === '' && this._settings.players === '') {
                     return poll;
+                }
 
-                let allies = this._settings.allies.split(',').map(entry => entry.trim());
-                let players = this._settings.players.split(',').map(entry => entry.trim());
+                let allies = this._settings.allies.split(',').map(entry => entry.trim()).filter(entry => entry.length !== 0);
+                let players = this._settings.players.split(',').map(entry => entry.trim()).filter(entry => entry.length !== 0);
 
                 Log('Targeting (allies):', allies);
                 Log('Targeting (players):', players);
 
-                let allyIds = worldInfo.ally.filter(a =>
+                let allyIds = allies.length === 0 ? [] : worldInfo.ally.filter(a =>
                     allies.some(target => target === a.tag)
                 ).map(a => a.id);
 
                 Log('Targeted (allies): ', allyIds);
 
-                let playerIds = worldInfo.player.filter(p =>
+                let playerIds = players.length === 0 ? [] : worldInfo.player.filter(p =>
                     players.some(target => target === p.name) ||
                     allyIds.some(target => target === p.allyId)
                 ).map(p => p.id);
