@@ -182,7 +182,7 @@ function Faking(debug) {
             displayTargetInfo: function (troops, target) {
                 let defaultTargetInput = $('.target-input-field');
                 if (defaultTargetInput.length === 1) {
-                    $('.target-input-field').val(target);
+                    defaultTargetInput.val(target);
                 }
                 else { // mobile devices
                     $('#inputx').val(target.split('|')[0]);
@@ -207,22 +207,10 @@ function Faking(debug) {
                 UI.SuccessMessage(`Atak dojdzie ${days}na ${hour}:${minutes}`)
             },
             _sanitizeCoordinates: function () {
-                let coordinates = this._settings.coords.replace(/\s\s+/g, ' ').split(' ');
-                let output = [];
-                let wrong = [];
-                let re = /^\d{1,3}\|\d{1,3}$/;
-                for (const coordinate of coordinates) {
-                    if (re.test(coordinate)) {
-                        output.push(coordinate);
-                    }
-                    else
-                        wrong.push(coordinate);
-                }
-                if (wrong.length > 0) {
-                    let sample = wrong.slice(0, Math.min(5, wrong.length)).join(' ');
-                    throw `coords: Nie potrafi\u0119 tego przeczyta\u0107: ${sample}`;
-                }
-                return output;
+                let coordinates = this._settings.coords.trim();
+                if (coordinates === '')
+                    return [];
+                return coordinates.match(/\d{1,3}\|\d{1,3}/g);
             },
             _checkConstraints: function (arrivalTime) {
                 let daysIntervals = this._settings.days.split(',');
@@ -253,7 +241,15 @@ function Faking(debug) {
             },
             _clearPlace: function () {
                 $('[id^=unit_input_]').val('');
-                $('.target-input-field').val('');
+                let defaultTargetInput = $('.target-input-field');
+
+                if (defaultTargetInput.length === 1) {
+                    defaultTargetInput.val('');
+                }
+                else { // mobile devices
+                    $('#inputy').val('');
+                    $('#inputx').val('');
+                }
             },
             _selectUnit: function (unitName, unitCount) {
                 if (worldInfo.config.unit.hasOwnProperty(unitName) === false)
