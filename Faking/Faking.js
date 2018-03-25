@@ -207,10 +207,12 @@ function Faking(debug) {
                 UI.SuccessMessage(`Atak dojdzie ${days}na ${hour}:${minutes}`)
             },
             _sanitizeCoordinates: function () {
-                let coordinates = this._settings.coords.trim();
-                if (coordinates === '')
-                    return [];
-                return coordinates.match(/\d{1,3}\|\d{1,3}/g);
+                let coordinates = this._settings.coords;
+                let coordsRegex = new RegExp(/\d{1,3}\|\d{1,3}/g);
+                let match = coordinates.match(coordsRegex);
+                return match == null
+                    ? []
+                    : match;
             },
             _checkConstraints: function (arrivalTime) {
                 let daysIntervals = this._settings.days.split(',');
