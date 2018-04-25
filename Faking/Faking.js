@@ -3,8 +3,9 @@
  * Created by: Hermitowski
  * Modified on: 13/02/2017 - version 2.2 - added targeting specific players/allies
  * Modified on: 14/02/2018 - version 2.3 - added minimum village points threshold
- * Modified on: 08/03/2018 - version 2.4 - added omitting lastly selected villages for a short period of time
- * Modified on: 14/03/2018 - version 2.4 - improved performance
+ * Modified on: 08/03/2018 - version 2.4 - added omitting recently selected villages for a short period of time
+ * Modified on: 14/03/2018 - version 2.4 - improved
+ * Modified on: 25/04/2018 - version 2.5 - added omitting recently selected villages in global context
  */
 
 function Faking(debug) {
@@ -99,9 +100,11 @@ function Faking(debug) {
                 fillExact: 'false',
                 skipVillages: 'true',
                 enableHistory: 'false',
-                historyLiveTime: '5'
+                historyLiveTime: '5',
+                historyContext: 'local'
             },
-            _historyKey: `HermitowskieFejki_${game_data.village.id}`,
+            _recentLocalKey: `HermitowskieFejki_${game_data.village.id}`,
+            _recentGlobalKey: `HermitowskieFejki`,
             init: function () {
                 try {
                     this.checkConfig();
@@ -172,7 +175,10 @@ function Faking(debug) {
                     throw 'Pula wiosek jest pusta z powodu wybranych ram czasowych';
 
                 if (this._toBoolean(this._settings.enableHistory)) {
-                    poll = this.omitLastlySelectedCoords(poll);
+                    if (this._settings.historyContext === 'global') {
+                        poll = this.omitRecentlySelectedCoords(poll, this._recentGlobalKey);
+                    }
+                    poll = this.omitRecentlySelectedCoords(poll, this._recentLocalKey);
                     if (poll.length === 0)
                         throw 'W puli wiosek zosta\u0142y tylko wioski, kt\u00F3re zosta\u0142y wybrane chwil\u0119 temu';
                 }
@@ -237,7 +243,7 @@ function Faking(debug) {
             _selectCoordinates: function (poll) {
                 if (poll.length === 0)
                     throw 'Lista wiosek spe\u0142niaj\u0105ce wymagania jest pusta';
-                let target = poll[Math.floor(Math.random() * poll.length)]
+                let target = poll[Math.floor(Math.random() * poll.length)];
                 this.save(target);
                 return target;
             },
@@ -441,29 +447,36 @@ function Faking(debug) {
             save: function (coords) {
                 if (!this._toBoolean(this._settings.enableHistory))
                     return;
-                let history = localStorage[this._historyKey];
-                let timestamp = Date.now();
-                let entry = {coords: coords, timestamp: timestamp};
-                history = history === undefined ? [] : JSON.parse(history);
-                history.push(entry);
-                localStorage[this._historyKey] = JSON.stringify(history);
+                let entry = {coords: coords, timestamp: Date.now()};
+                this._saveEntry(entry, this._recentLocalKey);
+                this._saveEntry(entry, this._recentGlobalKey);
             },
-            omitLastlySelectedCoords(poll) {
-                let history = localStorage[this._historyKey];
-                if (history === undefined)
+            _saveEntry: function (entry, key) {
+                let recent = localStorage[key];
+                recent = recent === undefined ? [] : JSON.parse(recent);
+                recent.push(entry);
+                localStorage[key] = JSON.stringify(recent);
+            },
+            omitRecentlySelectedCoords(poll, key) {
+                let recent = localStorage[key];
+                if (recent === undefined)
                     return poll;
-                history = JSON.parse(history);
+                recent = JSON.parse(recent);
                 let timestamp = Date.now();
                 let minutes = Number(this._settings.historyLiveTime);
                 if (isNaN(minutes))
                     minutes = Number(this._defaultSettings.historyLiveTime);
-                if ((history[0].timestamp + 1000 * 60 * minutes) < Date.now()) {
-                    // at least one element to delete
-                    history = history.filter(entry => (entry.timestamp + 1000 * 60 * minutes) > timestamp);
-                }
-                history = history.map(entry => entry.coords);
 
-                return poll.filter(poolCoords => !history.some(historyCoords => historyCoords === poolCoords));
+                if (recent.length > 0) {
+                    if ((recent[0].timestamp + 1000 * 60 * minutes) < Date.now()) {
+                        // at least one element to delete, update cache
+                        recent = recent.filter(entry => (entry.timestamp + 1000 * 60 * minutes) > timestamp);
+                        localStorage[key] = JSON.stringify(recent);
+                    }
+                }
+                recent = recent.map(entry => entry.coords);
+
+                return poll.filter(poolCoords => !recent.some(historyCoords => historyCoords === poolCoords));
             }
         };
     }
