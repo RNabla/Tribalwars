@@ -4,8 +4,9 @@
  * Modified on: 13/02/2017 - version 2.2 - added targeting specific players/allies
  * Modified on: 14/02/2018 - version 2.3 - added minimum village points threshold
  * Modified on: 08/03/2018 - version 2.4 - added omitting recently selected villages for a short period of time
- * Modified on: 14/03/2018 - version 2.4 - improved
+ * Modified on: 14/03/2018 - version 2.4 - improved performance
  * Modified on: 25/04/2018 - version 2.5 - added omitting recently selected villages in global context
+ * Modified on: 26/04/2018 - version 2.5 - improved 'skip village' logic
  */
 
 function Faking(debug) {
@@ -99,9 +100,8 @@ function Faking(debug) {
                 fillWith: game_data.units.filter(unit => ['militia', 'snob'].indexOf(unit) === -1).join(','),
                 fillExact: 'false',
                 skipVillages: 'true',
-                enableHistory: 'false',
                 historyLiveTime: '5',
-                historyContext: 'local'
+                historyContext: 'none' // none/local/global
             },
             _recentLocalKey: `HermitowskieFejki_${game_data.village.id}`,
             _recentGlobalKey: `HermitowskieFejki`,
@@ -110,7 +110,7 @@ function Faking(debug) {
                     this.checkConfig();
                     this.checkScreen();
                     if (this.isVillageOutOfGroup())
-                        this.goToNextVillage();
+                        this.goToNextVillage('Wioska poza grup\u0105. Przechodz\u0119 do nast\u0119pnej wioski z grupy');
                     let troops = this.selectTroops();
                     let target = this.selectTarget(troops);
                     this.displayTargetInfo(troops, target);
@@ -135,13 +135,15 @@ function Faking(debug) {
                     throw 'Skrypt jest zablokowany w tym przegl\u0105dzie';
             },
             isVillageOutOfGroup: function () {
-                return $('.jump_link')[0] !== undefined && this._toBoolean(this._settings.skipVillages);
+                return $('.jump_link')[0] !== undefined;
             },
-            goToNextVillage: function () {
-                let switchRight = $('#village_switch_right')[0];
-                let jumpLink = $('.jump_link')[0];
-                location = (switchRight && switchRight.href) || (jumpLink && jumpLink.href);
-                throw 'Przechodz\u0119 do nast\u0119pnej wioski z grupy';
+            goToNextVillage: function (message) {
+                if (this._toBoolean(this._settings.skipVillages)) {
+                    let switchRight = $('#village_switch_right')[0];
+                    let jumpLink = $('.jump_link')[0];
+                    location = (switchRight && switchRight.href) || (jumpLink && jumpLink.href);
+                }
+                throw message;
             },
             selectTroops: function () {
                 this._clearPlace();
@@ -154,7 +156,7 @@ function Faking(debug) {
                         }
                     }
                 }
-                throw 'Nie uda si\u0119 wybra\u0107 wystarczaj\u0105cej liczby jednostek';
+                this.goToNextVillage('Nie uda si\u0119 wybra\u0107 wystarczaj\u0105cej liczby jednostek');
             },
             selectTarget: function (troops) {
                 let poll = this._sanitizeCoordinates();
@@ -164,25 +166,33 @@ function Faking(debug) {
 
                 poll = this._targeting(poll);
 
-                if (poll.length === 0)
-                    throw 'Pula wiosek jest pusta';
+                if (poll.length === 0) {
+                    this.goToNextVillage('Pula wiosek jest pusta');
+                }
 
                 poll = poll.filter(coordinates =>
                     this._checkConstraints(this._calculateArrivalTime(coordinates, slowest))
                 );
 
-                if (poll.length === 0)
-                    throw 'Pula wiosek jest pusta z powodu wybranych ram czasowych';
-
-                if (this._toBoolean(this._settings.enableHistory)) {
-                    if (this._settings.historyContext === 'global') {
-                        poll = this.omitRecentlySelectedCoords(poll, this._recentGlobalKey);
-                    }
-                    poll = this.omitRecentlySelectedCoords(poll, this._recentLocalKey);
-                    if (poll.length === 0)
-                        throw 'W puli wiosek zosta\u0142y tylko wioski, kt\u00F3re zosta\u0142y wybrane chwil\u0119 temu';
+                if (poll.length === 0) {
+                    this.goToNextVillage('Pula wiosek jest pusta z powodu wybranych ram czasowych');
                 }
 
+                let contextKey = '';
+                switch (this._settings.historyContext) {
+                    case 'global':
+                        contextKey = this._recentGlobalKey;
+                        break;
+                    case 'local':
+                        contextKey = this._recentLocalKey;
+                        break;
+                }
+                if (contextKey !== '') {
+                    poll = this.omitRecentlySelectedCoords(poll, contextKey);
+                }
+                if (poll.length === 0) {
+                    this.goToNextVillage('W puli wiosek zosta\u0142y tylko wioski, kt\u00F3re zosta\u0142y wybrane chwil\u0119 temu');
+                }
                 return this._selectCoordinates(poll);
             },
             displayTargetInfo: function (troops, target) {
@@ -206,6 +216,10 @@ function Faking(debug) {
                 }
                 let hour = arrivalTime.getHours();
                 let minutes = arrivalTime.getMinutes();
+                console.log('day', arrivalTime.getDay());
+                console.log('month', arrivalTime.getMonth());
+                console.log('hour', hour);
+                console.log('minute', minutes);
                 if (hour < 10)
                     hour = '0' + hour;
                 if (minutes < 10)
@@ -241,8 +255,6 @@ function Faking(debug) {
                 return this._isInInterval(arrivalTime, timeInterval, this._parseTime);
             },
             _selectCoordinates: function (poll) {
-                if (poll.length === 0)
-                    throw 'Lista wiosek spe\u0142niaj\u0105ce wymagania jest pusta';
                 let target = poll[Math.floor(Math.random() * poll.length)];
                 this.save(target);
                 return target;
@@ -344,11 +356,11 @@ function Faking(debug) {
                 for (let property in this._defaultSettings) {
                     if (this._defaultSettings.hasOwnProperty(property)) {
                         if (userConfig[property] === undefined) {
-                            Log(`${property} not found, using default value : ${this._defaultSettings[property]}`);
+                            Log(`${property} not found, using default value : ${JSON.stringify(this._defaultSettings[property])}`);
                             this._settings[property] = JSON.parse(JSON.stringify(this._defaultSettings[property]));
                         }
                         else {
-                            Log(`${property} found, using user's value : ${userConfig[property]}`);
+                            Log(`${property} found, using user's value : ${JSON.stringify(this._defaultSettings[property])}`);
                             this._settings[property] = JSON.parse(JSON.stringify(userConfig[property]));
                         }
                     }
@@ -445,8 +457,6 @@ function Faking(debug) {
             },
 
             save: function (coords) {
-                if (!this._toBoolean(this._settings.enableHistory))
-                    return;
                 let entry = {coords: coords, timestamp: Date.now()};
                 this._saveEntry(entry, this._recentLocalKey);
                 this._saveEntry(entry, this._recentGlobalKey);
