@@ -7,6 +7,7 @@
  * Modified on: 14/03/2018 - version 2.4 - improved performance
  * Modified on: 25/04/2018 - version 2.5 - added omitting recently selected villages in global context
  * Modified on: 26/04/2018 - version 2.5 - improved 'skip village' logic
+ * Modified on: 26/04/2018 - version 3.0 -
  */
 
 function Faking(debug) {
@@ -79,7 +80,7 @@ function Faking(debug) {
     function CreateFaker(worldInfo) {
         return {
             _debugMode: debugMode,
-            _version: 'Keleris',
+            _version: 'amarantus',
             _owner: 699198069,
             _settings: {},
             _defaultSettings: {
@@ -206,25 +207,14 @@ function Faking(debug) {
                 }
                 this._selectUnits(troops);
                 let arrivalTime = this._calculateArrivalTime(target, this._slowestUnit(troops));
-                let travelTime = (arrivalTime - Date.now()) / (1000 * 3600);
-                let days = '';
-                if (travelTime > 24) {
-                    days = 'za 1 dzie\u0144 ';
-                }
-                if (travelTime > 48) {
-                    days = 'za ponad 2 dni ';
-                }
-                let hour = arrivalTime.getHours();
-                let minutes = arrivalTime.getMinutes();
-                console.log('day', arrivalTime.getDay());
-                console.log('month', arrivalTime.getMonth());
-                console.log('hour', hour);
-                console.log('minute', minutes);
-                if (hour < 10)
-                    hour = '0' + hour;
-                if (minutes < 10)
-                    minutes = '0' + minutes;
-                UI.SuccessMessage(`Atak dojdzie ${days}na ${hour}:${minutes}`)
+                let hour = this._twoDigitNumber(arrivalTime.getHours());
+                let minutes = this._twoDigitNumber(arrivalTime.getMinutes());
+                let day = this._twoDigitNumber(arrivalTime.getDay());
+                let month = this._twoDigitNumber(arrivalTime.getMonth());
+                UI.SuccessMessage(`Atak dojdzie ${day}.${month} na ${hour}:${minutes}`)
+            },
+            _twoDigitNumber: function(number) {
+                return `${Number(number) < 10 ? '0' : ''}${number}`;
             },
             _sanitizeCoordinates: function () {
                 let coordinates = this._settings.coords;
