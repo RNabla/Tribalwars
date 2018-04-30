@@ -7,7 +7,7 @@
  * Modified on: 14/03/2018 - version 2.4 - improved performance
  * Modified on: 25/04/2018 - version 2.5 - added omitting recently selected villages in global context
  * Modified on: 26/04/2018 - version 2.5 - improved 'skip village' logic
- * Modified on: 26/04/2018 - version 3.0 -
+ * Modified on: 26/04/2018 - version 2.6 - minor changes to selecting based on player/allies names
  */
 
 function Faking(debug) {
@@ -213,7 +213,7 @@ function Faking(debug) {
                 let month = this._twoDigitNumber(arrivalTime.getMonth());
                 UI.SuccessMessage(`Atak dojdzie ${day}.${month} na ${hour}:${minutes}`)
             },
-            _twoDigitNumber: function(number) {
+            _twoDigitNumber: function (number) {
                 return `${Number(number) < 10 ? '0' : ''}${number}`;
             },
             _sanitizeCoordinates: function () {
@@ -408,25 +408,31 @@ function Faking(debug) {
                 }
                 return true;
             },
+            _omitEmptyAndToLower: function(collection) {
+                return collection
+                    .map(name => name.trim())
+                    .filter(name => name.length !== 0)
+                    .map(name => name.toLowerCase());
+            },
             _targeting: function (poll) {
                 if (this._settings.allies === '' && this._settings.players === '') {
                     return poll;
                 }
 
-                let allies = this._settings.allies.split(',').map(entry => entry.trim()).filter(entry => entry.length !== 0);
-                let players = this._settings.players.split(',').map(entry => entry.trim()).filter(entry => entry.length !== 0);
+                let allies = this._omitEmptyAndToLower(this._settings.allies.split(','));
+                let players = this._omitEmptyAndToLower(this._settings.players.split(','));
 
                 Log('Targeting (allies):', allies);
                 Log('Targeting (players):', players);
 
                 let allyIds = allies.length === 0 ? [] : worldInfo.ally.filter(a =>
-                    allies.some(target => target === a.tag)
+                    allies.some(target => target === a.tag.toLowerCase())
                 ).map(a => a.id);
 
                 Log('Targeted (allies): ', allyIds);
 
                 let playerIds = players.length === 0 ? [] : worldInfo.player.filter(p =>
-                    players.some(target => target === p.name) ||
+                    players.some(target => target === p.name.toLowerCase()) ||
                     allyIds.some(target => target === p.allyId)
                 ).map(p => p.id);
 
