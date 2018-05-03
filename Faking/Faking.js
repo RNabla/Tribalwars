@@ -209,8 +209,8 @@ function Faking(debug) {
                 let arrivalTime = this._calculateArrivalTime(target, this._slowestUnit(troops));
                 let hour = this._twoDigitNumber(arrivalTime.getHours());
                 let minutes = this._twoDigitNumber(arrivalTime.getMinutes());
-                let day = this._twoDigitNumber(arrivalTime.getDay());
-                let month = this._twoDigitNumber(arrivalTime.getMonth());
+                let day = this._twoDigitNumber(arrivalTime.getDate());
+                let month = this._twoDigitNumber(arrivalTime.getMonth() + 1);
                 UI.SuccessMessage(`Atak dojdzie ${day}.${month} na ${hour}:${minutes}`)
             },
             _twoDigitNumber: function (number) {
