@@ -8,6 +8,7 @@
  * Modified on: 25/04/2018 - version 2.5 - added omitting recently selected villages in global context
  * Modified on: 26/04/2018 - version 2.5 - improved 'skip village' logic
  * Modified on: 26/04/2018 - version 2.6 - minor changes to selecting based on player/allies names
+ * Modified on: 14/06/2018 - version 2.7 - added distance option
  */
 
 function Faking(debug) {
@@ -43,8 +44,9 @@ function Faking(debug) {
     function ExecuteScript() {
         let files = ['unit', 'config'];
         if (typeof HermitowskieFejki !== 'undefined') {
-            let requirePlayerFiles = HermitowskieFejki.players !== undefined && HermitowskieFejki.players !== '';
             let requireAlliesFiles = HermitowskieFejki.allies !== undefined && HermitowskieFejki.allies !== '';
+            let requirePlayerFiles = HermitowskieFejki.players !== undefined && HermitowskieFejki.players !== ''
+                || requireAlliesFiles;
             if (requireAlliesFiles || requirePlayerFiles) {
                 files.push('villages');
                 if (requireAlliesFiles)
@@ -80,7 +82,7 @@ function Faking(debug) {
     function CreateFaker(worldInfo) {
         return {
             _debugMode: debugMode,
-            _version: 'amarantus',
+            _version: 'Sugarplum',
             _owner: 699198069,
             _settings: {},
             _defaultSettings: {
@@ -102,7 +104,9 @@ function Faking(debug) {
                 fillExact: 'false',
                 skipVillages: 'true',
                 historyLiveTime: '5',
-                historyContext: 'none' // none/local/global
+                historyContext: 'none',
+                minDistance: 'NaN',
+                maxDistance: 'NaN'
             },
             _recentLocalKey: `HermitowskieFejki_${game_data.village.id}`,
             _recentGlobalKey: `HermitowskieFejki`,
@@ -169,6 +173,12 @@ function Faking(debug) {
 
                 if (poll.length === 0) {
                     this.goToNextVillage('Pula wiosek jest pusta');
+                }
+
+                poll = this.filterDistance(poll);
+
+                if (poll.length === 0) {
+                    this.goToNextVillage('Wybrany zasi\u0119g nie pozwala na wyb\u00F3r wioski');
                 }
 
                 poll = poll.filter(coordinates =>
@@ -487,9 +497,31 @@ function Faking(debug) {
                 recent = recent.map(entry => entry.coords);
 
                 return poll.filter(poolCoords => !recent.some(historyCoords => historyCoords === poolCoords));
+            },
+            filterDistance: function (coords) {
+                let minDistance = Number(this._settings.minDistance);
+                let maxDistance = Number(this._settings.maxDistance);
+
+                let x = game_data.village.x;
+                let y = game_data.village.y;
+
+                let distance = function (coord, x, y) {
+                    let parts = coord.split('|');
+                    let dx = parts[0] - x;
+                    let dy = parts[1] - y;
+                    return Math.hypot(dx, dy);
+                };
+
+                return coords.filter(coord => {
+                    let dist = distance(coord, x, y);
+                    if (dist < minDistance) return false;
+                    if (dist > maxDistance) return false;
+                    return true;
+                });
             }
         };
     }
 }
+
 
 Faking(true);
