@@ -340,7 +340,7 @@ function Faking(debug) {
             },
             _checkVersion: function (userConfig) {
                 if (!userConfig['version'] || userConfig['version'] !== this._version)
-                    throw 'Yey! Wysz\u0142a nowa wersja skryptu :) Sprawd\u017A now\u0105 wersj\u0119 skryptu w skryptotece na forum plemion.';
+                    throw `Yey! Wysz\u0142a nowa wersja skryptu: ${this._version}<br/>Sprawd\u017A now\u0105 wersj\u0119 skryptu w skryptotece na forum plemion.`;
             },
             _fixConfig: function (userConfig) {
                 for (let property in this._defaultSettings) {
