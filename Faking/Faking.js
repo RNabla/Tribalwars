@@ -408,7 +408,7 @@ function Faking(debug) {
                 }
                 return true;
             },
-            _omitEmptyAndToLower: function(collection) {
+            _omitEmptyAndToLower: function (collection) {
                 return collection
                     .map(name => name.trim())
                     .filter(name => name.length !== 0)
@@ -425,16 +425,20 @@ function Faking(debug) {
                 Log('Targeting (allies):', allies);
                 Log('Targeting (players):', players);
 
-                let allyIds = allies.length === 0 ? [] : worldInfo.ally.filter(a =>
-                    allies.some(target => target === a.tag.toLowerCase())
-                ).map(a => a.id);
+                let allyIds = allies.length === 0
+                    ? []
+                    : worldInfo.ally.filter(a =>
+                        allies.some(target => target === a.tag.toLowerCase())
+                    ).map(a => a.id);
 
                 Log('Targeted (allies): ', allyIds);
 
-                let playerIds = players.length === 0 ? [] : worldInfo.player.filter(p =>
-                    players.some(target => target === p.name.toLowerCase()) ||
-                    allyIds.some(target => target === p.allyId)
-                ).map(p => p.id);
+                let playerIds = players.length === 0 && allies.length === 0
+                    ? []
+                    : worldInfo.player.filter(p =>
+                        players.some(target => target === p.name.toLowerCase()) ||
+                        allyIds.some(target => target === p.allyId)
+                    ).map(p => p.id);
 
                 Log('Targeted (players): ', playerIds);
 
