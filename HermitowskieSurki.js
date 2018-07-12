@@ -222,7 +222,7 @@ var HermitowskieSurki = {
     }
 
     generateTradeTable().then(trade_table => {
-        doAjax(trade_table, 300);
+        doAjax(trade_table, options.intervalMilliseconds);
     });
 
 })(TribalWars, HermitowskieSurki);
