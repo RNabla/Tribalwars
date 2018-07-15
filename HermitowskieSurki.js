@@ -192,14 +192,15 @@ var HermitowskieSurki = {
     function doAjax(trade_table, time_offset) {
         let i = 0;
         let intervalId = setInterval(() => {
-            if (i++ === trade_table.length) {
+            if (i === trade_table.length) {
                 clearInterval(intervalId);
                 return;
             }
             let entry = trade_table[i];
             let url = TribalWars.buildURL('POST', "market", {ajaxaction: 'map_send', village: entry.village.id});
             UI.SuccessMessage(`Supplying<br/>${entry.village.name} with:<br/>[wood: ${entry.form.wood}, stone: ${ entry.form.stone}, iron: ${entry.form.iron}]<br/>(${i + 1}/${trade_table.length})`);
-            $.post(url, entry.form)
+            $.post(url, entry.form);
+            i++;
         }, time_offset);
     }
 
