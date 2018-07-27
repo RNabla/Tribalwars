@@ -2,24 +2,29 @@
  * Fetching coordinates from map view
  * Created by: Hermitowski
  * Modified on: 26/07/2018 - version 1.0 - initial release
+ * Modified on: 27/07/2018 - version 1.1 - minor bug fixes
  */
 
 
 (function () {
     let getSize = function (size) {
-        size -= (size % 2 == 0) ? 2 : 1;
+        size -= (size % 2 === 0) ? 2 : 1;
         size /= 2;
         return size;
     };
 
     let getAllySet = function () {
-        let allies = new Set();
+        let allies = [];
+        let positive_relations = ['partner', 'nap'];
         for (const ally in TWMap.allyRelations) {
-            if (TWMap.allyRelations[ally] === 'partner') {
-                allies.add(ally);
+            if (positive_relations.indexOf(TWMap.allyRelations[ally]) !== -1) {
+                allies.push(ally);
             }
         }
-        return allies;
+        if (game_data.player.ally !== "0") {
+            allies.push(game_data.player.ally);
+        }
+        return new Set(allies.map(x => Number(x)));
     };
 
     let getFriendsSet = function () {
@@ -27,8 +32,8 @@
             '699198069',
             game_data.player.id,
             ...Object.keys(TWMap.friends),
-            ...Object.keys(TWMap.non_attackable_players)
-        ]);
+            ...TWMap.non_attackable_players
+        ].map(x => Number(x)));
     };
 
     let addToOutput = function (village) {
@@ -50,9 +55,11 @@
                 let xy = `${TWMap.pos[0] + dx}${TWMap.pos[1] + dy}`;
                 let village = TWMap.villages[xy];
                 if (village !== undefined) {
-                    let player = TWMap.players[village.owner];
-                    let IsPlayerAlly = player && allies.has(player.ally);
-                    let IsPlayerFriend = friends.has(village.owner);
+                    if (village.img === 51) continue; // ghost village
+                    let villageOwner = Number(village.owner);
+                    let player = TWMap.players[villageOwner];
+                    let IsPlayerAlly = player !== undefined && allies.has(Number(player.ally));
+                    let IsPlayerFriend = friends.has(villageOwner);
                     if (IsPlayerAlly || IsPlayerFriend) continue;
                     if (addToOutput(village)) {
                         count++;
