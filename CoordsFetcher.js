@@ -3,6 +3,7 @@
  * Created by: Hermitowski
  * Modified on: 26/07/2018 - version 1.0 - initial release
  * Modified on: 27/07/2018 - version 1.1 - minor bug fixes
+ * Modified on: 28/07/2018 - version 1.2 - ability to toggle on/off villages on mouse click
  */
 
 
@@ -40,9 +41,17 @@
         let coords = TWMap.CoordByXY(village.xy).join("|");
         if (set.has(coords)) return false;
         set.add(coords);
-        resetChangesSet.push(village);
-        let color = [255, 255, 255];
-        $("#map_village_" + village.id).css("background-color", "rgb(" + color[0] + "," + color[1] + "," + color[2] + ")");
+        resetChangesSet.add(village);
+        $("#map_village_" + village.id).css("background-color", "rgb(255,255,255)");
+        return true;
+    };
+
+    let removeFromOutput = function (village) {
+        let coords = TWMap.CoordByXY(village.xy).join("|");
+        if (!set.has(coords)) return false;
+        set.delete(coords);
+        resetChangesSet.delete(village);
+        MapHighlighter.colorVillage(village);
         return true;
     };
 
@@ -68,8 +77,9 @@
             }
         }
         UI.SuccessMessage(count > 0 ?
-            `Dodano ${count} wcześniej niespotkanych wiosek` :
-            'Nie znaleziono wcześniej niespotkanych wiosek. Spróbuj przesunać mapkę albo kliknij zakończ, aby wyświetlić zebrane do tej pory wioski');
+            `Dodano ${count} wcze\u015Bniej niespotkanych wiosek` :
+            'Nie znaleziono wcze\u015Bniej niespotkanych wiosek. Spr\u00F3buj przesuna\u0107 mapk\u0119 albo kliknij ' +
+            'zako\u0144cz, aby wy\u015Bwietli\u0107 zebrane do tej pory wioski');
     };
 
 
@@ -77,9 +87,11 @@
         let village = TWMap.villages[x * 1000 + y];
         if (village !== undefined) {
             if (addToOutput(village)) {
-                UI.SuccessMessage(`Dodano wioskę <b>${village.name}</b>`);
+                UI.SuccessMessage(`Dodano wiosk\u0119 <b>${village.name}</b>`);
             }
-
+            else if (removeFromOutput(village)) {
+                UI.SuccessMessage(`Usuni\u0119to wiosk\u0119 <b>${village.name}</b>`);
+            }
         }
         return false; // prevent redirection
     };
@@ -99,7 +111,7 @@
     let friends = getFriendsSet();
     let allies = getAllySet();
     let set = new Set();
-    let resetChangesSet = [];
+    let resetChangesSet = new Set();
     let oldClickHandler = TWMap.map.handler.onClick;
     let map = $('#HermitowskieCoordy');
     if (!map.length) {
@@ -109,7 +121,7 @@
         });
         let endButton = $('<button>', {
             class: 'btn',
-            text: 'Zakończ'
+            text: 'Zako\u0144cz'
         });
         scanButton.click(scanMap);
         endButton.click(printCoords);
