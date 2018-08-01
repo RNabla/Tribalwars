@@ -9,6 +9,7 @@
  * Modified on: 26/04/2018 - version 2.5 - improved 'skip village' logic
  * Modified on: 26/04/2018 - version 2.6 - minor changes to selecting based on player/allies names
  * Modified on: 14/06/2018 - version 2.7 - added distance option
+ * Modified on: 01/08/2018 - version 2.8 - added safeguard option
  */
 
 function Faking(debug) {
@@ -106,7 +107,8 @@ function Faking(debug) {
                 historyLiveTime: '5',
                 historyContext: 'none',
                 minDistance: 'NaN',
-                maxDistance: 'NaN'
+                maxDistance: 'NaN',
+                safeguard: {}
             },
             _recentLocalKey: `HermitowskieFejki_${game_data.village.id}`,
             _recentGlobalKey: `HermitowskieFejki`,
@@ -406,6 +408,13 @@ function Faking(debug) {
                 let obj = {};
                 for (let unit of units) {
                     obj[unit] = Number(this._getInput(unit).attr('data-all-count'));
+                    if (this._settings.safeguard.hasOwnProperty(unit)) {
+                        let threshold = Number(this._settings.safeguard[unit]);
+                        if (isNaN(threshold) || threshold < 0){
+                            throw `Settings: safeguard: ${unit} : ${this._settings.safeguard[unit]}`;
+                        }
+                        obj[unit] = Math.max(0, obj[unit] - threshold);
+                    }
                 }
                 return obj;
             },
