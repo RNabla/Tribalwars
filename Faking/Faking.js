@@ -310,6 +310,7 @@ function Faking(debug) {
                         name = parts[0];
                         quantity = Number(parts[1]);
                     }
+                    name = name.trim();
                     fillTable.push([name, quantity]);
                 }
                 return fillTable;
@@ -351,7 +352,7 @@ function Faking(debug) {
                 return speed;
             },
             _checkVersion: function (userConfig) {
-                if (!userConfig['version'] || userConfig['version'] !== this._version)
+                if (!userConfig['version'] || userConfig['version'].trim() !== this._version)
                     throw `Yey! Wysz\u0142a nowa wersja skryptu: ${this._version}<br/>Sprawd\u017A now\u0105 wersj\u0119 skryptu w skryptotece na forum plemion.`;
             },
             _fixConfig: function (userConfig) {
