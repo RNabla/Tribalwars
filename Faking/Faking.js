@@ -10,7 +10,7 @@
  * Modified on: 26/04/2018 - version 2.6 - minor changes to selecting based on player/allies names
  * Modified on: 14/06/2018 - version 2.7 - added distance option
  * Modified on: 01/08/2018 - version 2.8 - added safeguard option
- * Modified on: 04/08/2018 - version 2.9 - redesign of contexts 
+ * Modified on: 04/08/2018 - version 2.9 - redesign of contexts
  */
 
 function Faking(debug) {
@@ -177,7 +177,7 @@ function Faking(debug) {
                     this.goToNextVillage('Pula wiosek jest pusta');
                 }
 
-                poll = this.filterDistance(poll);
+                poll = this._filterDistance(poll);
 
                 if (poll.length === 0) {
                     this.goToNextVillage('Wybrany zasi\u0119g nie pozwala na wyb\u00F3r wioski');
@@ -191,8 +191,8 @@ function Faking(debug) {
                     this.goToNextVillage('Pula wiosek jest pusta z powodu wybranych ram czasowych');
                 }
 
-                poll = this.applyLocalContext(poll);
-                poll = this.applyCustomContexts(poll);
+                poll = this._applyLocalContext(poll);
+                poll = this._applyCustomContexts(poll);
 
                 if (poll.length === 0) {
                     this.goToNextVillage('W puli wiosek zosta\u0142y tylko wioski, kt\u00F3re zosta\u0142y wybrane chwil\u0119 temu');
@@ -249,7 +249,7 @@ function Faking(debug) {
             },
             _selectCoordinates: function (poll) {
                 let target = poll[Math.floor(Math.random() * poll.length)];
-                this.save(target);
+                this._save(target);
                 return target;
             },
             _clearPlace: function () {
@@ -426,13 +426,12 @@ function Faking(debug) {
                     .map(name => name.toLowerCase());
             },
             _targeting: function (poll) {
-                // TODO: change order
-                if (this._settings.allies === '' && this._settings.players === '') {
-                    return poll;
-                }
-
                 let allies = this._omitEmptyAndToLower(this._settings.allies.split(','));
                 let players = this._omitEmptyAndToLower(this._settings.players.split(','));
+
+                if (allies.length === 0 && players.length === 0) {
+                    return poll;
+                }
 
                 Log('Targeting (allies):', allies);
                 Log('Targeting (players):', players);
@@ -467,8 +466,7 @@ function Faking(debug) {
 
                 return [... new Set([...poll, ...villages])];
             },
-
-            save: function (coords) {
+            _save: function (coords) {
                 let entry = {coords: coords, timestamp: Date.now()};
                 this._saveEntry(entry, this._localContextKey);
                 let customContexts = this._getCustomContexts();
@@ -493,20 +491,20 @@ function Faking(debug) {
                         }
                     });
             },
-            applyLocalContext: function (poll) {
-                return this.omitRecentlySelectedCoords(poll, {
+            _applyLocalContext: function (poll) {
+                return this._omitRecentlySelectedCoords(poll, {
                     key: this._localContextKey,
                     liveTime: Number(this._settings.localContext)
                 });
             },
-            applyCustomContexts: function (poll) {
+            _applyCustomContexts: function (poll) {
                 let customContexts = this._getCustomContexts();
                 for (let customContext of customContexts) {
-                    poll = this.omitRecentlySelectedCoords(poll, customContext);
+                    poll = this._omitRecentlySelectedCoords(poll, customContext);
                 }
                 return poll;
             },
-            omitRecentlySelectedCoords(poll, context) {
+            _omitRecentlySelectedCoords(poll, context) {
                 if (isNaN(context.liveTime) || context.liveTime <= 0) {
                     return poll;
                 }
@@ -524,13 +522,13 @@ function Faking(debug) {
                     }
                 }
 
-                return this.exclude(poll, recent.map(entry => entry.coords));
+                return this._exclude(poll, recent.map(entry => entry.coords));
             },
-            exclude: function (poll, excluded) {
+            _exclude: function (poll, excluded) {
                 let banned = new Set([...excluded]);
                 return poll.filter(pollCoords => !banned.has(pollCoords));
             },
-            filterDistance: function (coords) {
+            _filterDistance: function (coords) {
                 let minDistance = Number(this._settings.minDistance);
                 let maxDistance = Number(this._settings.maxDistance);
 
