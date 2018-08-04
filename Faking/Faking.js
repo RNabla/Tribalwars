@@ -11,6 +11,7 @@
  * Modified on: 14/06/2018 - version 2.7 - added distance option
  * Modified on: 01/08/2018 - version 2.8 - added safeguard option
  * Modified on: 04/08/2018 - version 2.9 - redesign of contexts
+ * Modified on: 04/08/2018 - version 2.10 - added bounding boxes
  */
 
 function Faking(debug) {
@@ -109,7 +110,8 @@ function Faking(debug) {
                 maxDistance: 'NaN',
                 safeguard: {},
                 localContext: '0',
-                customContexts: ''
+                customContexts: '',
+                boundingBoxes: []
             },
             _localContextKey: `HermitowskieFejki_${game_data.village.id}`,
             init: function () {
@@ -175,6 +177,12 @@ function Faking(debug) {
 
                 if (poll.length === 0) {
                     this.goToNextVillage('Pula wiosek jest pusta');
+                }
+
+                poll = this._applyBoundingBoxes(poll);
+
+                if (poll.length === 0) {
+                    this.goToNextVillage('Pula wiosek jest pusta z powodu wybranych prostok\u0105t\u00F3w obcinaj\u0105cych');
                 }
 
                 poll = this._filterDistance(poll);
@@ -548,7 +556,28 @@ function Faking(debug) {
                     if (dist > maxDistance) return false;
                     return true;
                 });
-            }
+            },
+            _applyBoundingBoxes: function (poll) {
+                if (this._settings.boundingBoxes.length === 0) {
+                     return poll;
+                }
+
+                let coords = poll.map(c => {
+                    let parts = c.split('|');
+                    return {
+                        x: Number(parts[0]),
+                        y: Number(parts[1])
+                    }
+                });
+
+                coords = coords.filter(c => {
+                    return this._settings.boundingBoxes.some(boundingBox => {
+                        return (boundingBox.minX <= c.x && c.x <= boundingBox.maxX) &&
+                            (boundingBox.minY <= c.y && c.y <= boundingBox.maxY);
+                    });
+                });
+                return coords.map(c => `${c.x}|${c.y}`);
+            },
         };
     }
 }
