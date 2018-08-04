@@ -10,6 +10,7 @@
  * Modified on: 26/04/2018 - version 2.6 - minor changes to selecting based on player/allies names
  * Modified on: 14/06/2018 - version 2.7 - added distance option
  * Modified on: 01/08/2018 - version 2.8 - added safeguard option
+ * Modified on: 04/08/2018 - version 2.9 - redesign of contexts 
  */
 
 function Faking(debug) {
@@ -30,7 +31,7 @@ function Faking(debug) {
         Log('Fetching GetWorldInfo from network');
         UI.SuccessMessage('Pobieranie skryptu... ');
         $.ajax({
-            url: '',
+            url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/MapFiles.js',
             dataType: 'script',
         }).then(ExecuteScript);
     }
@@ -104,14 +105,13 @@ function Faking(debug) {
                 fillWith: game_data.units.filter(unit => ['militia', 'snob'].indexOf(unit) === -1).join(','),
                 fillExact: 'false',
                 skipVillages: 'true',
-                historyLiveTime: '5',
-                historyContext: 'none',
                 minDistance: 'NaN',
                 maxDistance: 'NaN',
-                safeguard: {}
+                safeguard: {},
+                localContext: '0',
+                customContexts: ''
             },
-            _recentLocalKey: `HermitowskieFejki_${game_data.village.id}`,
-            _recentGlobalKey: `HermitowskieFejki`,
+            _localContextKey: `HermitowskieFejki_${game_data.village.id}`,
             init: function () {
                 try {
                     this.checkConfig();
@@ -191,18 +191,9 @@ function Faking(debug) {
                     this.goToNextVillage('Pula wiosek jest pusta z powodu wybranych ram czasowych');
                 }
 
-                let contextKey = '';
-                switch (this._settings.historyContext) {
-                    case 'global':
-                        contextKey = this._recentGlobalKey;
-                        break;
-                    case 'local':
-                        contextKey = this._recentLocalKey;
-                        break;
-                }
-                if (contextKey !== '') {
-                    poll = this.omitRecentlySelectedCoords(poll, contextKey);
-                }
+                poll = this.applyLocalContext(poll);
+                poll = this.applyCustomContexts(poll);
+
                 if (poll.length === 0) {
                     this.goToNextVillage('W puli wiosek zosta\u0142y tylko wioski, kt\u00F3re zosta\u0142y wybrane chwil\u0119 temu');
                 }
@@ -411,7 +402,7 @@ function Faking(debug) {
                     obj[unit] = Number(this._getInput(unit).attr('data-all-count'));
                     if (this._settings.safeguard.hasOwnProperty(unit)) {
                         let threshold = Number(this._settings.safeguard[unit]);
-                        if (isNaN(threshold) || threshold < 0){
+                        if (isNaN(threshold) || threshold < 0) {
                             throw `Settings: safeguard: ${unit} : ${this._settings.safeguard[unit]}`;
                         }
                         obj[unit] = Math.max(0, obj[unit] - threshold);
@@ -435,6 +426,7 @@ function Faking(debug) {
                     .map(name => name.toLowerCase());
             },
             _targeting: function (poll) {
+                // TODO: change order
                 if (this._settings.allies === '' && this._settings.players === '') {
                     return poll;
                 }
@@ -478,8 +470,11 @@ function Faking(debug) {
 
             save: function (coords) {
                 let entry = {coords: coords, timestamp: Date.now()};
-                this._saveEntry(entry, this._recentLocalKey);
-                this._saveEntry(entry, this._recentGlobalKey);
+                this._saveEntry(entry, this._localContextKey);
+                let customContexts = this._getCustomContexts();
+                for (let customContext of customContexts) {
+                    this._saveEntry(entry, customContext.key);
+                }
             },
             _saveEntry: function (entry, key) {
                 let recent = localStorage[key];
@@ -487,26 +482,53 @@ function Faking(debug) {
                 recent.push(entry);
                 localStorage[key] = JSON.stringify(recent);
             },
-            omitRecentlySelectedCoords(poll, key) {
-                let recent = localStorage[key];
+            _getCustomContexts: function () {
+                return this._settings.customContexts.split(',')
+                    .filter(value => value.length !== 0)
+                    .map(entry => entry.split(":"))
+                    .map(entry => {
+                        return {
+                            key: `HermitowskieFejki_${entry[0].trim()}`,
+                            liveTime: Number(entry[1])
+                        }
+                    });
+            },
+            applyLocalContext: function (poll) {
+                return this.omitRecentlySelectedCoords(poll, {
+                    key: this._localContextKey,
+                    liveTime: Number(this._settings.localContext)
+                });
+            },
+            applyCustomContexts: function (poll) {
+                let customContexts = this._getCustomContexts();
+                for (let customContext of customContexts) {
+                    poll = this.omitRecentlySelectedCoords(poll, customContext);
+                }
+                return poll;
+            },
+            omitRecentlySelectedCoords(poll, context) {
+                if (isNaN(context.liveTime) || context.liveTime <= 0) {
+                    return poll;
+                }
+                let recent = localStorage[context.key];
                 if (recent === undefined)
                     return poll;
                 recent = JSON.parse(recent);
                 let timestamp = Date.now();
-                let minutes = Number(this._settings.historyLiveTime);
-                if (isNaN(minutes))
-                    minutes = Number(this._defaultSettings.historyLiveTime);
 
                 if (recent.length > 0) {
-                    if ((recent[0].timestamp + 1000 * 60 * minutes) < Date.now()) {
+                    if ((recent[0].timestamp + 1000 * 60 * context.liveTime) < Date.now()) {
                         // at least one element to delete, update cache
-                        recent = recent.filter(entry => (entry.timestamp + 1000 * 60 * minutes) > timestamp);
-                        localStorage[key] = JSON.stringify(recent);
+                        recent = recent.filter(entry => (entry.timestamp + 1000 * 60 * context.liveTime) > timestamp);
+                        localStorage[context.key] = JSON.stringify(recent);
                     }
                 }
-                recent = recent.map(entry => entry.coords);
 
-                return poll.filter(poolCoords => !recent.some(historyCoords => historyCoords === poolCoords));
+                return this.exclude(poll, recent.map(entry => entry.coords));
+            },
+            exclude: function (poll, excluded) {
+                let banned = new Set([...excluded]);
+                return poll.filter(pollCoords => !banned.has(pollCoords));
             },
             filterDistance: function (coords) {
                 let minDistance = Number(this._settings.minDistance);
@@ -532,6 +554,5 @@ function Faking(debug) {
         };
     }
 }
-
 
 Faking(true);
