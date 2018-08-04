@@ -12,6 +12,7 @@
  * Modified on: 01/08/2018 - version 2.8 - added safeguard option
  * Modified on: 04/08/2018 - version 2.9 - redesign of contexts
  * Modified on: 04/08/2018 - version 2.10 - added bounding boxes
+ * Modified on: 04/08/2018 - version 2.11 - added 'excludeCoords'
  */
 
 function Faking(debug) {
@@ -111,7 +112,8 @@ function Faking(debug) {
                 safeguard: {},
                 localContext: '0',
                 customContexts: '',
-                boundingBoxes: []
+                boundingBoxes: [],
+                excludeCoords: ''
             },
             _localContextKey: `HermitowskieFejki_${game_data.village.id}`,
             init: function () {
@@ -168,7 +170,7 @@ function Faking(debug) {
                 this.goToNextVillage('Nie uda si\u0119 wybra\u0107 wystarczaj\u0105cej liczby jednostek');
             },
             selectTarget: function (troops) {
-                let poll = this._sanitizeCoordinates();
+                let poll = this._sanitizeCoordinates(this._settings.coords);
                 let slowest = this._slowestUnit(troops);
                 if (slowest === 0)
                     throw 'Wydaje si\u0119, \u017Ce obecne ustawienia nie pozwalaj\u0105 na wyb\u00F3r jednostek';
@@ -183,6 +185,12 @@ function Faking(debug) {
 
                 if (poll.length === 0) {
                     this.goToNextVillage('Pula wiosek jest pusta z powodu wybranych prostok\u0105t\u00F3w obcinaj\u0105cych');
+                }
+
+                poll = this._excludeCoordinates(poll);
+
+                if (poll.length === 0) {
+                    this.goToNextVillage('Pola wiosek jest pusta z powodu zablokowanych wsp\u00F3\u0142rz\u0119dnych');
                 }
 
                 poll = this._filterDistance(poll);
@@ -227,8 +235,7 @@ function Faking(debug) {
             _twoDigitNumber: function (number) {
                 return `${Number(number) < 10 ? '0' : ''}${number}`;
             },
-            _sanitizeCoordinates: function () {
-                let coordinates = this._settings.coords;
+            _sanitizeCoordinates: function (coordinates) {
                 let coordsRegex = new RegExp(/\d{1,3}\|\d{1,3}/g);
                 let match = coordinates.match(coordsRegex);
                 return match == null
@@ -578,6 +585,10 @@ function Faking(debug) {
                 });
                 return coords.map(c => `${c.x}|${c.y}`);
             },
+            _excludeCoordinates: function(poll) {
+                let coords = this._sanitizeCoordinates(this._settings.excludeCoords)
+                return this._exclude(poll, coords);
+            }
         };
     }
 }
