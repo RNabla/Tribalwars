@@ -13,6 +13,7 @@
  * Modified on: 04/08/2018 - version 2.9 - redesign of contexts
  * Modified on: 04/08/2018 - version 2.10 - added bounding boxes
  * Modified on: 04/08/2018 - version 2.11 - added 'excludeCoords'
+ * --- VERSION 3.0 ---
  */
 
 function Faking(debug) {
@@ -86,7 +87,7 @@ function Faking(debug) {
     function CreateFaker(worldInfo) {
         return {
             _debugMode: debugMode,
-            _version: 'Sugarplum',
+            _version: 'Honey',
             _owner: 699198069,
             _settings: {},
             _defaultSettings: {
