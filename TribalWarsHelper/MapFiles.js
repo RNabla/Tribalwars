@@ -16,9 +16,8 @@
  * @param debug
  * @returns {Promise<[any , any , any , any , any , any , any , any , any , any]>}
  */
-
-
 function GetWorldInfo(requests, debug) {
+    let cache_key = 'MapFiles_CacheControl';
     let debugMode = (game_data.player.id === '699198069' || game_data.player.sitter === '699198069') && debug === true;
     let _regex = new RegExp(/\+/, 'g');
     let _bonuses = {
@@ -103,6 +102,53 @@ function GetWorldInfo(requests, debug) {
         }
     }
 
+    function GetData(path, expirationTime, isCacheRequired) {
+        let key = `MapFiles_${path}`;
+        return IsCacheValid(key) ?
+            new Promise(resolve => resolve(localStorage[key])) :
+            fetch(`https://${location.host}/${path}`).then(t => t.text()).then(data => {
+                //Log(`Fetching ${path} over network`);
+                let dataInsertionSucceed = true;
+                try {
+                    localStorage.setItem(key, data);
+                }
+                catch (e) {
+                    dataInsertionSucceed = false;
+                    console.log('data insertion failed, cacheRequired: ', isCacheRequired);
+                    if (isCacheRequired) {
+                        throw e;
+                    }
+                }
+                if (dataInsertionSucceed) {
+                    SetupCache(key, expirationTime);
+                }
+                return data;
+                });
+    }
+
+    function GetCacheControl() {
+        let cacheControl = localStorage.getItem(cache_key);
+        if (cacheControl == null) {
+            return {};
+        }
+        return JSON.parse(cacheControl);
+    }
+
+    function IsCacheValid(key) {
+        let cacheControl = GetCacheControl();
+        if (cacheControl[key] === undefined) {
+            return false;
+        }
+        return cacheControl[key] >= Date.now();
+    }
+
+
+    function SetupCache(dataKey, expirationTime) {
+        let cacheControl = GetCacheControl();
+        cacheControl[dataKey] = Date.now() + expirationTime * 3600 * 1000;
+        localStorage[cache_key] = JSON.stringify(cacheControl);
+    }
+
     function Parser(rawContent, customParser) {
         if (customParser === undefined) {
             return ParseXML(rawContent);
@@ -182,3 +228,4 @@ function GetWorldInfo(requests, debug) {
         return decodeURIComponent(encodedString.replace(_regex, ' '));
     }
 }
+
