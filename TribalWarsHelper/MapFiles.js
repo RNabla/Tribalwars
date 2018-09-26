@@ -1,24 +1,51 @@
 /**
- * Helper for downloading world info in tribalwars - browser game
+ * Helper for downloading world info in TribalWars
+ * Created by: Hermitowski
+ * Modified on: 14/02/2018 - version 1.0
+ * Modified on: 26/09/2018 - version 1.1 - adding mandatory caching
  */
 
-
-/**
- * @param requests
- * array of files to download, eg. ['player', 'ally']
- * 'player'     -> /map/player.txt
- * 'village'    -> /map/village.txt
- * 'ally'       -> /map/ally.txt
- * 'config'     -> /interface.php?func=get_config
- * 'unit'       -> /interface.php?func=get_unit_info
- * 'building'   -> /interface.php?func=get_building_info
- * 'all'        -> all of above (default, if requests are blank)
- * @param debug
- * @returns {Promise<[any , any , any , any , any , any , any , any , any , any]>}
+/*
+ * This function takes object in which key should map to one of this entities, value for that key should be
+ * cache options. (for now it's only caching option, maybe there will be more option in the feature)
+ *
+ * Entities are:
+ * 'player'         -> /map/player.txt
+ * 'village'        -> /map/village.txt
+ * 'ally'           -> /map/ally.txt
+ * 'config'         -> /interface.php?func=get_config
+ * 'unit_info'      -> /interface.php?func=get_unit_info
+ * 'building_info'  -> /interface.php?func=get_building_info
+ *
+ *  Sample configs:
+ *  let config = {
+ *      player: {
+ *         isCacheMandatory: true
+ *      },
+ *      village: {
+ *          isCacheMandatory: true
+ *      },
+ *      ally: {
+ *          isCacheMandatory: true
+ *      },
+ *      config: {
+ *          isCacheMandatory: true
+ *      },
+ *      unit_info: {
+ *          isCacheMandatory: true
+ *      },
+ *      building_info: {
+ *          isCacheMandatory: true
+ *      },
+ * };
+ *
+ * if 'isCacheMandatory' is set to false it means that script will NOT fail in case of quota restriction of
+ * local storage (script will return parsed data), anyway if your script is used large amount of times in a short
+ * period of time you should probably left this value set to true
  */
-function GetWorldInfo(requests, debug) {
-    let cache_key = 'MapFiles_CacheControl';
-    let debugMode = (game_data.player.id === '699198069' || game_data.player.sitter === '699198069') && debug === true;
+
+function GetWorldInfo(config) {
+    let _cache_key = 'MapFiles_CacheControl';
     let _regex = new RegExp(/\+/, 'g');
     let _bonuses = {
         0: 'none',
@@ -32,102 +59,99 @@ function GetWorldInfo(requests, debug) {
         8: 'eco',
         9: 'market',
     };
-    let startTime = Date.now();
-    Log('Setting up cache');
-    localStorage['GetWorldInfo'] = GetWorldInfo.toString();
+    let _feature2path = {
+        player: 'map/player.txt',
+        village: 'map/village.txt',
+        ally: 'map/ally.txt',
+        config: 'interface.php?func=get_config',
+        building_info: 'interface.php?func=get_building_info',
+        unit_info: 'interface.php?func=get_unit_info'
+    };
+    let _feature2expirationTime = {
+        player: 2 * 60 * 60 * 1000,
+        village: 2 * 60 * 60 * 1000,
+        ally: 2 * 60 * 60 * 1000,
+        config: 24 * 60 * 60 * 1000,
+        building_info: 24 * 60 * 60 * 1000,
+        unit_info: 24 * 60 * 60 * 1000
+    };
+    let _feature2parser = {
+        player: ParsePlayer,
+        village: ParseVillage,
+        ally: ParseAlly,
+    };
 
+    function MapFeatureToPath(feature) {
+        if (_feature2path.hasOwnProperty(feature)) {
+            return _feature2path[feature];
+        }
+    }
 
-    if (requests === undefined)
-        requests = ['all'];
-    let require = [
-        Feature(['player', 'players', 'all'], 'map/player.txt', 2, ParsePlayer),
-        Feature(['ally', 'allies', 'all'], 'map/ally.txt', 2, ParseAlly),
-        Feature(['village', 'villages', 'all'], 'map/village.txt', 2, ParseVillage),
-        Feature(['general', 'config', 'configs', 'all'], 'interface.php?func=get_config', 48),
-        Feature(['building', 'buildings', 'configs', 'all'], 'interface.php?func=get_building_info', 48),
-        Feature(['unit', 'units', 'configs', 'all'], 'interface.php?func=get_unit_info', 48),
-    ];
+    function MapFeatureToExpirationTime(feature) {
+        if (_feature2expirationTime.hasOwnProperty(feature)) {
+            return _feature2expirationTime[feature];
+        }
+    }
 
-    return Promise.all(require).then(results => {
-        let endTime = Date.now();
-        Log('Execution time:', endTime - startTime);
-        return {
-            'player': results[0],
-            'ally': results[1],
-            'village': results[2],
-            'config': {
-                'general': results[3],
-                'building': results[4],
-                'unit': results[5]
+    function MapFeatureToParser(feature) {
+        if (_feature2parser.hasOwnProperty(feature)) {
+            return _feature2parser[feature];
+        }
+        return undefined;
+    }
+
+    function SaveToLocalStorage(key, item, isCacheMandatory) {
+        let dataInsertionSucceed = true;
+        try {
+            localStorage.setItem(key, item);
+        }
+        catch (e) {
+            if (isCacheMandatory) {
+                throw e;
             }
-        };
-    }).catch(e => {
-        return {error: e};
-    });
+            dataInsertionSucceed = false;
+        }
+        return dataInsertionSucceed;
+    }
 
-    function Feature(keywords, path, expirationTime, parser) {
-        if (requests.filter(request => keywords.includes(request.toLowerCase())).length === 0) {
+    function GetFeatureIfRequested(feature) {
+        let featureConfig = config[feature];
+        if (featureConfig === undefined) {
             return new Promise(resolve => resolve(null));
         }
-        return DownloadData(path, expirationTime, parser);
-    }
-
-    function Log() {
-        if (debugMode)
-            console.log('MapFiles:', ...arguments);
-    }
-
-    function DownloadData(path, expirationTime, customParser) {
-        let timestampKey = `${path}${'timestamp'}`;
-        let dataKey = `${path}${'data'}`;
-        let timestamp = localStorage[timestampKey];
-        if (timestamp === undefined || (Number(timestamp) + 3600 * 1000 * expirationTime) < Date.now()) {
-            return fetch(`https://${location.host}/${path}`).then(t => t.text()).then(text => {
-                Log(`Fetching ${path} over network`);
-                let content = Parser(text, customParser);
-                localStorage[dataKey] = JSON.stringify(content);
-                localStorage[timestampKey] = Date.now();
-                return content;
-            });
+        let path = MapFeatureToPath(feature);
+        let expirationTime = MapFeatureToExpirationTime(feature);
+        let parser = MapFeatureToParser(feature);
+        let isCacheMandatory = true;
+        if (featureConfig.hasOwnProperty('isCacheMandatory') && !featureConfig['isCacheMandatory']) {
+            isCacheMandatory = false;
         }
-        else {
-            return new Promise(function (resolve) {
-                Log(`Fetching ${path} over cache`);
-                let data = localStorage[dataKey];
-                if (data === undefined) {
-                    throw `Missing ${path} from cache`;
-                }
-                resolve(JSON.parse(data));
-            });
-        }
+        return GetData(path, expirationTime, isCacheMandatory, parser);
     }
 
-    function GetData(path, expirationTime, isCacheRequired) {
+    function GetDataFromLocalStorage(key) {
+        return new Promise(resolve => resolve(JSON.parse(localStorage[key])))
+    }
+
+    function GetDataFromServer(key, path, expirationTime, isCacheMandatory, parser) {
+        return fetch(`https://${location.host}/${path}`).then(t => t.text()).then(rawData => {
+            let data = Parser(rawData, parser);
+            if (SaveToLocalStorage(key, JSON.stringify(data), isCacheMandatory)) {
+                SetupCacheControl(key, expirationTime);
+            }
+            return data;
+        });
+    }
+
+    function GetData(path, expirationTime, isCacheMandatory, parser) {
         let key = `MapFiles_${path}`;
-        return IsCacheValid(key) ?
-            new Promise(resolve => resolve(localStorage[key])) :
-            fetch(`https://${location.host}/${path}`).then(t => t.text()).then(data => {
-                //Log(`Fetching ${path} over network`);
-                let dataInsertionSucceed = true;
-                try {
-                    localStorage.setItem(key, data);
-                }
-                catch (e) {
-                    dataInsertionSucceed = false;
-                    console.log('data insertion failed, cacheRequired: ', isCacheRequired);
-                    if (isCacheRequired) {
-                        throw e;
-                    }
-                }
-                if (dataInsertionSucceed) {
-                    SetupCache(key, expirationTime);
-                }
-                return data;
-                });
+        return IsCacheValid(key)
+            ? GetDataFromLocalStorage(key)
+            : GetDataFromServer(key, path, expirationTime, isCacheMandatory, parser);
     }
 
     function GetCacheControl() {
-        let cacheControl = localStorage.getItem(cache_key);
+        let cacheControl = localStorage.getItem(_cache_key);
         if (cacheControl == null) {
             return {};
         }
@@ -136,17 +160,32 @@ function GetWorldInfo(requests, debug) {
 
     function IsCacheValid(key) {
         let cacheControl = GetCacheControl();
-        if (cacheControl[key] === undefined) {
-            return false;
-        }
-        return cacheControl[key] >= Date.now();
+        return cacheControl.hasOwnProperty(key)
+            && Number(cacheControl[key]) >= Date.now();
     }
 
-
-    function SetupCache(dataKey, expirationTime) {
+    function InvalidateCache() {
         let cacheControl = GetCacheControl();
-        cacheControl[dataKey] = Date.now() + expirationTime * 3600 * 1000;
-        localStorage[cache_key] = JSON.stringify(cacheControl);
+        for (const key in cacheControl) {
+            if (cacheControl.hasOwnProperty(key)
+                && !IsCacheValid(key)) {
+                localStorage.removeItem(key);
+            }
+        }
+    }
+
+    function SetupCacheControl(dataKey, expirationTime) {
+        let cacheControl = GetCacheControl();
+        cacheControl[dataKey] = Date.now() + expirationTime;
+        localStorage[_cache_key] = JSON.stringify(cacheControl);
+    }
+
+    function SetupScriptCache() {
+        if (localStorage.getItem('GetWorldInfo') === null) {
+            if (SaveToLocalStorage('GetWorldInfo', GetWorldInfo.toString(), true)) {
+                SetupCacheControl('GetWorldInfo', 24 * 60 * 60 * 1000);
+            }
+        }
     }
 
     function Parser(rawContent, customParser) {
@@ -198,13 +237,8 @@ function GetWorldInfo(requests, debug) {
             coords: `${Number(raw[2])}|${Number(raw[3])}`,
             playerId: Number(raw[4]),
             points: Number(raw[5]),
-            bonus: ParseBonus(Number(raw[6]))
+            bonus: _bonuses[(Number(raw[6]))]
         };
-    }
-
-
-    function ParseBonus(id) {
-        return _bonuses[id];
     }
 
     function ParseXML(xmlString) {
@@ -227,5 +261,29 @@ function GetWorldInfo(requests, debug) {
     function _decode(encodedString) {
         return decodeURIComponent(encodedString.replace(_regex, ' '));
     }
-}
 
+
+    SetupScriptCache();
+    InvalidateCache();
+    let requests = [
+        GetFeatureIfRequested('player'),
+        GetFeatureIfRequested('ally'),
+        GetFeatureIfRequested('village'),
+        GetFeatureIfRequested('config'),
+        GetFeatureIfRequested('building_info'),
+        GetFeatureIfRequested('unit_info')
+    ];
+    return Promise.all(requests).then(results => {
+        return {
+            player: results[0],
+            ally: results[1],
+            village: results[2],
+            config: results[3],
+            building_info: results[4],
+            unit_info: results[5]
+        }
+    }).catch(e => {
+        return {error: e};
+    });
+
+}
