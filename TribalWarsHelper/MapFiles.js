@@ -55,9 +55,9 @@ function GetWorldInfo(config) {
         4: 'farm',
         5: 'barracks',
         6: 'stable',
-        7: 'barracks',
-        8: 'eco',
-        9: 'market',
+        7: 'garage',
+        8: 'all',
+        9: 'storage',
     };
     let _feature2path = {
         player: 'map/player.txt',
