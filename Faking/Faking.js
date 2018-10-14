@@ -142,7 +142,10 @@ function Faking(debug) {
                 if (this._toBoolean(this._settings.skipVillages)) {
                     let switchRight = $('#village_switch_right')[0];
                     let jumpLink = $('.jump_link')[0];
-                    location = (switchRight && switchRight.href) || (jumpLink && jumpLink.href);
+                    if (switchRight)
+                        location = switchRight.href;
+                    if (jumpLink)
+                        location = jumpLink.href;
                 }
                 throw message;
             },
