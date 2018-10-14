@@ -330,16 +330,22 @@ function Faking(debug) {
                 return speed;
             },
             _fixConfig: function (userConfig) {
+                // check if user have only valid settings
+
+                for (let property in userConfig) {
+                    if (!this._defaultSettings.hasOwnProperty(property)) {
+                        throw `Nieznana opcja: ${property}`;
+                    }
+                }
+
+                // overwrite default values with user defined
                 for (let property in this._defaultSettings) {
                     if (this._defaultSettings.hasOwnProperty(property)) {
-                        if (userConfig[property] === undefined) {
-                            Log(`${property} not found, using default value : ${JSON.stringify(this._defaultSettings[property])}`);
-                            this._settings[property] = JSON.parse(JSON.stringify(this._defaultSettings[property]));
-                        }
-                        else {
-                            Log(`${property} found, using user's value : ${JSON.stringify(this._defaultSettings[property])}`);
-                            this._settings[property] = JSON.parse(JSON.stringify(userConfig[property]));
-                        }
+                        this._settings[property] = JSON.parse(JSON.stringify(
+                            (userConfig[property] === undefined)
+                                ? this._defaultSettings[property]
+                                : userConfig[property]
+                        ));
                     }
                 }
             },
