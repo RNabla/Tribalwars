@@ -48,15 +48,26 @@ function Faking(debug) {
     }
 
     function ExecuteScript() {
-        let files = ['unit', 'config'];
+        let config = {
+            unit_info: {
+                caching: 'Mandatory'
+            },
+            config: {
+                caching: 'Mandatory'
+            }
+        };
         if (typeof HermitowskieFejki !== 'undefined') {
-            let requirePlayerFiles = HermitowskieFejki.players !== undefined && HermitowskieFejki.players !== '';
+            let requirePlayerFiles = HermitowskieFejki.players !== undefined && HermitowskieFejki.players.trim()  !== '';
             if (requirePlayerFiles) {
-                files.push('villages');
-                files.push('player');
+                config['village'] = {
+                    caching: 'Mandatory'
+                };
+                config['player'] = {
+                    caching: 'Mandatory'
+                };
             }
         }
-        GetWorldInfo(files, debug).then(worldInfo => {
+        GetWorldInfo(config, debug).then(worldInfo => {
             if (worldInfo.error !== undefined) {
                 // some failure getting worldInfo data, e.g. QUOTA
                 throw worldInfo.error;
@@ -85,7 +96,7 @@ function Faking(debug) {
             _debugMode: debugMode,
             _owner: 699198069,
             _settings: {},
-            _fakeLimit: worldInfo.config.general.game.fake_limit,
+            _fakeLimit: worldInfo.config.game.fake_limit,
             _defaultSettings: {
                 omitNightBonus: 'true',
                 coords: '',
@@ -229,11 +240,11 @@ function Faking(debug) {
                 return this._isInInterval(arrivalTime, hoursIntervals, this._parseTime);
             },
             _isInNightBonus: function (arrivalTime) {
-                if (!worldInfo.config.general.night.active)
+                if (!worldInfo.config.night.active)
                     return false;
                 let timeInterval = [
-                    `${worldInfo.config.general.night.start_hour}:00-
-                     ${worldInfo.config.general.night.end_hour}:00`
+                    `${worldInfo.config.night.start_hour}:00-
+                     ${worldInfo.config.night.end_hour}:00`
                 ];
                 return this._isInInterval(arrivalTime, timeInterval, this._parseTime);
             },
@@ -255,7 +266,7 @@ function Faking(debug) {
                 }
             },
             _selectUnit: function (unitName, unitCount) {
-                if (worldInfo.config.unit.hasOwnProperty(unitName) === false)
+                if (worldInfo.unit_info.hasOwnProperty(unitName) === false)
                     throw `Podana jednostka nie istnieje: ${unitName}`;
                 let input = this._getInput(unitName);
                 let maxUnitCount = Number(input.attr('data-all-count'));
@@ -273,7 +284,7 @@ function Faking(debug) {
                 let sum = 0;
                 for (const unitName in units) {
                     if (units.hasOwnProperty(unitName)) {
-                        let pop = Number(worldInfo.config.unit[unitName].pop);
+                        let pop = Number(worldInfo.unit_info[unitName].pop);
                         let quantity = units[unitName];
                         sum += pop * quantity;
                     }
@@ -304,9 +315,9 @@ function Faking(debug) {
                 let fillTable = this._getFillTable();
                 for (const entry of fillTable) {
                     let name = entry[0];
-                    if (!worldInfo.config.unit.hasOwnProperty(name)) continue;
+                    if (!worldInfo.unit_info.hasOwnProperty(name)) continue;
                     let minimum = entry[1];
-                    let pop = Number(worldInfo.config.unit[name].pop);
+                    let pop = Number(worldInfo.unit_info[name].pop);
                     if (!this._toBoolean(this._settings.fillExact)) {
                         minimum = Math.min(minimum, Math.ceil(left / pop));
                     }
@@ -328,7 +339,7 @@ function Faking(debug) {
                 let speed = 0;
                 for (const unitName in units) {
                     if (units.hasOwnProperty(unitName) && units[unitName] !== 0)
-                        speed = Math.max(Number(worldInfo.config.unit[unitName].speed), speed);
+                        speed = Math.max(Number(worldInfo.unit_info[unitName].speed), speed);
                 }
                 return speed;
             },
@@ -405,7 +416,7 @@ function Faking(debug) {
             _isEnough: function (template, placeUnits) {
                 for (let unit in template) {
                     if (template.hasOwnProperty(unit)) {
-                        if (!worldInfo.config.unit.hasOwnProperty(unit) || template[unit] > placeUnits[unit])
+                        if (!worldInfo.unit_info.hasOwnProperty(unit) || template[unit] > placeUnits[unit])
                             return false;
                     }
                 }
