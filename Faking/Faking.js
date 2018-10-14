@@ -171,12 +171,6 @@ function Faking(debug) {
                     this.goToNextVillage('Pula wiosek jest pusta');
                 }
 
-                poll = this._applyBoundingBoxes(poll);
-
-                if (poll.length === 0) {
-                    this.goToNextVillage('Pula wiosek jest pusta z powodu wybranych prostok\u0105t\u00F3w obcinaj\u0105cych');
-                }
-
                 poll = poll.filter(coordinates =>
                     this._checkConstraints(this._calculateArrivalTime(coordinates, slowest))
                 );
@@ -432,6 +426,10 @@ function Faking(debug) {
                 let villages = worldInfo.village.filter(v =>
                     playerIds.some(target => target === v.playerId)
                 ).map(v => v.coords);
+
+                Log('Applying bounding boxes');
+
+                villages = this._applyBoundingBoxes(villages);
 
                 Log('Targeted villages: ', villages);
 
