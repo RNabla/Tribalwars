@@ -58,12 +58,16 @@ function Faking(debug) {
         };
         if (typeof HermitowskieFejki !== 'undefined') {
             let requirePlayerFiles = HermitowskieFejki.players !== undefined && HermitowskieFejki.players.trim()  !== '';
+            let isCacheMandatory = true;
+            if (HermitowskieFejki.hasOwnProperty('mandatoryCaching') && !HermitowskieFejki.mandatoryCaching) {
+                isCacheMandatory = false;
+            }
             if (requirePlayerFiles) {
                 config['village'] = {
-                    caching: 'Mandatory'
+                    caching: isCacheMandatory ? 'Mandatory' : 'Preferred'
                 };
                 config['player'] = {
-                    caching: 'Mandatory'
+                    caching: isCacheMandatory ? 'Mandatory' : 'Preferred'
                 };
             }
         }
@@ -116,6 +120,7 @@ function Faking(debug) {
                 localContext: '0',
                 customContexts: '',
                 boundingBoxes: [],
+                mandatoryCaching: true
             },
             _localContextKey: `HermitowskieFejki_${game_data.village.id}`,
             init: function () {
