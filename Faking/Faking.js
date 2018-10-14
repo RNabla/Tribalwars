@@ -319,7 +319,13 @@ function Faking(debug) {
                     let minimum = entry[1];
                     let pop = Number(worldInfo.unit_info[name].pop);
                     if (!this._toBoolean(this._settings.fillExact)) {
-                        minimum = Math.min(minimum, Math.ceil(left / pop));
+                        if (name === 'spy' &&
+                            game_data.units.filter(unit => unit !== 'spy').every(unit => Number(template[unit]) > 0)) {
+                            let spies = (template['spy']) ? Number(template['spy']) : 0;
+                            minimum = Math.min(minimum, Math.ceil(left / pop), 5 - spies);
+                        } else {
+                            minimum = Math.min(minimum, Math.ceil(left / pop));
+                        }
                     }
                     let selected = 0;
                     if (!!template[name])
@@ -330,10 +336,10 @@ function Faking(debug) {
                     else
                         template[name] += minimum;
                     left -= minimum * pop;
-                    if (left <= 0 && !this._toBoolean(this._settings.fillExact))
+                    if ((left <= 0 || !this._shouldApplyFakeLimit(template)) && !this._toBoolean(this._settings.fillExact))
                         break;
                 }
-                return left <= 0;
+                return left <= 0 || !this._shouldApplyFakeLimit(template);
             },
             _slowestUnit: function (units) {
                 let speed = 0;
@@ -539,9 +545,7 @@ function Faking(debug) {
                 return coords.map(c => `${c.x}|${c.y}`);
             },
             _shouldApplyFakeLimit: function (units) {
-                if (units['spy'] < 5)
-                    return true;
-                return game_data.units.filter(unit => unit !== 'spy').some(unit => Number(units[unit]) > 0);
+                return game_data.units.filter(unit => unit !== 'spy').some(unit => Number(units[unit]) > 0) || units['spy'] < 5;
             }
         };
     }
