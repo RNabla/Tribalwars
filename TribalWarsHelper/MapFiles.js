@@ -7,7 +7,7 @@
  */
 
 /**
- * This function takes object in which key should map to one of this entities, each entity should contain preferred
+ * This function takes config object in which key should map to one of this entities, each entity should contain preferred
  * settings. (for now it's only caching option, maybe there will be more option in the feature)
  *
  * Sample config:
@@ -33,9 +33,13 @@
  *  'Preferred'     data will be downloaded, and script will try to save it in localStorage
  *  'Mandatory'     data will be downloaded, and saved in localStorage, if that's not possible, e.g. quota
  *                  script will throw an exception (default)
+ *
+ * This function takes also misc object. Available actions here are:
+ *  purgeCache: true    deletes all cached information, use it in case of corrupted cache e.g.
+ *                      root.children[Symbol.iterator] is not a function
  */
 
-function GetWorldInfo(config) {
+function GetWorldInfo(config, misc) {
     let _cache_key = 'MapFiles_CacheControl';
     let _regex = new RegExp(/\+/, 'g');
     let _bonuses = {
@@ -152,12 +156,18 @@ function GetWorldInfo(config) {
 
     function InvalidateCache() {
         let cacheControl = GetCacheControl();
+        let purgeCache = false;
+        if (misc && misc.hasOwnProperty('purgeCache') && misc.purgeCache){
+            purgeCache = true;
+        }
         for (const key in cacheControl) {
             if (cacheControl.hasOwnProperty(key)
-                && !IsCacheValid(key)) {
+                && (!IsCacheValid(key) || purgeCache)) {
                 localStorage.removeItem(key);
+                delete cacheControl[key];
             }
         }
+        localStorage.setItem(_cache_key, JSON.stringify(cacheControl));
     }
 
     function SetupCacheControl(dataKey, expirationTime) {

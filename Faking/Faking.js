@@ -56,6 +56,9 @@ function Faking(debug) {
                 caching: 'Mandatory'
             }
         };
+        let misc = {
+
+        };
         if (typeof HermitowskieFejki !== 'undefined') {
             let requirePlayerFiles = HermitowskieFejki.players !== undefined && HermitowskieFejki.players.trim()  !== '';
             let isCacheMandatory = true;
@@ -70,8 +73,9 @@ function Faking(debug) {
                     caching: isCacheMandatory ? 'Mandatory' : 'Preferred'
                 };
             }
+            misc['purgeCache'] = HermitowskieFejki.hasOwnProperty('purgeCache') && HermitowskieFejki.purgeCache;
         }
-        GetWorldInfo(config, debug).then(worldInfo => {
+        GetWorldInfo(config, misc).then(worldInfo => {
             if (worldInfo.error !== undefined) {
                 // some failure getting worldInfo data, e.g. QUOTA
                 throw worldInfo.error;
@@ -120,7 +124,8 @@ function Faking(debug) {
                 localContext: '0',
                 customContexts: '',
                 boundingBoxes: [],
-                mandatoryCaching: true
+                mandatoryCaching: true,
+                purgeCache: false
             },
             _localContextKey: `HermitowskieFejki_${game_data.village.id}`,
             init: function () {
