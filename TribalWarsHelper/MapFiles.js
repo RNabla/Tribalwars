@@ -3,45 +3,36 @@
  * Created by: Hermitowski
  * Modified on: 14/02/2018 - version 1.0
  * Modified on: 26/09/2018 - version 1.1 - adding mandatory caching
+ * Modified on: 14/10/2018 - version 1.2 - caching options
  */
 
-/*
- * This function takes object in which key should map to one of this entities, value for that key should be
- * cache options. (for now it's only caching option, maybe there will be more option in the feature)
+/**
+ * This function takes object in which key should map to one of this entities, each entity should contain preferred
+ * settings. (for now it's only caching option, maybe there will be more option in the feature)
  *
- * Entities are:
- * 'player'         -> /map/player.txt
- * 'village'        -> /map/village.txt
- * 'ally'           -> /map/ally.txt
- * 'config'         -> /interface.php?func=get_config
- * 'unit_info'      -> /interface.php?func=get_unit_info
- * 'building_info'  -> /interface.php?func=get_building_info
- *
- *  Sample configs:
- *  let config = {
- *      player: {
- *         isCacheMandatory: true
- *      },
- *      village: {
- *          isCacheMandatory: true
- *      },
- *      ally: {
- *          isCacheMandatory: true
- *      },
- *      config: {
- *          isCacheMandatory: true
- *      },
- *      unit_info: {
- *          isCacheMandatory: true
- *      },
- *      building_info: {
- *          isCacheMandatory: true
- *      },
+ * Sample config:
+ * let config = {
+ *     entity: {
+ *         caching: CACHE_OPTION
+ *     },
+ *     entity: {
+ *         caching: CACHE_OPTION
+ *     },
  * };
  *
- * if 'isCacheMandatory' is set to false it means that script will NOT fail in case of quota restriction of
- * local storage (script will return parsed data), anyway if your script is used large amount of times in a short
- * period of time you should probably left this value set to true
+ * where entity is one of the following:
+ *  'player'        /map/player.txt
+ *  'village'       /map/village.txt
+ *  'ally'          /map/ally.txt
+ *  'config'        /interface.php?func=get_config
+ *  'unit_info'     /interface.php?func=get_unit_info
+ *  'building_info' /interface.php?func=get_building_info
+ *
+ * where CACHE_OPTION is one of the following:
+ *  'None'          data will be downloaded, but it won't be saved in localStorage
+ *  'Preferred'     data will be downloaded, and script will try to save it in localStorage
+ *  'Mandatory'     data will be downloaded, and saved in localStorage, if that's not possible, e.g. quota
+ *                  script will throw an exception (default)
  */
 
 function GetWorldInfo(config) {
@@ -100,18 +91,17 @@ function GetWorldInfo(config) {
         return undefined;
     }
 
-    function SaveToLocalStorage(key, item, isCacheMandatory) {
-        let dataInsertionSucceed = true;
+    function SaveToLocalStorage(key, item, caching) {
         try {
             localStorage.setItem(key, item);
+            return true;
         }
         catch (e) {
-            if (isCacheMandatory) {
+            if (caching !== 'Preferred') {
                 throw e;
             }
-            dataInsertionSucceed = false;
         }
-        return dataInsertionSucceed;
+        return false;
     }
 
     function GetFeatureIfRequested(feature) {
@@ -122,32 +112,28 @@ function GetWorldInfo(config) {
         let path = MapFeatureToPath(feature);
         let expirationTime = MapFeatureToExpirationTime(feature);
         let parser = MapFeatureToParser(feature);
-        let isCacheMandatory = true;
-        if (featureConfig.hasOwnProperty('isCacheMandatory') && !featureConfig['isCacheMandatory']) {
-            isCacheMandatory = false;
-        }
-        return GetData(path, expirationTime, isCacheMandatory, parser);
+        return GetData(path, expirationTime, featureConfig.caching, parser);
     }
 
     function GetDataFromLocalStorage(key) {
         return new Promise(resolve => resolve(JSON.parse(localStorage[key])))
     }
 
-    function GetDataFromServer(key, path, expirationTime, isCacheMandatory, parser) {
+    function GetDataFromServer(key, path, expirationTime, caching, parser) {
         return fetch(`https://${location.host}/${path}`).then(t => t.text()).then(rawData => {
             let data = Parser(rawData, parser);
-            if (SaveToLocalStorage(key, JSON.stringify(data), isCacheMandatory)) {
+            if (caching !== 'None' && SaveToLocalStorage(key, JSON.stringify(data), caching)) {
                 SetupCacheControl(key, expirationTime);
             }
             return data;
         });
     }
 
-    function GetData(path, expirationTime, isCacheMandatory, parser) {
+    function GetData(path, expirationTime, caching, parser) {
         let key = `MapFiles_${path}`;
         return IsCacheValid(key)
             ? GetDataFromLocalStorage(key)
-            : GetDataFromServer(key, path, expirationTime, isCacheMandatory, parser);
+            : GetDataFromServer(key, path, expirationTime, caching, parser);
     }
 
     function GetCacheControl() {
