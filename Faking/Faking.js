@@ -14,6 +14,7 @@
  * Modified on: 04/08/2018 - version 2.10 - added bounding boxes
  * Modified on: 04/08/2018 - version 2.11 - added 'excludeCoords'
  * --- VERSION 3.0 ---
+ * Modified on: 29/08/2018 - version 3.0a - major cleanup
  */
 
 function Faking(debug) {
@@ -49,15 +50,10 @@ function Faking(debug) {
     function ExecuteScript() {
         let files = ['unit', 'config'];
         if (typeof HermitowskieFejki !== 'undefined') {
-            let requireAlliesFiles = HermitowskieFejki.allies !== undefined && HermitowskieFejki.allies !== '';
-            let requirePlayerFiles = HermitowskieFejki.players !== undefined && HermitowskieFejki.players !== ''
-                || requireAlliesFiles;
-            if (requireAlliesFiles || requirePlayerFiles) {
+            let requirePlayerFiles = HermitowskieFejki.players !== undefined && HermitowskieFejki.players !== '';
+            if (requirePlayerFiles) {
                 files.push('villages');
-                if (requireAlliesFiles)
-                    files.push('allies');
-                if (requirePlayerFiles)
-                    files.push('player');
+                files.push('player');
             }
         }
         GetWorldInfo(files, debug).then(worldInfo => {
@@ -90,13 +86,11 @@ function Faking(debug) {
             _version: 'Honey',
             _owner: 699198069,
             _settings: {},
+            _fakeLimit: worldInfo.config.general.game.fake_limit,
             _defaultSettings: {
-                fakeLimit: worldInfo.config.general.game.fake_limit,
                 omitNightBonus: 'true',
                 coords: '',
                 players: '',
-                allies: '',
-                minimumVillagePoints: '0',
                 days: '1-31',
                 intervals: '0:00-23:59',
                 templates: [
@@ -108,13 +102,10 @@ function Faking(debug) {
                 fillWith: game_data.units.filter(unit => ['militia', 'snob'].indexOf(unit) === -1).join(','),
                 fillExact: 'false',
                 skipVillages: 'true',
-                minDistance: 'NaN',
-                maxDistance: 'NaN',
                 safeguard: {},
                 localContext: '0',
                 customContexts: '',
                 boundingBoxes: [],
-                excludeCoords: ''
             },
             _localContextKey: `HermitowskieFejki_${game_data.village.id}`,
             init: function () {
@@ -186,18 +177,6 @@ function Faking(debug) {
 
                 if (poll.length === 0) {
                     this.goToNextVillage('Pula wiosek jest pusta z powodu wybranych prostok\u0105t\u00F3w obcinaj\u0105cych');
-                }
-
-                poll = this._excludeCoordinates(poll);
-
-                if (poll.length === 0) {
-                    this.goToNextVillage('Pola wiosek jest pusta z powodu zablokowanych wsp\u00F3\u0142rz\u0119dnych');
-                }
-
-                poll = this._filterDistance(poll);
-
-                if (poll.length === 0) {
-                    this.goToNextVillage('Wybrany zasi\u0119g nie pozwala na wyb\u00F3r wioski');
                 }
 
                 poll = poll.filter(coordinates =>
@@ -323,9 +302,9 @@ function Faking(debug) {
                 return fillTable;
             },
             _fill: function (template, place) {
-                let left = Math.floor(game_data.village.points * Number(this._settings.fakeLimit) * 0.01);
+                let left = Math.floor(game_data.village.points * Number(this._fakeLimit) * 0.01);
                 left -= this._countPopulations(template);
-                if (left <= 0 && !this._toBoolean(this._settings.fillExact))
+                if ((left <= 0 || !this._shouldApplyFakeLimit(template)) && !this._toBoolean(this._settings.fillExact))
                     return true;
                 let fillTable = this._getFillTable();
                 for (const entry of fillTable) {
@@ -442,40 +421,22 @@ function Faking(debug) {
                     .map(name => name.toLowerCase());
             },
             _targeting: function (poll) {
-                let allies = this._omitEmptyAndToLower(this._settings.allies.split(','));
                 let players = this._omitEmptyAndToLower(this._settings.players.split(','));
 
-                if (allies.length === 0 && players.length === 0) {
+                if (players.length === 0) {
                     return poll;
                 }
 
-                Log('Targeting (allies):', allies);
                 Log('Targeting (players):', players);
 
-                let allyIds = allies.length === 0
-                    ? []
-                    : worldInfo.ally.filter(a =>
-                        allies.some(target => target === a.tag.toLowerCase())
-                    ).map(a => a.id);
-
-                Log('Targeted (allies): ', allyIds);
-
-                let playerIds = players.length === 0 && allies.length === 0
-                    ? []
-                    : worldInfo.player.filter(p =>
-                        players.some(target => target === p.name.toLowerCase()) ||
-                        allyIds.some(target => target === p.allyId)
-                    ).map(p => p.id);
+                let playerIds = worldInfo.player.filter(p =>
+                    players.some(target => target === p.name.toLowerCase())
+                ).map(p => p.id);
 
                 Log('Targeted (players): ', playerIds);
 
-                let minimumPoints = Number(this._settings.minimumVillagePoints);
-                if (isNaN(minimumPoints)) {
-                    minimumPoints = Number(this._defaultSettings.minimumVillagePoints);
-                }
                 let villages = worldInfo.village.filter(v =>
-                    playerIds.some(target => target === v.playerId) &&
-                    v.points >= minimumPoints
+                    playerIds.some(target => target === v.playerId)
                 ).map(v => v.coords);
 
                 Log('Targeted villages: ', villages);
@@ -544,30 +505,9 @@ function Faking(debug) {
                 let banned = new Set([...excluded]);
                 return poll.filter(pollCoords => !banned.has(pollCoords));
             },
-            _filterDistance: function (coords) {
-                let minDistance = Number(this._settings.minDistance);
-                let maxDistance = Number(this._settings.maxDistance);
-
-                let x = game_data.village.x;
-                let y = game_data.village.y;
-
-                let distance = function (coord, x, y) {
-                    let parts = coord.split('|');
-                    let dx = parts[0] - x;
-                    let dy = parts[1] - y;
-                    return Math.hypot(dx, dy);
-                };
-
-                return coords.filter(coord => {
-                    let dist = distance(coord, x, y);
-                    if (dist < minDistance) return false;
-                    if (dist > maxDistance) return false;
-                    return true;
-                });
-            },
             _applyBoundingBoxes: function (poll) {
                 if (this._settings.boundingBoxes.length === 0) {
-                     return poll;
+                    return poll;
                 }
 
                 let coords = poll.map(c => {
@@ -586,9 +526,10 @@ function Faking(debug) {
                 });
                 return coords.map(c => `${c.x}|${c.y}`);
             },
-            _excludeCoordinates: function(poll) {
-                let coords = this._sanitizeCoordinates(this._settings.excludeCoords)
-                return this._exclude(poll, coords);
+            _shouldApplyFakeLimit: function (units) {
+                if (units['spy'] < 5)
+                    return true;
+                return game_data.units.filter(unit => unit !== 'spy').some(unit => Number(units[unit]) > 0);
             }
         };
     }
