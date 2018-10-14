@@ -83,7 +83,6 @@ function Faking(debug) {
     function CreateFaker(worldInfo) {
         return {
             _debugMode: debugMode,
-            _version: 'Honey',
             _owner: 699198069,
             _settings: {},
             _fakeLimit: worldInfo.config.general.game.fake_limit,
@@ -125,7 +124,6 @@ function Faking(debug) {
             checkConfig: function () {
                 if (typeof(HermitowskieFejki) === 'undefined')
                     throw 'Brak konfiguracji u\u017Cytkownika';
-                this._checkVersion(HermitowskieFejki);
                 this._fixConfig(HermitowskieFejki);
             },
             checkScreen: function () {
@@ -336,10 +334,6 @@ function Faking(debug) {
                         speed = Math.max(Number(worldInfo.config.unit[unitName].speed), speed);
                 }
                 return speed;
-            },
-            _checkVersion: function (userConfig) {
-                if (!userConfig['version'] || userConfig['version'].trim() !== this._version)
-                    throw `Yey! Wysz\u0142a nowa wersja skryptu: ${this._version}<br/>Sprawd\u017A now\u0105 wersj\u0119 skryptu w skryptotece na forum plemion.`;
             },
             _fixConfig: function (userConfig) {
                 for (let property in this._defaultSettings) {
