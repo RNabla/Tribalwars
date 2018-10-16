@@ -17,22 +17,25 @@
  * Modified on: 29/08/2018 - version 3.0a - major cleanup
  */
 
-function Faking(debug) {
-    let debugMode = (game_data.player.id === '699198069' || game_data.player.sitter === '699198069') && debug === true;
-    let startTime = Date.now();
-    if (localStorage['Faking'] === undefined) {
-        Log('Setting up cache');
-        localStorage['Faking'] = '(' + Faking.toString() + ')(true)';
-        localStorage['FakingTimestamp'] = Date.now();
+function Faking() {
+    function SetupScriptCache() {
+        if (localStorage.getItem('Faking') === null) {
+            localStorage.setItem('Faking', `(${Faking.toString()})()`);
+            localStorage.setItem('FakingTimestamp', JSON.stringify(Date.now() + 24 * 3600 * 1000));
+        }
+        if (Number(localStorage.getItem('FakingTimestamp')) < Date.now()) {
+            localStorage.removeItem('Faking');
+            localStorage.removeItem('FakingTimestamp');
+        }
     }
+
+    SetupScriptCache();
     let getWorldInfo = localStorage['GetWorldInfo'];
     if (getWorldInfo !== undefined) {
-        Log('Executing GetWorldInfo from local cache');
         eval(getWorldInfo);
         ExecuteScript();
     }
     else {
-        Log('Fetching GetWorldInfo from network');
         UI.SuccessMessage('Pobieranie skryptu... ');
         $.ajax({
             url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/MapFiles.js',
@@ -41,11 +44,6 @@ function Faking(debug) {
     }
 
     return true;
-
-    function Log() {
-        if (debugMode)
-            console.log('Faking:', ...arguments);
-    }
 
     function ExecuteScript() {
         let config = {
@@ -56,14 +54,13 @@ function Faking(debug) {
                 caching: 'Mandatory'
             }
         };
-        let misc = {
-
-        };
+        let misc = {};
         if (typeof HermitowskieFejki !== 'undefined') {
-            let requirePlayerFiles = HermitowskieFejki.players !== undefined && HermitowskieFejki.players.trim()  !== '';
+            let requirePlayerFiles = HermitowskieFejki.players !== undefined && HermitowskieFejki.players.trim() !== '';
             let isCacheMandatory = true;
-            if (HermitowskieFejki.hasOwnProperty('mandatoryCaching') && !HermitowskieFejki.mandatoryCaching) {
+            if (HermitowskieFejki.hasOwnProperty('mandatoryCaching') && !HermitowskieFejki['mandatoryCaching']) {
                 isCacheMandatory = false;
+                delete HermitowskieFejki['mandatoryCaching'];
             }
             if (requirePlayerFiles) {
                 config['village'] = {
@@ -81,27 +78,23 @@ function Faking(debug) {
                 throw worldInfo.error;
             }
             CreateFaker(worldInfo).init();
-            let endTime = Date.now();
-            Log('Execution time: ' + (endTime - startTime));
-            if (localStorage['FakingTimestamp'] === undefined || Number(localStorage['FakingTimestamp']) + 24 * 3600 * 1000 < Date.now()) {
-                // delete cached version once a day, so the user get's update notification when new version comes out
-                Log('Deleting current version');
-                localStorage.removeItem('Faking');
-                localStorage.removeItem('GetWorldInfo');
-                localStorage.removeItem('FakingTimestamp');
-            }
+
         }).catch(HandleError);
     }
 
     function HandleError(error) {
         console.log(error);
-        localStorage.removeItem('Faking');
-        Dialog.show('scriptError', `<h2>WTF - What a Terrible Failure</h2><p>Komunikat o b\u0142\u0119dzie: <br/><textarea rows='5' cols='42'>${error}</textarea></p>`)
+        const gui =
+            `<h2>WTF - What a Terrible Failure</h2>
+             <p><strong>Komunikat o b\u0142\u0119dzie: </strong><br/>
+                <textarea rows='5' cols='42'>${error}\n\n${error.stack}</textarea><br/>
+                <a href="https://forum.plemiona.pl/index.php?threads/hermitowskie-fejki.125294/">Link do wątku na forum</a>
+             </p>`;
+        Dialog.show('scriptError',gui);
     }
 
     function CreateFaker(worldInfo) {
         return {
-            _debugMode: debugMode,
             _owner: 699198069,
             _settings: {},
             _fakeLimit: worldInfo.config.game.fake_limit,
@@ -117,14 +110,13 @@ function Faking(debug) {
                     {ram: 1},
                     {catapult: 1}
                 ],
-                fillWith: game_data.units.filter(unit => ['militia', 'snob'].indexOf(unit) === -1).join(','),
+                fillWith: 'spear,sword,axe,archer,spy,light,marcher,heavy,ram,catapult',
                 fillExact: 'false',
                 skipVillages: 'true',
                 safeguard: {},
                 localContext: '0',
                 customContexts: '',
                 boundingBoxes: [],
-                mandatoryCaching: true,
                 purgeCache: false
             },
             _localContextKey: `HermitowskieFejki_${game_data.village.id}`,
@@ -249,7 +241,7 @@ function Faking(debug) {
                 let month = this._twoDigitNumber(arrivalTime.getMonth() + 1);
                 UI.SuccessMessage(`Atak dojdzie ${day}.${month} na ${hour}:${minutes}`)
             },
-            _invalidateItem: function(key, purge) {
+            _invalidateItem: function (key, purge) {
                 if (purge) {
                     localStorage.removeItem(key);
                     return 0;
@@ -493,23 +485,15 @@ function Faking(debug) {
                     return poll;
                 }
 
-                Log('Targeting (players):', players);
-
                 let playerIds = worldInfo.player.filter(p =>
                     players.some(target => target === p.name.toLowerCase())
                 ).map(p => p.id);
-
-                Log('Targeted (players): ', playerIds);
 
                 let villages = worldInfo.village.filter(v =>
                     playerIds.some(target => target === v.playerId)
                 ).map(v => v.coords);
 
-                Log('Applying bounding boxes');
-
                 villages = this._applyBoundingBoxes(villages);
-
-                Log('Targeted villages: ', villages);
 
                 return [... new Set([...poll, ...villages])];
             },
@@ -531,14 +515,14 @@ function Faking(debug) {
                 localStorage[key] = JSON.stringify(recent);
                 this._updateCacheControl(key, expirationTime);
             },
-            _updateCacheControl: function(key, expirationTime) {
+            _updateCacheControl: function (key, expirationTime) {
                 let cacheControl = this._getCacheControl();
                 if (!cacheControl.hasOwnProperty(key) || cacheControl[key] > expirationTime) {
                     cacheControl[key] = expirationTime;
                     localStorage.setItem(this._cache_control_key, JSON.stringify(cacheControl));
                 }
             },
-            _getCacheControl: function() {
+            _getCacheControl: function () {
                 let cacheControl = localStorage.getItem(this._cache_control_key);
                 if (cacheControl == null) {
                     return {};
