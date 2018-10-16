@@ -128,9 +128,12 @@ function Faking(debug) {
                 purgeCache: false
             },
             _localContextKey: `HermitowskieFejki_${game_data.village.id}`,
+            _cache_control_key: `HermitowskieFejki_CacheControl`,
+            _now: Date.now(),
             init: function () {
                 try {
                     this.checkConfig();
+                    this.invalidateCache();
                     this.checkScreen();
                     if (this.isVillageOutOfGroup())
                         this.goToNextVillage('Wioska poza grup\u0105. Przechodz\u0119 do nast\u0119pnej wioski z grupy');
@@ -146,6 +149,24 @@ function Faking(debug) {
                 if (typeof(HermitowskieFejki) === 'undefined')
                     throw 'Brak konfiguracji u\u017Cytkownika';
                 this._fixConfig(HermitowskieFejki);
+            },
+            invalidateCache() {
+                let cacheControl = this._getCacheControl();
+                let purgeCache = this._toBoolean(this._settings.purgeCache);
+                for (const key in cacheControl) {
+                    if (cacheControl.hasOwnProperty(key)) {
+                        if (cacheControl[key] < this._now || purgeCache) {
+                            let timestamp = this._invalidateItem(key, purgeCache);
+                            if (timestamp === 0) {
+                                delete cacheControl[key];
+                            }
+                            else {
+                                cacheControl[key] = timestamp;
+                            }
+                        }
+                    }
+                }
+                localStorage.setItem(this._cache_control_key, JSON.stringify(cacheControl));
             },
             checkScreen: function () {
                 if (game_data.screen !== 'place' || $('#command-data-form').length !== 1) {
@@ -227,6 +248,27 @@ function Faking(debug) {
                 let day = this._twoDigitNumber(arrivalTime.getDate());
                 let month = this._twoDigitNumber(arrivalTime.getMonth() + 1);
                 UI.SuccessMessage(`Atak dojdzie ${day}.${month} na ${hour}:${minutes}`)
+            },
+            _invalidateItem: function(key, purge) {
+                if (purge) {
+                    localStorage.removeItem(key);
+                    return 0;
+                }
+
+                let items = localStorage.getItem(key);
+                if (items === null) {
+                    throw 'ups';
+                }
+                items = JSON.parse(items);
+
+                items = items.filter(item => item[1] > this._now);
+
+                if (items.length === 0) {
+                    localStorage.removeItem(key);
+                    return 0;
+                }
+                localStorage.setItem(key, JSON.stringify(items));
+                return Math.min(...items.map(item => item[1]));
             },
             _twoDigitNumber: function (number) {
                 return `${Number(number) < 10 ? '0' : ''}${number}`;
@@ -389,7 +431,7 @@ function Faking(debug) {
                 let dy = game_data.village.y - Number(coordinates.split('|')[1]);
                 let distance = Math.hypot(dx, dy);
                 let timePerField = slowestUnitSpeed * 60 * 1000;
-                return new Date(distance * timePerField + Date.now());
+                return new Date(distance * timePerField + this._now);
             },
             _getInput: function (unitName) {
                 let input = $(`#unit_input_${unitName}`);
@@ -472,18 +514,36 @@ function Faking(debug) {
                 return [... new Set([...poll, ...villages])];
             },
             _save: function (coords) {
-                let entry = {coords: coords, timestamp: Date.now()};
-                this._saveEntry(entry, this._localContextKey);
+                this._saveEntry(coords, this._localContextKey, Number(this._settings.localContext));
                 let customContexts = this._getCustomContexts();
                 for (let customContext of customContexts) {
-                    this._saveEntry(entry, customContext.key);
+                    this._saveEntry(coords, customContext.key, customContext.liveTime);
                 }
             },
-            _saveEntry: function (entry, key) {
+            _saveEntry: function (coords, key, liveTime) {
+                if (isNaN(liveTime)) {
+                    return;
+                }
+                let expirationTime = this._now + liveTime * 60 * 1000;
                 let recent = localStorage[key];
                 recent = recent === undefined ? [] : JSON.parse(recent);
-                recent.push(entry);
+                recent.push([coords, expirationTime]);
                 localStorage[key] = JSON.stringify(recent);
+                this._updateCacheControl(key, expirationTime);
+            },
+            _updateCacheControl: function(key, expirationTime) {
+                let cacheControl = this._getCacheControl();
+                if (!cacheControl.hasOwnProperty(key) || cacheControl[key] > expirationTime) {
+                    cacheControl[key] = expirationTime;
+                    localStorage.setItem(this._cache_control_key, JSON.stringify(cacheControl));
+                }
+            },
+            _getCacheControl: function() {
+                let cacheControl = localStorage.getItem(this._cache_control_key);
+                if (cacheControl == null) {
+                    return {};
+                }
+                return JSON.parse(cacheControl);
             },
             _getCustomContexts: function () {
                 return this._settings.customContexts.split(',')
@@ -510,24 +570,11 @@ function Faking(debug) {
                 return poll;
             },
             _omitRecentlySelectedCoords(poll, context) {
-                if (isNaN(context.liveTime) || context.liveTime <= 0) {
-                    return poll;
-                }
-                let recent = localStorage[context.key];
-                if (recent === undefined)
+                let recent = localStorage.getItem(context.key);
+                if (recent === null)
                     return poll;
                 recent = JSON.parse(recent);
-                let timestamp = Date.now();
-
-                if (recent.length > 0) {
-                    if ((recent[0].timestamp + 1000 * 60 * context.liveTime) < Date.now()) {
-                        // at least one element to delete, update cache
-                        recent = recent.filter(entry => (entry.timestamp + 1000 * 60 * context.liveTime) > timestamp);
-                        localStorage[context.key] = JSON.stringify(recent);
-                    }
-                }
-
-                return this._exclude(poll, recent.map(entry => entry.coords));
+                return this._exclude(poll, recent.map(entry => entry[0]));
             },
             _exclude: function (poll, excluded) {
                 let banned = new Set([...excluded]);
