@@ -18,6 +18,27 @@
  */
 
 function Faking() {
+    const i18n = {
+        DOWNLOADING_SCRIPT: 'Pobieranie skryptu... ',
+        ERROR_MESSAGE: 'Komunikat o b\u0142\u0119dzie: ',
+        FORUM_THREAD: 'Link do wątku na forum',
+        FORUM_THREAD_HREF: 'https://forum.plemiona.pl/index.php?threads/hermitowskie-fejki.125294/',
+        VILLAGE_OUT_OF_GROUP: 'Wioska poza grup\u0105. Przechodz\u0119 do nast\u0119pnej wioski z grupy',
+        MISSING_CONFIGURATION: 'Brak konfiguracji u\u017Cytkownika',
+        BAD_SCREEN: 'Nie jeste\u015B  na placu',
+        BLOCKED_SCREEN: 'Skrypt jest zablokowany w tym przegl\u0105dzie',
+        INSUFFICIENT_TROOPS: 'Nie uda si\u0119 wybra\u0107 wystarczaj\u0105cej liczby jednostek',
+        NO_TROOPS_SELECTED: 'Wydaje si\u0119, \u017Ce obecne ustawienia nie pozwalaj\u0105 na wyb\u00F3r jednostek',
+        COORDS_EMPTY: 'Pula wiosek jest pusta',
+        COORDS_EMPTY_TIME: 'Pula wiosek jest pusta z powodu wybranych ram czasowych',
+        COORDS_EMPTY_CONTEXTS: 'W puli wiosek zosta\u0142y tylko wioski, kt\u00F3re zosta\u0142y wybrane chwil\u0119 temu',
+        ATTACK_TIME: 'Atak dojdzie __DAY__.__MONTH__ na __HOURS__:__MINUTES__',
+        UNKNOWN_UNIT: 'Podana jednostka nie istnieje: __UNIT_NAME__',
+        UNKNOWN_OPTION: 'Nieznana opcja: __PROPERTY__',
+        NONEXISTENT_UNIT: 'Podana jednostka nie wyst\u0119puje na tym \u015Bwiecie: __UNIT_NAME__',
+        INVALID_SETTINGS_SAFEGUARD: 'Ustawienia > safeguard > __UNIT_NAME__  : __VALUE__'
+    };
+
     function SetupScriptCache() {
         if (localStorage.getItem('Faking') === null) {
             localStorage.setItem('Faking', `(${Faking.toString()})()`);
@@ -36,7 +57,7 @@ function Faking() {
         ExecuteScript();
     }
     else {
-        UI.SuccessMessage('Pobieranie skryptu... ');
+        UI.SuccessMessage(i18n.DOWNLOADING_SCRIPT);
         $.ajax({
             url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/MapFiles.js',
             dataType: 'script',
@@ -83,14 +104,13 @@ function Faking() {
     }
 
     function HandleError(error) {
-        console.log(error);
         const gui =
             `<h2>WTF - What a Terrible Failure</h2>
-             <p><strong>Komunikat o b\u0142\u0119dzie: </strong><br/>
+             <p><strong>${i18n.ERROR_MESSAGE}</strong><br/>
                 <textarea rows='5' cols='42'>${error}\n\n${error.stack}</textarea><br/>
-                <a href="https://forum.plemiona.pl/index.php?threads/hermitowskie-fejki.125294/">Link do wątku na forum</a>
+                <a href="${i18n.FORUM_THREAD_HREF}">${i18n.FORUM_THREAD}</a>
              </p>`;
-        Dialog.show('scriptError',gui);
+        Dialog.show('scriptError', gui);
     }
 
     function CreateFaker(worldInfo) {
@@ -128,18 +148,17 @@ function Faking() {
                     this.invalidateCache();
                     this.checkScreen();
                     if (this.isVillageOutOfGroup())
-                        this.goToNextVillage('Wioska poza grup\u0105. Przechodz\u0119 do nast\u0119pnej wioski z grupy');
+                        this.goToNextVillage(i18n.VILLAGE_OUT_OF_GROUP);
                     let troops = this.selectTroops();
                     let target = this.selectTarget(troops);
                     this.displayTargetInfo(troops, target);
                 } catch (err) {
-                    console.log(err);
                     UI.ErrorMessage(err, '1e3');
                 }
             },
             checkConfig: function () {
                 if (typeof(HermitowskieFejki) === 'undefined')
-                    throw 'Brak konfiguracji u\u017Cytkownika';
+                    throw i18n.MISSING_CONFIGURATION;
                 this._fixConfig(HermitowskieFejki);
             },
             invalidateCache() {
@@ -163,11 +182,11 @@ function Faking() {
             checkScreen: function () {
                 if (game_data.screen !== 'place' || $('#command-data-form').length !== 1) {
                     location = TribalWars.buildURL('GET', 'place', {mode: 'command'});
-                    throw 'Nie jeste\u015B  na placu';
+                    throw i18n.BAD_SCREEN;
                 }
                 // disable executing script on screen with command confirmation
                 if ($('#troop_confirm_go').length !== 0)
-                    throw 'Skrypt jest zablokowany w tym przegl\u0105dzie';
+                    throw i18n.BLOCKED_SCREEN;
             },
             isVillageOutOfGroup: function () {
                 return $('.jump_link')[0] !== undefined;
@@ -194,18 +213,18 @@ function Faking() {
                         }
                     }
                 }
-                this.goToNextVillage('Nie uda si\u0119 wybra\u0107 wystarczaj\u0105cej liczby jednostek');
+                this.goToNextVillage(i18n.INSUFFICIENT_TROOPS);
             },
             selectTarget: function (troops) {
                 let poll = this._sanitizeCoordinates(this._settings.coords);
                 let slowest = this._slowestUnit(troops);
                 if (slowest === 0)
-                    throw 'Wydaje si\u0119, \u017Ce obecne ustawienia nie pozwalaj\u0105 na wyb\u00F3r jednostek';
+                    throw i18n.NO_TROOPS_SELECTED;
 
                 poll = this._targeting(poll);
 
                 if (poll.length === 0) {
-                    this.goToNextVillage('Pula wiosek jest pusta');
+                    this.goToNextVillage(i18n.COORDS_EMPTY);
                 }
 
                 poll = poll.filter(coordinates =>
@@ -213,14 +232,14 @@ function Faking() {
                 );
 
                 if (poll.length === 0) {
-                    this.goToNextVillage('Pula wiosek jest pusta z powodu wybranych ram czasowych');
+                    this.goToNextVillage(i18n.COORDS_EMPTY_TIME);
                 }
 
                 poll = this._applyLocalContext(poll);
                 poll = this._applyCustomContexts(poll);
 
                 if (poll.length === 0) {
-                    this.goToNextVillage('W puli wiosek zosta\u0142y tylko wioski, kt\u00F3re zosta\u0142y wybrane chwil\u0119 temu');
+                    this.goToNextVillage(i18n.COORDS_EMPTY_CONTEXTS);
                 }
                 return this._selectCoordinates(poll);
             },
@@ -235,11 +254,12 @@ function Faking() {
                 }
                 this._selectUnits(troops);
                 let arrivalTime = this._calculateArrivalTime(target, this._slowestUnit(troops));
-                let hour = this._twoDigitNumber(arrivalTime.getHours());
-                let minutes = this._twoDigitNumber(arrivalTime.getMinutes());
-                let day = this._twoDigitNumber(arrivalTime.getDate());
-                let month = this._twoDigitNumber(arrivalTime.getMonth() + 1);
-                UI.SuccessMessage(`Atak dojdzie ${day}.${month} na ${hour}:${minutes}`)
+                let attack_time = i18n.ATTACK_TIME
+                    .replace('__DAY__', this._twoDigitNumber(arrivalTime.getDate()))
+                    .replace('__MONTH__', this._twoDigitNumber(arrivalTime.getMonth() + 1))
+                    .replace('__HOURS__', this._twoDigitNumber(arrivalTime.getHours()))
+                    .replace('__MINUTES__', this._twoDigitNumber(arrivalTime.getMinutes()));
+                UI.SuccessMessage(attack_time);
             },
             _invalidateItem: function (key, purge) {
                 if (purge) {
@@ -311,7 +331,7 @@ function Faking() {
             },
             _selectUnit: function (unitName, unitCount) {
                 if (worldInfo.unit_info.hasOwnProperty(unitName) === false)
-                    throw `Podana jednostka nie istnieje: ${unitName}`;
+                    throw i18n.UNKNOWN_UNIT.replace('__UNIT_NAME__', unitName)
                 let input = this._getInput(unitName);
                 let maxUnitCount = Number(input.attr('data-all-count'));
                 let selectedUnitCount = Number(input.val());
@@ -398,7 +418,7 @@ function Faking() {
 
                 for (let property in userConfig) {
                     if (!this._defaultSettings.hasOwnProperty(property)) {
-                        throw `Nieznana opcja: ${property}`;
+                        throw i18n.UNKNOWN_OPTION.replace('__PROPERTY__', property);
                     }
                 }
 
@@ -428,7 +448,7 @@ function Faking() {
             _getInput: function (unitName) {
                 let input = $(`#unit_input_${unitName}`);
                 if (input.length === 0)
-                    throw `Podana jednostka nie wyst\u0119puje na tym \u015Bwiecie: ${unitName}`;
+                    throw i18n.NONEXISTENT_UNIT.replace('__UNIT_NAME__', unitName);
                 return input;
             },
             _isInInterval: function (value, intervals, predicate) {
@@ -456,7 +476,9 @@ function Faking() {
                     if (this._settings.safeguard.hasOwnProperty(unit)) {
                         let threshold = Number(this._settings.safeguard[unit]);
                         if (isNaN(threshold) || threshold < 0) {
-                            throw `Settings: safeguard: ${unit} : ${this._settings.safeguard[unit]}`;
+                            throw i18n.INVALID_SETTINGS_SAFEGUARD
+                                .replace('__UNIT_NAME__', unit)
+                                .replace('__VALUE__', this._settings.safeguard[unit]);
                         }
                         obj[unit] = Math.max(0, obj[unit] - threshold);
                     }

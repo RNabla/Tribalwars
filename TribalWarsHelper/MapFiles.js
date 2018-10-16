@@ -258,7 +258,6 @@ function GetWorldInfo(config, misc) {
         return decodeURIComponent(encodedString.replace(_regex, ' '));
     }
 
-
     SetupScriptCache();
     InvalidateCache();
     let requests = [
