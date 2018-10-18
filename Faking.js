@@ -37,7 +37,11 @@ function Faking() {
         UNKNOWN_UNIT: 'Podana jednostka nie istnieje: __UNIT_NAME__',
         UNKNOWN_OPTION: 'Nieznana opcja: __PROPERTY__',
         NONEXISTENT_UNIT: 'Podana jednostka nie wyst\u{119}puje na tym \u{15B}wiecie: __UNIT_NAME__',
-        INVALID_SETTINGS_SAFEGUARD: 'Ustawienia > safeguard > __UNIT_NAME__  : __VALUE__'
+        INVALID_SETTINGS_SAFEGUARD: 'Ustawienia > safeguard > __UNIT_NAME__  : __VALUE__',
+        INVALID_SETTINGS_TEMPLATES: 'Ustawienia > templates > __UNIT_NAME__  : __VALUE__',
+        INVALID_SETTINGS_DAYS: 'Ustawienia > days > __VALUE__',
+        INVALID_SETTINGS_INTERVALS: 'Ustawienia > intervals > __VALUE__',
+        INVALID_SETTINGS_BOUNDING_BOXES: 'Ustawienia > boundingBoxes > __VALUE__',
     };
 
     function SetupScriptCache() {
@@ -209,6 +213,7 @@ function Faking() {
                 let place = this._getAvailableUnits();
 
                 for (let template of this._settings.templates) {
+                    this._validateTemplate(template);
                     if (this._isEnough(template, place)) {
                         if (this._fill(template, place)) {
                             return template;
@@ -250,9 +255,9 @@ function Faking() {
                     poll = poll.filter(coords =>
                         this._calculateDistanceTo(coords) <= max_dist
                     );
-                }
-                if (poll.length === 0) {
-                    this.goToNextVillage(i18n.COORDS_EMPTY_SNOBS);
+                    if (poll.length === 0) {
+                        this.goToNextVillage(i18n.COORDS_EMPTY_SNOBS);
+                    }
                 }
 
                 poll = poll.filter(coordinates =>
@@ -307,8 +312,7 @@ function Faking() {
                     return false;
                 }
                 let timeInterval = [
-                    `${worldInfo.config.night.start_hour}:00-
-                     ${worldInfo.config.night.end_hour}:00`
+                    `${worldInfo.config.night.start_hour}:00-${worldInfo.config.night.end_hour}:00`
                 ];
                 return this._isInInterval(arrivalTime, timeInterval, this._parseTime);
             },
@@ -447,7 +451,10 @@ function Faking() {
                 if (typeof(input) === 'boolean') {
                     return input;
                 }
-                return (input.toLowerCase() === 'true');
+                if (typeof(input) === 'string') {
+                    return input.trim().toLowerCase() === 'true';
+                }
+                return false;
             },
             _calculateDistanceTo: function (target) {
                 let dx = game_data.village.x - Number(target.split('|')[0]);
@@ -475,21 +482,47 @@ function Faking() {
                 return false;
             },
             _parseDailyDate: function (value, interval) {
+                let error = i18n.INVALID_SETTINGS_DAYS
+                    .replace('__VALUE__', interval);
                 let day = value.getDate();
                 let range = interval.split('-');
-                return Number(range[0]) <= day && day <= Number(range[1]);
+                if (range.length !== 2) {
+                    throw error;
+                }
+                let minDay = Number(range[0]);
+                let maxDay = Number(range[1]);
+                if (isNaN(minDay) || isNaN(maxDay)) {
+                    throw error;
+                }
+                return minDay <= day && day <= maxDay;
             },
             _parseTime: function (value, interval) {
-                let convertTimeToMinutes = timer => Number(timer[0]) * 60 + Number(timer[1]);
-                let minutes = convertTimeToMinutes([value.getHours(), value.getMinutes()]);
+                let error = i18n.INVALID_SETTINGS_INTERVALS
+                    .replace('__VALUE__', interval);
+                let convertTimeToMinutes = time => {
+                    let parts = time.split(':');
+                    if (parts.length !== 2){
+                        throw error;
+                    }
+                    let hours = Number(parts[0]);
+                    let minutes = Number(parts[1]);
+                    if (isNaN(hours) || isNaN(minutes)) {
+                        throw error;
+                    }
+                    return hours * 60 + minutes;
+                };
+                let minutes = value.getHours() * 60 + value.getMinutes();
                 let range = interval.split('-');
-                return convertTimeToMinutes(range[0].split(':')) <= minutes && minutes <= convertTimeToMinutes(range[1].split(':'));
+                if (range.length !== 2) {
+                    throw error;
+                }
+                return convertTimeToMinutes(range[0]) <= minutes && minutes <= convertTimeToMinutes(range[1]);
             },
             _getAvailableUnits: function () {
                 let units = game_data.units.filter(unit => unit !== 'militia');
-                let obj = {};
+                let available = {};
                 for (let unit of units) {
-                    obj[unit] = Number(this._getInput(unit).attr('data-all-count'));
+                    available[unit] = Number(this._getInput(unit).attr('data-all-count'));
                     if (this._settings.safeguard.hasOwnProperty(unit)) {
                         let threshold = Number(this._settings.safeguard[unit]);
                         if (isNaN(threshold) || threshold < 0) {
@@ -497,10 +530,10 @@ function Faking() {
                                 .replace('__UNIT_NAME__', unit)
                                 .replace('__VALUE__', this._settings.safeguard[unit]);
                         }
-                        obj[unit] = Math.max(0, obj[unit] - threshold);
+                        available[unit] = Math.max(0, available[unit] - threshold);
                     }
                 }
-                return obj;
+                return available;
             },
             _isEnough: function (template, placeUnits) {
                 for (let unit in template) {
@@ -630,6 +663,7 @@ function Faking() {
 
                 coords = coords.filter(c => {
                     return this._settings.boundingBoxes.some(boundingBox => {
+                        this._validateBoundingBox(boundingBox);
                         return (boundingBox.minX <= c.x && c.x <= boundingBox.maxX) &&
                             (boundingBox.minY <= c.y && c.y <= boundingBox.maxY);
                     });
@@ -638,7 +672,33 @@ function Faking() {
             },
             _shouldApplyFakeLimit: function (units) {
                 return game_data.units.filter(unit => unit !== 'spy').some(unit => Number(units[unit]) > 0) || units['spy'] < 5;
-            }
+            },
+            _validateTemplate(template) {
+                for (const unit in template) {
+                    if (template.hasOwnProperty(unit)) {
+                        let count = Number(template[unit]);
+                        if (!worldInfo.unit_info.hasOwnProperty(unit) || isNaN(count) || count < 0) {
+                            throw i18n.INVALID_SETTINGS_TEMPLATES
+                                .replace('__UNIT_NAME__', unit)
+                                .replace('__VALUE__', template[unit]);
+                        }
+                    }
+                }
+            },
+            _validateBoundingBox(boundingBox) {
+                const properties = ['minX', 'maxX', 'minY', 'maxY'];
+                for (const property of boundingBox) {
+                    if (boundingBox.hasOwnProperty(property)) {
+                        let boundary = Number(boundingBox[property]);
+                        if (properties.indexOf(property) === -1 || isNaN(boundary)) {
+                            throw i18n.INVALID_SETTINGS_BOUNDING_BOXES
+                                .replace('__VALUE__', JSON.stringify(boundingBox));
+                        }
+                        boundingBox[property] = boundary; // just in case of number literal
+
+                    }
+                }
+            },
         };
     }
 }
