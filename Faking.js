@@ -30,6 +30,7 @@ function Faking() {
         INSUFFICIENT_TROOPS: 'Nie uda si\u0119 wybra\u0107 wystarczaj\u0105cej liczby jednostek',
         NO_TROOPS_SELECTED: 'Wydaje si\u0119, \u017Ce obecne ustawienia nie pozwalaj\u0105 na wyb\u00F3r jednostek',
         COORDS_EMPTY: 'Pula wiosek jest pusta',
+        COORDS_EMPTY_SNOBS: 'Pula wiosek leży poza zasięiem szlachciców',
         COORDS_EMPTY_TIME: 'Pula wiosek jest pusta z powodu wybranych ram czasowych',
         COORDS_EMPTY_CONTEXTS: 'W puli wiosek zosta\u0142y tylko wioski, kt\u00F3re zosta\u0142y wybrane chwil\u0119 temu',
         ATTACK_TIME: 'Atak dojdzie __DAY__.__MONTH__ na __HOURS__:__MINUTES__',
@@ -229,6 +230,13 @@ function Faking() {
                     this.goToNextVillage(i18n.COORDS_EMPTY);
                 }
 
+                poll = this._removeUnreachableVillages(poll, troops);
+
+                if (poll.length === 0) {
+                    this.goToNextVillage(i18n.COORDS_EMPTY_SNOBS);
+                }
+
+
                 poll = poll.filter(coordinates =>
                     this._checkConstraints(this._calculateArrivalTime(coordinates, slowest))
                 );
@@ -262,6 +270,14 @@ function Faking() {
                     .replace('__HOURS__', this._twoDigitNumber(arrivalTime.getHours()))
                     .replace('__MINUTES__', this._twoDigitNumber(arrivalTime.getMinutes()));
                 UI.SuccessMessage(attack_time);
+            },
+            _removeUnreachableVillages: function (poll, troops) {
+                if (troops.hasOwnProperty('snob') && Number(troops.snob) > 0) {
+                    poll = poll.filter(coords =>
+                        this._calculateDistanceTo(coords) <= Number(worldInfo.config.snob.max_dist)
+                    );
+                }
+                return poll;
             },
             _invalidateItem: function (key, purge) {
                 if (purge) {
@@ -440,10 +456,13 @@ function Faking() {
                     return input;
                 return (input.toLowerCase() === 'true');
             },
+            _calculateDistanceTo: function(target) {
+                let dx = game_data.village.x - Number(target.split('|')[0]);
+                let dy = game_data.village.y - Number(target.split('|')[1]);
+                return Math.hypot(dx, dy);
+            },
             _calculateArrivalTime: function (coordinates, slowestUnitSpeed) {
-                let dx = game_data.village.x - Number(coordinates.split('|')[0]);
-                let dy = game_data.village.y - Number(coordinates.split('|')[1]);
-                let distance = Math.hypot(dx, dy);
+                let distance = this._calculateDistanceTo(coordinates);
                 let timePerField = slowestUnitSpeed * 60 * 1000;
                 return new Date(distance * timePerField + this._now);
             },
