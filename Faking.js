@@ -20,23 +20,23 @@
 function Faking() {
     const i18n = {
         DOWNLOADING_SCRIPT: 'Pobieranie skryptu... ',
-        ERROR_MESSAGE: 'Komunikat o b\u0142\u0119dzie: ',
-        FORUM_THREAD: 'Link do wątku na forum',
+        ERROR_MESSAGE: 'Komunikat o b\u{142}\u{119}dzie: ',
+        FORUM_THREAD: 'Link do w\u{105}tku na forum',
         FORUM_THREAD_HREF: 'https://forum.plemiona.pl/index.php?threads/hermitowskie-fejki.125294/',
-        VILLAGE_OUT_OF_GROUP: 'Wioska poza grup\u0105. Przechodz\u0119 do nast\u0119pnej wioski z grupy',
-        MISSING_CONFIGURATION: 'Brak konfiguracji u\u017Cytkownika',
-        BAD_SCREEN: 'Nie jeste\u015B  na placu',
-        BLOCKED_SCREEN: 'Skrypt jest zablokowany w tym przegl\u0105dzie',
-        INSUFFICIENT_TROOPS: 'Nie uda si\u0119 wybra\u0107 wystarczaj\u0105cej liczby jednostek',
-        NO_TROOPS_SELECTED: 'Wydaje si\u0119, \u017Ce obecne ustawienia nie pozwalaj\u0105 na wyb\u00F3r jednostek',
+        VILLAGE_OUT_OF_GROUP: 'Wioska poza grup\u{105}. Przechodz\u{119} do nast\u{119}pnej wioski z grupy',
+        MISSING_CONFIGURATION: 'Brak konfiguracji u\u{17C}ytkownika',
+        BAD_SCREEN: 'Nie jeste\u{15B}  na placu',
+        BLOCKED_SCREEN: 'Skrypt jest zablokowany w tym przegl\u{105}dzie',
+        INSUFFICIENT_TROOPS: 'Nie uda si\u{119} wybra\u{107} wystarczaj\u{105}cej liczby jednostek',
+        NO_TROOPS_SELECTED: 'Wydaje si\u{119}, \u{17C}e obecne ustawienia nie pozwalaj\u{105} na wyb\u{F3}r jednostek',
         COORDS_EMPTY: 'Pula wiosek jest pusta',
-        COORDS_EMPTY_SNOBS: 'Pula wiosek leży poza zasięiem szlachciców',
+        COORDS_EMPTY_SNOBS: 'Pula wiosek le\u{17C}y poza zasi\u{119}iem szlachcic\u{F3}w',
         COORDS_EMPTY_TIME: 'Pula wiosek jest pusta z powodu wybranych ram czasowych',
-        COORDS_EMPTY_CONTEXTS: 'W puli wiosek zosta\u0142y tylko wioski, kt\u00F3re zosta\u0142y wybrane chwil\u0119 temu',
+        COORDS_EMPTY_CONTEXTS: 'W puli wiosek zosta\u{142}y tylko wioski, kt\u{F3}re zosta\u{142}y wybrane chwil\u{119} temu',
         ATTACK_TIME: 'Atak dojdzie __DAY__.__MONTH__ na __HOURS__:__MINUTES__',
         UNKNOWN_UNIT: 'Podana jednostka nie istnieje: __UNIT_NAME__',
         UNKNOWN_OPTION: 'Nieznana opcja: __PROPERTY__',
-        NONEXISTENT_UNIT: 'Podana jednostka nie wyst\u0119puje na tym \u015Bwiecie: __UNIT_NAME__',
+        NONEXISTENT_UNIT: 'Podana jednostka nie wyst\u{119}puje na tym \u{15B}wiecie: __UNIT_NAME__',
         INVALID_SETTINGS_SAFEGUARD: 'Ustawienia > safeguard > __UNIT_NAME__  : __VALUE__'
     };
 
@@ -148,8 +148,6 @@ function Faking() {
                     this.checkConfig();
                     this.invalidateCache();
                     this.checkScreen();
-                    if (this.isVillageOutOfGroup())
-                        this.goToNextVillage(i18n.VILLAGE_OUT_OF_GROUP);
                     let troops = this.selectTroops();
                     let target = this.selectTarget(troops);
                     this.displayTargetInfo(troops, target);
@@ -181,16 +179,17 @@ function Faking() {
                 localStorage.setItem(this._cache_control_key, JSON.stringify(cacheControl));
             },
             checkScreen: function () {
+                if ($('.jump_link').length) {
+                    this.goToNextVillage(i18n.VILLAGE_OUT_OF_GROUP);
+                }
                 if (game_data.screen !== 'place' || $('#command-data-form').length !== 1) {
                     location = TribalWars.buildURL('GET', 'place', {mode: 'command'});
                     throw i18n.BAD_SCREEN;
                 }
                 // disable executing script on screen with command confirmation
-                if ($('#troop_confirm_go').length !== 0)
+                if ($('#troop_confirm_go').length !== 0) {
                     throw i18n.BLOCKED_SCREEN;
-            },
-            isVillageOutOfGroup: function () {
-                return $('.jump_link')[0] !== undefined;
+                }
             },
             goToNextVillage: function (message) {
                 if (this._toBoolean(this._settings.skipVillages)) {
@@ -219,38 +218,12 @@ function Faking() {
                 this.goToNextVillage(i18n.INSUFFICIENT_TROOPS);
             },
             selectTarget: function (troops) {
-                let poll = this._sanitizeCoordinates(this._settings.coords);
                 let slowest = this._slowestUnit(troops);
-                if (slowest === 0)
-                    throw i18n.NO_TROOPS_SELECTED;
-
+                let poll = this._sanitizeCoordinates(this._settings.coords);
                 poll = this._targeting(poll);
-
-                if (poll.length === 0) {
-                    this.goToNextVillage(i18n.COORDS_EMPTY);
-                }
-
-                poll = this._removeUnreachableVillages(poll, troops);
-
-                if (poll.length === 0) {
-                    this.goToNextVillage(i18n.COORDS_EMPTY_SNOBS);
-                }
-
-
-                poll = poll.filter(coordinates =>
-                    this._checkConstraints(this._calculateArrivalTime(coordinates, slowest))
-                );
-
-                if (poll.length === 0) {
-                    this.goToNextVillage(i18n.COORDS_EMPTY_TIME);
-                }
-
+                poll = this._removeUnreachableVillages(poll, troops, slowest);
                 poll = this._applyLocalContext(poll);
                 poll = this._applyCustomContexts(poll);
-
-                if (poll.length === 0) {
-                    this.goToNextVillage(i18n.COORDS_EMPTY_CONTEXTS);
-                }
                 return this._selectCoordinates(poll);
             },
             displayTargetInfo: function (troops, target) {
@@ -271,12 +244,24 @@ function Faking() {
                     .replace('__MINUTES__', this._twoDigitNumber(arrivalTime.getMinutes()));
                 UI.SuccessMessage(attack_time);
             },
-            _removeUnreachableVillages: function (poll, troops) {
+            _removeUnreachableVillages: function (poll, troops, slowest) {
                 if (troops.hasOwnProperty('snob') && Number(troops.snob) > 0) {
+                    let max_dist = Number(worldInfo.config.snob.max_dist);
                     poll = poll.filter(coords =>
-                        this._calculateDistanceTo(coords) <= Number(worldInfo.config.snob.max_dist)
+                        this._calculateDistanceTo(coords) <= max_dist
                     );
                 }
+                if (poll.length === 0) {
+                    this.goToNextVillage(i18n.COORDS_EMPTY_SNOBS);
+                }
+
+                poll = poll.filter(coordinates =>
+                    this._checkConstraints(this._calculateArrivalTime(coordinates, slowest))
+                );
+                if (poll.length === 0) {
+                    this.goToNextVillage(i18n.COORDS_EMPTY_TIME);
+                }
+
                 return poll;
             },
             _invalidateItem: function (key, purge) {
@@ -284,15 +269,9 @@ function Faking() {
                     localStorage.removeItem(key);
                     return 0;
                 }
-
                 let items = localStorage.getItem(key);
-                if (items === null) {
-                    throw 'ups';
-                }
                 items = JSON.parse(items);
-
                 items = items.filter(item => item[1] > this._now);
-
                 if (items.length === 0) {
                     localStorage.removeItem(key);
                     return 0;
@@ -315,15 +294,18 @@ function Faking() {
                 /* daysIntervals: ['1-23','23-30'], */
                 let hoursIntervals = this._settings.intervals.split(',');
                 /* hoursIntervals: ['7:00-8:00','23:00-23:59'], */
-                if (this._isInInterval(arrivalTime, daysIntervals, this._parseDailyDate) === false)
+                if (this._isInInterval(arrivalTime, daysIntervals, this._parseDailyDate) === false) {
                     return false;
-                if (this._toBoolean(this._settings.omitNightBonus) && this._isInNightBonus(arrivalTime))
+                }
+                if (this._toBoolean(this._settings.omitNightBonus) && this._isInNightBonus(arrivalTime)) {
                     return false;
+                }
                 return this._isInInterval(arrivalTime, hoursIntervals, this._parseTime);
             },
             _isInNightBonus: function (arrivalTime) {
-                if (!worldInfo.config.night.active)
+                if (!worldInfo.config.night.active) {
                     return false;
+                }
                 let timeInterval = [
                     `${worldInfo.config.night.start_hour}:00-
                      ${worldInfo.config.night.end_hour}:00`
@@ -348,8 +330,9 @@ function Faking() {
                 }
             },
             _selectUnit: function (unitName, unitCount) {
-                if (worldInfo.unit_info.hasOwnProperty(unitName) === false)
+                if (worldInfo.unit_info.hasOwnProperty(unitName) === false) {
                     throw i18n.UNKNOWN_UNIT.replace('__UNIT_NAME__', unitName);
+                }
                 let input = this._getInput(unitName);
                 let maxUnitCount = Number(input.attr('data-all-count'));
                 let selectedUnitCount = Number(input.val());
@@ -392,8 +375,9 @@ function Faking() {
             _fill: function (template, place) {
                 let left = Math.floor(game_data.village.points * Number(this._fakeLimit) * 0.01);
                 left -= this._countPopulations(template);
-                if ((left <= 0 || !this._shouldApplyFakeLimit(template)) && !this._toBoolean(this._settings.fillExact))
+                if ((left <= 0 || !this._shouldApplyFakeLimit(template)) && !this._toBoolean(this._settings.fillExact)) {
                     return true;
+                }
                 let fillTable = this._getFillTable();
                 for (const entry of fillTable) {
                     let name = entry[0];
@@ -410,24 +394,32 @@ function Faking() {
                         }
                     }
                     let selected = 0;
-                    if (!!template[name])
+                    if (!!template[name]) {
                         selected = template[name];
+                    }
                     minimum = Math.min(place[name] - selected, minimum);
-                    if (!template[name])
+                    if (!template[name]) {
                         template[name] = minimum;
-                    else
+                    }
+                    else {
                         template[name] += minimum;
+                    }
                     left -= minimum * pop;
-                    if ((left <= 0 || !this._shouldApplyFakeLimit(template)) && !this._toBoolean(this._settings.fillExact))
+                    if ((left <= 0 || !this._shouldApplyFakeLimit(template)) && !this._toBoolean(this._settings.fillExact)) {
                         break;
+                    }
                 }
                 return left <= 0 || !this._shouldApplyFakeLimit(template);
             },
             _slowestUnit: function (units) {
                 let speed = 0;
                 for (const unitName in units) {
-                    if (units.hasOwnProperty(unitName) && units[unitName] !== 0)
+                    if (units.hasOwnProperty(unitName) && units[unitName] !== 0) {
                         speed = Math.max(Number(worldInfo.unit_info[unitName].speed), speed);
+                    }
+                }
+                if (speed === 0) {
+                    throw i18n.NO_TROOPS_SELECTED;
                 }
                 return speed;
             },
@@ -452,11 +444,12 @@ function Faking() {
                 }
             },
             _toBoolean: function (input) {
-                if (typeof(input) === 'boolean')
+                if (typeof(input) === 'boolean') {
                     return input;
+                }
                 return (input.toLowerCase() === 'true');
             },
-            _calculateDistanceTo: function(target) {
+            _calculateDistanceTo: function (target) {
                 let dx = game_data.village.x - Number(target.split('|')[0]);
                 let dy = game_data.village.y - Number(target.split('|')[1]);
                 return Math.hypot(dx, dy);
@@ -468,14 +461,17 @@ function Faking() {
             },
             _getInput: function (unitName) {
                 let input = $(`#unit_input_${unitName}`);
-                if (input.length === 0)
+                if (input.length === 0) {
                     throw i18n.NONEXISTENT_UNIT.replace('__UNIT_NAME__', unitName);
+                }
                 return input;
             },
             _isInInterval: function (value, intervals, predicate) {
-                for (let i = 0; i < intervals.length; i++)
-                    if (predicate(value, intervals[i]))
+                for (let i = 0; i < intervals.length; i++) {
+                    if (predicate(value, intervals[i])) {
                         return true;
+                    }
+                }
                 return false;
             },
             _parseDailyDate: function (value, interval) {
@@ -538,7 +534,11 @@ function Faking() {
 
                 villages = this._applyBoundingBoxes(villages);
 
-                return [... new Set([...poll, ...villages])];
+                poll = [... new Set([...poll, ...villages])];
+                if (poll.length === 0) {
+                    this.goToNextVillage(i18n.COORDS_EMPTY);
+                }
+                return poll;
             },
             _save: function (coords) {
                 this._saveEntry(coords, this._localContextKey, Number(this._settings.localContext));
@@ -584,22 +584,30 @@ function Faking() {
                     });
             },
             _applyLocalContext: function (poll) {
-                return this._omitRecentlySelectedCoords(poll, {
+                poll = this._omitRecentlySelectedCoords(poll, {
                     key: this._localContextKey,
                     liveTime: Number(this._settings.localContext)
                 });
+                if (poll.length === 0) {
+                    this.goToNextVillage(i18n.COORDS_EMPTY_CONTEXTS);
+                }
+                return poll;
             },
             _applyCustomContexts: function (poll) {
                 let customContexts = this._getCustomContexts();
                 for (let customContext of customContexts) {
                     poll = this._omitRecentlySelectedCoords(poll, customContext);
                 }
+                if (poll.length === 0) {
+                    this.goToNextVillage(i18n.COORDS_EMPTY_CONTEXTS);
+                }
                 return poll;
             },
             _omitRecentlySelectedCoords(poll, context) {
                 let recent = localStorage.getItem(context.key);
-                if (recent === null)
+                if (recent === null) {
                     return poll;
+                }
                 recent = JSON.parse(recent);
                 return this._exclude(poll, recent.map(entry => entry[0]));
             },
@@ -635,4 +643,4 @@ function Faking() {
     }
 }
 
-Faking(true);
+Faking();
