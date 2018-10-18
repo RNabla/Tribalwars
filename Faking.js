@@ -195,10 +195,12 @@ function Faking() {
                 if (this._toBoolean(this._settings.skipVillages)) {
                     let switchRight = $('#village_switch_right')[0];
                     let jumpLink = $('.jump_link')[0];
-                    if (switchRight)
+                    if (switchRight) {
                         location = switchRight.href;
-                    if (jumpLink)
+                    }
+                    else if (jumpLink) {
                         location = jumpLink.href;
+                    }
                 }
                 throw message;
             },
@@ -331,7 +333,7 @@ function Faking() {
             },
             _selectUnit: function (unitName, unitCount) {
                 if (worldInfo.unit_info.hasOwnProperty(unitName) === false)
-                    throw i18n.UNKNOWN_UNIT.replace('__UNIT_NAME__', unitName)
+                    throw i18n.UNKNOWN_UNIT.replace('__UNIT_NAME__', unitName);
                 let input = this._getInput(unitName);
                 let maxUnitCount = Number(input.attr('data-all-count'));
                 let selectedUnitCount = Number(input.val());
