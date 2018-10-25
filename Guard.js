@@ -2,6 +2,7 @@
  * Helper for distributing deff troops
  * Created by: Hermitowski
  * Modified on: 30/03/2018 - version 2.0 - initial release
+ * Modified on: 25/10/2018 - version 2.1 - added strategy for selecting villages
  */
 
 (function (TribalWars) {
@@ -17,7 +18,15 @@
                 deffCount: 'Ilo\u015B\u0107 deffa',
                 spyCount: 'Ilo\u015B\u0107 zwiadu',
                 villageCount: 'Ilo\u015B\u0107 wiosek',
-                minimumCount: 'Ilo\u015B\u0107 minimalna'
+                minimumCount: 'Ilo\u015B\u0107 minimalna',
+                strategy: 'Strategia wybierania'
+            },
+            strategy: {
+                TROOP_ASC: 'Ilość wojsk rosnaco',
+                TROOP_DESC: 'Ilość wojsk malejąco',
+                DIST_ASC: 'Odległość rosnąco',
+                DIST_DESC: 'Odległość malejąco',
+                RANDOM: 'Losowo xD'
             },
             ratio: {
                 spear: 'Przelicznik - Pikinier',
@@ -168,6 +177,7 @@
                 `<th><label for="Guard_spyCount">${Info.DESCRIPTION.initial.spyCount}</label></th>` +
                 `<th><label for="Guard_villageCount">${Info.DESCRIPTION.initial.villageCount}</label></th>` +
                 `<th><label for="Guard_minimumCount">${Info.DESCRIPTION.initial.minimumCount}</label></th>` +
+                `<th><label for="Guard_strategy">${Info.DESCRIPTION.initial.strategy}</label></th>` +
                 `<th></th>` + // padding for buttton
                 `<th><img id="Guard_settings" src="${image_base}icons/settings.png" alt="settings"/></th>`
             });
@@ -179,6 +189,7 @@
                 `<td><input id='Guard_spyCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
                 `<td><input id='Guard_villageCount' type="text" pattern="\\d+\\s*"></td>` +
                 `<td><input id='Guard_minimumCount' type="text" pattern="\\d+\\s*"></td>` +
+                `<td><select id='Guard_strategy'/></td>` +
                 `<td><input id='Guard_calculate' class="btn" type="button" disabled="disabled" value="${Info.DESCRIPTION.BUTTONS.CALCULATE}"/></td>` +
                 `<td></td>` // padding for settings icon
             });
@@ -238,11 +249,16 @@
             if (game_data.screen === 'info_village') {
                 input.val(`${TWMap.pos[0]}|${TWMap.pos[1]}`);
             }
+            let strategy$ = $('#Guard_strategy');
+            for (const key of Guard._strategies) {
+                let option$ = $('<option>', {text: Info.DESCRIPTION.strategy[key], value: key});
+                strategy$.append(option$);
+            }
             for (const key in Guard._defaultSettings.initial) {
                 if (!Guard._defaultSettings.initial.hasOwnProperty(key)) continue;
                 $(`#Guard_${key}`).val(Guard._settings.initial[key]);
             }
-            // handlersc
+            // handlers
             $('#Guard_calculate').click(() => setTimeout(Guard.Calculate));
             $('#Guard_settings').click(() => setTimeout(Guard.EditSettings));
 
@@ -271,8 +287,8 @@
         Calculate: function () {
 
             let checkInput = function (userInput) {
-                for (const key in Guard._defaultSettings.initial) {
-                    if (!Guard._defaultSettings.initial.hasOwnProperty(key)) continue;
+                let numeric = ['deffCount', 'spyCount', 'villageCount', 'minimumCount'];
+                for (const key of numeric) {
                     let input = $(`#Guard_${key}`);
                     let value = input.val();
                     if (!Guard._isNumber(`#Guard_${key}`, Info.DESCRIPTION.initial[key]))
@@ -288,6 +304,7 @@
                     return false;
                 }
                 userInput['target'] = coordsInput.val();
+                userInput['strategy'] = $('#Guard_strategy').val();
                 return true;
             };
 
@@ -298,6 +315,7 @@
                         deff: 0,
                         name: village.name,
                         id: village.id,
+                        coords: village.coords,
                         units: {}
                     };
                     for (const unit in Guard._defaultSettings.safeguard) {
@@ -341,16 +359,95 @@
                 return normalizedVillages;
             };
 
-            let selectDeff = function (normalized, userInput) {
-                // discard villages with deff less then minimum threshold
+            let sortByOwnedDeffAsc = function (lhs, rhs) {
+                return lhs.deff !== rhs.deff ? lhs.deff > rhs.deff ? 1 : -1 : 0;
+            };
+            let sortByOwnedDeffDesc = function (lhs, rhs) {
+                return lhs.deff !== rhs.deff ? lhs.deff > rhs.deff ? -1 : 1 : 0;
+            };
+
+            let sortByOwnedSpiesDesc = function (lhs, rhs) {
+                return lhs.units.spy !== rhs.units.spy ? lhs.units.spy > rhs.units.spy ? -1 : 1 : 0;
+            };
+            let sortByOwnedSpiesAsc = function (lhs, rhs) {
+                return lhs.units.spy !== rhs.units.spy ? lhs.units.spy > rhs.units.spy ? 1 : -1 : 0;
+            };
+
+            let sortByDistanceDesc = function (lhs, rhs) {
+                return lhs.distance !== rhs.distance ? lhs.distance > rhs.distance ? -1 : 1 : 0;
+            };
+            let sortByDistanceAsc = function (lhs, rhs) {
+                return lhs.distance !== rhs.distance ? lhs.distance > rhs.distance ? 1 : -1 : 0;
+            };
+
+            let calculateDistanceToTarget = function (villages, userInput) {
+                let target = userInput.target.split('|').map(x => Number(x));
+                for (let village of villages) {
+                    let dx = target[0] - village.coords[0];
+                    let dy = target[1] - village.coords[1];
+                    village['distance'] = Math.hypot(dx, dy);
+                }
+            };
+
+            let sortByDistance = function (villages, userInput) {
+                calculateDistanceToTarget(villages, userInput);
+                userInput.strategy === 'DIST_ASC'
+                    ? villages.sort(sortByDistanceAsc)
+                    : villages.sort(sortByDistanceDesc);
+            };
+
+            let randomSort = function (villages) {
+                for (let i = villages.length - 1; i > 0; i--) {
+                    let j = Math.floor(Math.random() * (i + 1));
+                    let x = villages[i];
+                    villages[i] = villages[j];
+                    villages[j] = x;
+                }
+                return villages;
+            };
+
+            let preprocessVillages = function (normalized, userInput) {
                 normalized.villages = normalized.villages.filter(village => village.deff >= userInput.minimumCount);
-                // sort by owned deff if requested deffCount is not equal zero, otherwise sort by ownedSpies
-                userInput.deffCount !== 0
-                    ? normalized.villages.sort((lhs, rhs) => rhs.deff - lhs.deff)
-                    : normalized.villages.sort((lhs, rhs) => rhs.units.spy - lhs.units.spy);
+
+                if (userInput.deffCount) {
+                    normalized.villages = normalized.villages.filter(village => village.deff !== 0);
+                }
+                else {
+                    // we need only spies
+                    normalized.villages = normalized.villages.filter(village => village.units.spy !== 0);
+                }
+                switch (userInput.strategy) {
+                    case 'DIST_ASC':
+                    case 'DIST_DESC':
+                        sortByDistance(normalized.villages, userInput);
+                        break;
+                    case 'RANDOM':
+                        randomSort(normalized.villages);
+                        break;
+                    case 'TROOP_ASC':
+                        normalized.villages.sort(userInput.deffCount
+                            ? sortByOwnedDeffAsc
+                            : sortByOwnedSpiesAsc
+                        );
+                        break;
+                    case 'TROOP_DESC':
+                    default:
+                        normalized.villages.sort(userInput.deffCount
+                            ? sortByOwnedDeffDesc
+                            : sortByOwnedSpiesDesc
+                        );
+                        break;
+                }
                 // take as many villages as user wanted
                 normalized.villages = normalized.villages.slice(0, userInput.villageCount);
+                return normalized;
+            };
+
+            let selectDeff = function (normalized, userInput) {
+                normalized = preprocessVillages(normalized, userInput);
+
                 // deff selection
+                normalized.villages.sort(sortByOwnedDeffDesc);
                 for (let i = normalized.villages.length; i > 0; i--) {
                     let village = normalized.villages[i - 1];
                     // on average we should pick this amount deff to balance distribution
@@ -364,8 +461,8 @@
                         village.units[unit] = selectedCount;
                     }
                 }
-                normalized.villages.sort((lhs, rhs) => rhs.units.spy - lhs.units.spy);
                 // spy selection
+                normalized.villages.sort(sortByOwnedSpiesDesc);
                 for (let i = normalized.villages.length; i > 0; i--) {
                     let village = normalized.villages[i - 1];
                     let threshold = (userInput.spyCount - normalized.selected.spy) / i;
@@ -433,8 +530,10 @@
                         }
                         // general info
                         let mainCell = row.cells[0];
+                        let name = mainCell.textContent.trim();
                         let villageInfo = {
-                            name: mainCell.textContent.trim(),
+                            name: name,
+                            coords: name.match(/\d+\|\d+/).pop().split('|').map(x => Number(x)),
                             id: mainCell.children[0].getAttribute('data-id'),
                             units: units
                         };
@@ -462,6 +561,19 @@
                 return fieldset;
             };
 
+            let addSettingsInput = function (id, value) {
+                return `<td><input id="${id}" value="${value}"/></td>`;
+            };
+
+            let addSettingsSelect = function (id, value, options, map) {
+                let html = `<td><select id="${id}">`;
+                for (let option of options) {
+                    html += `<option value="${option}">${map[option]}</option>`
+                }
+                html += '</select></td>';
+                return html;
+            };
+
             let addInfoFieldset = function (branch) {
                 let fieldset = `<fieldset><legend>${Info.LEGEND[branch]}</legend><table>`;
                 for (const key in Guard._defaultSettings[branch]) {
@@ -470,7 +582,12 @@
                     let value = Guard._settings[branch][key];
                     fieldset += '<tr>';
                     fieldset += `<td><label for="${id}">${Info.DESCRIPTION[branch][key]}:</label></td>`;
-                    fieldset += `<td><input id="${id}" value="${value}"/></td>`;
+                    if (key === 'strategy') {
+                        fieldset += addSettingsSelect(id, value, Guard._strategies, Info.DESCRIPTION.strategy);
+                    }
+                    else {
+                        fieldset += addSettingsInput(id, value);
+                    }
                     fieldset += '</tr>';
                 }
                 fieldset += '</table></fieldset>';
@@ -486,10 +603,15 @@
                         if (!Guard._defaultSettings[branch].hasOwnProperty(key)) continue;
                         let userInput = $(`#Guard_default_${branch}_${key}`);
                         let userValue = userInput.val();
-                        if (!Guard._isNumber(`#Guard_default_${branch}_${key}`, Info.DESCRIPTION[branch][key])) {
-                            return;
+                        if (key === 'strategy') {
+                            settings[branch][key] = userValue;
                         }
-                        settings[branch][key] = Number(userValue);
+                        else {
+                            if (!Guard._isNumber(`#Guard_default_${branch}_${key}`, Info.DESCRIPTION[branch][key])) {
+                                return;
+                            }
+                            settings[branch][key] = Number(userValue);
+                        }
                         // apply changes to current setttings, but don't change user's input
                         if (branch !== 'initial') {
                             Guard._settings[branch][key] = settings[branch][key];
@@ -512,6 +634,7 @@
         },
         _storageKey: 'GuardSettings',
         _unitsPerGroup: new Map(),
+        _strategies: ['TROOP_DESC', 'TROOP_ASC', 'DIST_DESC', 'DIST_ASC', 'RANDOM'],
         _defaultSettings: {
             ratio: {
                 spear: 1,
@@ -530,17 +653,20 @@
                 deffCount: 0,
                 spyCount: 0,
                 villageCount: 12,
-                minimumCount: 0
-            }
+                minimumCount: 0,
+                strategy: 'TROOP_DESC'
+            },
         },
         _settings: {},
         initSettings: function () {
-            let storedSettings = localStorage[Guard._storageKey];
-            if (storedSettings === undefined) {
-                localStorage[Guard._storageKey] = JSON.stringify(Guard._defaultSettings);
-                storedSettings = JSON.stringify(Guard._defaultSettings);
+            let storedSettingsJson = localStorage.getItem(Guard._storageKey);
+            if (storedSettingsJson === null) {
+                let settingsJson = JSON.stringify(Guard._defaultSettings);
+                localStorage.setItem(Guard._storageKey, settingsJson);
+                Guard._settings = JSON.parse(settingsJson);
+                return;
             }
-            Guard._settings = JSON.parse(storedSettings);
+            Guard._settings = JSON.parse(storedSettingsJson);
         },
         init: function () {
             let instance = $('#HermitianGuard');
