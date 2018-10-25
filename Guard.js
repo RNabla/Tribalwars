@@ -69,7 +69,7 @@
                     number /= 1000;
                 } else {
                     if (i === 0)
-                        return number;
+                        return number.toFixed(2);
                     let fraction = 2;
                     if (number >= 10)
                         fraction = 1;
@@ -87,18 +87,18 @@
             let value = input.val();
             if (emptyRegex.test(value)) {
                 UI.ErrorMessage(Info.ERROR.BLANK.replace('__1__', replacement));
-                input.focus();
+                input.trigger('focus');
                 return false;
             }
             let numericValue = Number(value);
             if (isNaN(numericValue)) {
                 UI.ErrorMessage(Info.ERROR.NAN.replace('__1__', replacement));
-                input.focus();
+                input.trigger('focus');
                 return false;
             }
             if (numericValue < 0) {
                 UI.ErrorMessage(Info.ERROR.NEGATIVE_NUMBER.replace('__1__', replacement));
-                input.focus();
+                input.trigger('focus');
                 return false;
             }
             return true;
@@ -155,7 +155,7 @@
             let deleteRow = function () {
                 $(this).closest('tr').remove();
             };
-            placeA.click(deleteRow);
+            placeA.on('click', deleteRow);
             placeCell.append(placeA);
             row.append(placeCell);
             $('#GuardResultList').append(row);
@@ -187,8 +187,8 @@
                 `<td><select id='Guard_group'></select></td>` +
                 `<td><input id='Guard_deffCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
                 `<td><input id='Guard_spyCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
-                `<td><input id='Guard_villageCount' type="text" pattern="\\d+\\s*"></td>` +
-                `<td><input id='Guard_minimumCount' type="text" pattern="\\d+\\s*"></td>` +
+                `<td><input id='Guard_villageCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
+                `<td><input id='Guard_minimumCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
                 `<td><select id='Guard_strategy'/></td>` +
                 `<td><input id='Guard_calculate' class="btn" type="button" disabled="disabled" value="${Info.DESCRIPTION.BUTTONS.CALCULATE}"/></td>` +
                 `<td></td>` // padding for settings icon
@@ -259,8 +259,8 @@
                 $(`#Guard_${key}`).val(Guard._settings.initial[key]);
             }
             // handlers
-            $('#Guard_calculate').click(() => setTimeout(Guard.Calculate));
-            $('#Guard_settings').click(() => setTimeout(Guard.EditSettings));
+            $('#Guard_calculate').on('click', Guard.Calculate);
+            $('#Guard_settings').on('click', Guard.EditSettings);
 
             let getGroupsInfo = function () {
                 let url = TribalWars.buildURL('GET', 'groups', {mode: 'overview', ajax: 'load_group_menu'});
@@ -279,7 +279,7 @@
                     select.append(option);
                 }
                 select.val(groupInfo.group_id);
-                $('#Guard_calculate').attr('disabled', false);
+                $('#Guard_calculate').prop('disabled', false);
             });
 
         },
@@ -300,7 +300,7 @@
                 let coordsInput = $('#Guard_target');
                 if (!coordsRegex.test(coordsInput.val())) {
                     UI.ErrorMessage(Info.ERROR.BAD_FORMAT.replace('__1__', Info.DESCRIPTION.HEADERS.TARGET));
-                    coordsInput.focus();
+                    coordsInput.trigger('focus');
                     return false;
                 }
                 userInput['target'] = coordsInput.val();
@@ -471,7 +471,6 @@
                     normalized.selected.spy += selectedCount;
                     village.units.spy = selectedCount;
                 }
-
                 for (const name in normalized.all) {
                     if (!normalized.all.hasOwnProperty(name)) continue;
                     let selected = Guard._beautifyNumber(normalized.selected[name]);
@@ -489,9 +488,7 @@
             }
             // clear output
             $('#GuardResultList').find('tr').remove();
-            let button = $('#HermitianGuardCalculate');
-            button.attr('disabled', true);
-
+            $('#Guard_calculate').prop('disabled', true);
             let selectedGroupId = $('#Guard_group').val();
             Guard.getUnitsForGroup(selectedGroupId).then(villages => {
                 let normalized = normalizeVillages(villages);
@@ -499,7 +496,7 @@
                 for (const village of normalized.villages) {
                     Guard.addToResults(village, userInput.target.split('|'));
                 }
-                button.attr('disabled', false);
+                $('#Guard_calculate').prop('disabled', false);
             });
         },
         getUnitsForGroup: function (group_id) {
@@ -620,7 +617,7 @@
                 }
                 localStorage[Guard._storageKey] = JSON.stringify(settings);
                 UI.SuccessMessage(Info.SETTINGS_SAVED);
-                $('.popup_box_close').click();
+                $('.popup_box_close').trigger('click');
             };
 
             let gui = '<div>';
@@ -629,7 +626,7 @@
             gui += addInfoFieldset('initial');
             gui += `<button id="GuardSaveSettings" class="btn">${Info.DESCRIPTION.BUTTONS.SAVE_SETTINGS}</button><div>`;
             Dialog.show('GuardOptionEditor', gui);
-            $('#GuardSaveSettings').click(saveSettings);
+            $('#GuardSaveSettings').on('click', saveSettings);
 
         },
         _storageKey: 'GuardSettings',
