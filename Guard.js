@@ -44,14 +44,15 @@
             },
             BUTTONS: {
                 SAVE_SETTINGS: 'Zapisz',
-                CALCULATE: 'Oblicz'
+                CALCULATE: 'Oblicz',
+                SEND: 'Wykonaj'
             },
             HEADERS: {
                 TARGET: 'Cel',
                 GROUP: 'Grupa',
                 PROCESS: 'Oblicz',
                 SELECTED: 'Wybrano'
-            }
+            },
         },
         ERROR: {
             BLANK: 'Pole <strong>__1__</strong> jest puste',
@@ -104,7 +105,7 @@
             return true;
         },
 
-        addToResults: function (village, coords) {
+        addToResults: function (village, coords, groupId) {
             let misc = {
                 x: coords[0],
                 y: coords[1],
@@ -149,10 +150,12 @@
 
             let placeA = $('<a>', {
                 href: placeLink,
-                text: 'Wykonaj'
+                text: Info.DESCRIPTION.BUTTONS.SEND
             });
             placeCell.attr('href', placeLink);
             let deleteRow = function () {
+                // delete cached information for future recalculations as the command may be issued
+                Guard._unitsPerGroup.delete(groupId);
                 $(this).closest('tr').remove();
             };
             placeA.on('click', deleteRow);
@@ -494,7 +497,7 @@
                 let normalized = normalizeVillages(villages);
                 selectDeff(normalized, userInput);
                 for (const village of normalized.villages) {
-                    Guard.addToResults(village, userInput.target.split('|'));
+                    Guard.addToResults(village, userInput.target.split('|'), selectedGroupId);
                 }
                 $('#Guard_calculate').prop('disabled', false);
             });
