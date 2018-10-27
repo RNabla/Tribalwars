@@ -3,51 +3,53 @@
  * Created by: Hermitowski
  * Modified on: 30/03/2018 - version 2.0 - initial release
  * Modified on: 25/10/2018 - version 2.1 - added strategy for selecting villages
+ * Modified on: 27/10/2018 - version 2.2 - added time range filter
  */
 
 (function (TribalWars) {
     let Info = {
-        SETTINGS_SAVED: 'Zapisano pomy\u015Blnie',
-        SETTINGS_RESET: 'Przywrócono domyślne ustawienia',
+        SETTINGS_SAVED: 'Zapisano pomy\u{15B}lnie',
+        SETTINGS_RESET: 'Przywr\u{F3}cono domy\u{15B}lne ustawienia',
         CURRENT_SELECTED_GROUP: 'Obecnie wybrana grupa',
         LEGEND: {
             ratio: 'Przeliczniki',
             safeguard: 'Rezerwa',
-            initial: 'Domy\u015Blne warto\u015Bci'
+            initial: 'Domy\u{15B}lne warto\u{15B}ci'
         },
         DESCRIPTION: {
             initial: {
-                deffCount: 'Ilo\u015B\u0107 deffa',
-                spyCount: 'Ilo\u015B\u0107 zwiadu',
-                villageCount: 'Ilo\u015B\u0107 wiosek',
-                minimumCount: 'Ilo\u015B\u0107 minimalna',
+                deffCount: 'Ilo\u{15B}\u{107} deffa',
+                spyCount: 'Ilo\u{15B}\u{107} zwiadu',
+                villageCount: 'Ilo\u{15B}\u{107} wiosek',
+                minimumCount: 'Ilo\u{15B}\u{107} minimalna',
                 strategy: 'Strategia wybierania',
-                group_id: 'Domyślna grupa'
+                group_id: 'Domy\u{15B}lna grupa',
+                date: 'Data dotarcia'
             },
             strategy: {
-                TROOP_ASC: 'Ilość wojsk rosnaco',
-                TROOP_DESC: 'Ilość wojsk malejąco',
-                DIST_ASC: 'Odległość rosnąco',
-                DIST_DESC: 'Odległość malejąco',
+                TROOP_ASC: 'Ilo\u{15B}\u{107} wojsk rosnaco',
+                TROOP_DESC: 'Ilo\u{15B}\u{107} wojsk malej\u{105}co',
+                DIST_ASC: 'Odleg\u{142}o\u{15B}\u{107} rosn\u{105}co',
+                DIST_DESC: 'Odleg\u{142}o\u{15B}\u{107} malej\u{105}co',
                 RANDOM: 'Losowo xD'
             },
             ratio: {
                 spear: 'Przelicznik - Pikinier',
                 sword: 'Przelicznik - Miecznik',
-                archer: 'Przelicznik - \u0141ucznik',
+                archer: 'Przelicznik - \u{141}ucznik',
                 spy: 'Przelicznik - Zwiadowca',
-                heavy: 'Przelicznik - Ci\u0119\u017Cka kawaleria',
+                heavy: 'Przelicznik - Ci\u{119}\u{17C}ka kawaleria',
             },
             safeguard: {
                 spear: 'Rezerwa - Pikinier',
                 sword: 'Rezerwa - Miecznik',
-                archer: 'Rezerwa - \u0141ucznik',
+                archer: 'Rezerwa - \u{141}ucznik',
                 spy: 'Rezerwa - Zwiadowca',
-                heavy: 'Rezerwa - Ci\u0119\u017Cka kawaleria',
+                heavy: 'Rezerwa - Ci\u{119}\u{17C}ka kawaleria',
             },
             BUTTONS: {
                 SAVE_SETTINGS: 'Zapisz',
-                RESET_SETTINGS: 'Przywróć domyślne',
+                RESET_SETTINGS: 'Przywr\u{F3}\u{107} domy\u{15B}lne',
                 CALCULATE: 'Oblicz',
                 SEND: 'Wykonaj'
             },
@@ -62,7 +64,7 @@
             BLANK: 'Pole <strong>__1__</strong> jest puste',
             NAN: 'Pole <strong>__1__</strong> nie reprezentuje liczby',
             NEGATIVE_NUMBER: 'Pole <strong>__1__</strong> jest ujemne',
-            BAD_FORMAT: 'Pole <strong>__1__</strong> ma z\u0142y format'
+            BAD_FORMAT: 'Pole <strong>__1__</strong> ma z\u{142}y format'
         }
     };
 
@@ -85,7 +87,37 @@
             }
             return `${number.toFixed(0)}T`;
         },
+        _parseDate: function (dateString) {
+            dateString = dateString.trim();
+            let parts = dateString.split(' ');
+            if (parts.length !== 2) {
+                throw 'Invalid date';
+            }
 
+            let result = {};
+            let dateParts = parts[0].split('.').filter(x => x.trim().length !== 0);
+            let timeParts = parts[1].split(':').filter(x => x.trim().length !== 0);
+            if (dateParts.length < 2 || timeParts.length < 2) {
+                throw 'Invalid date';
+            }
+            result['day'] = Number(dateParts[0]);
+            result['month'] = Number(dateParts[1]);
+            result['year'] = dateParts.length === 3
+                ? Number(dateParts[2])
+                : new Date().getFullYear();
+
+            result['hour'] = Number(timeParts[0]);
+            result['minute'] = Number(timeParts[1]);
+            result['second'] = timeParts.length === 3
+                ? Number(timeParts[2])
+                : 0;
+            for (const key in result) {
+                if (isNaN(result[key])) {
+                    throw `${key} is invalid`;
+                }
+            }
+            return new Date(result.year, result.month - 1, result.day, result.hour, result.minute, result.second);
+        },
         _isNumber: function (selector, replacement) {
             let emptyRegex = new RegExp(/^\s*$/);
             let input = $(selector);
@@ -178,25 +210,27 @@
             let head = $('<thead>');
             let header = $('<tr>', {
                 html:
-                `<th><label for="Guard_target">${Info.DESCRIPTION.HEADERS.TARGET}</label></th>` +
-                `<th><label for="Guard_group">${Info.DESCRIPTION.HEADERS.GROUP}</label></th>` +
-                `<th><label for="Guard_deffCount">${Info.DESCRIPTION.initial.deffCount}</label></th>` +
-                `<th><label for="Guard_spyCount">${Info.DESCRIPTION.initial.spyCount}</label></th>` +
-                `<th><label for="Guard_villageCount">${Info.DESCRIPTION.initial.villageCount}</label></th>` +
-                `<th><label for="Guard_minimumCount">${Info.DESCRIPTION.initial.minimumCount}</label></th>` +
-                `<th><label for="Guard_strategy">${Info.DESCRIPTION.initial.strategy}</label></th>` +
+                `<th><label class="center" for="Guard_target">${Info.DESCRIPTION.HEADERS.TARGET}</label></th>` +
+                `<th><label class="center" for="Guard_group">${Info.DESCRIPTION.HEADERS.GROUP}</label></th>` +
+                `<th><label class="center" for="Guard_deffCount">${Info.DESCRIPTION.initial.deffCount}</label></th>` +
+                `<th><label class="center" for="Guard_spyCount">${Info.DESCRIPTION.initial.spyCount}</label></th>` +
+                `<th><label class="center" for="Guard_villageCount">${Info.DESCRIPTION.initial.villageCount}</label></th>` +
+                `<th><label class="center" for="Guard_minimumCount">${Info.DESCRIPTION.initial.minimumCount}</label></th>` +
+                `<th><label class="center" for="Guard_strategy">${Info.DESCRIPTION.initial.strategy}</label></th>` +
+                `<th><label class="center" for="Guard_date">${Info.DESCRIPTION.initial.date}</label></th>` +
                 `<th></th>` + // padding for buttton
                 `<th><img id="Guard_settings" src="${image_base}icons/settings.png" alt="settings"/></th>`
             });
             let inputRow = $('<tr>', {
                 html:
-                `<td><input id='Guard_target' type='text' size='9' pattern="\\s*\\d{1,3}\\|\\d{1,3}\\s*"/></td>` +
+                `<td><input id='Guard_target' type='text' size='8' pattern="\\s*\\d{1,3}\\|\\d{1,3}\\s*"/></td>` +
                 `<td><select id='Guard_group'></select></td>` +
-                `<td><input id='Guard_deffCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
-                `<td><input id='Guard_spyCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
-                `<td><input id='Guard_villageCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
-                `<td><input id='Guard_minimumCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
+                `<td><input size="16" id='Guard_deffCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
+                `<td><input size="16" id='Guard_spyCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
+                `<td><input size="16" id='Guard_villageCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
+                `<td><input size="16" id='Guard_minimumCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
                 `<td><select id='Guard_strategy'/></td>` +
+                `<td><span><input id='Guard_apply_filter_date' type="checkbox"><input id='Guard_date' size="16" type="text" disabled/></span></td>` +
                 `<td><input id='Guard_calculate' class="btn" type="button" disabled="disabled" value="${Info.DESCRIPTION.BUTTONS.CALCULATE}"/></td>` +
                 `<td></td>` // padding for settings icon
             });
@@ -265,9 +299,22 @@
                 if (!Guard._defaultSettings.initial.hasOwnProperty(key)) continue;
                 $(`#Guard_${key}`).val(Guard._settings.initial[key]);
             }
+            let default_date = new Date();
+            if (Guard._worldInfo.config.night.active) {
+                let end_hour = Number(Guard._worldInfo.config.night.end_hour);
+                if (default_date.getHours() >= end_hour) {
+                    default_date.setDate(default_date.getDate() + 1);
+                }
+                default_date.setHours(end_hour);
+            }
+
+            $('#Guard_date').val(`${default_date.getDate()}.${default_date.getMonth() + 1} ${default_date.getHours()}:00:00`);
             // handlers
             $('#Guard_calculate').on('click', Guard.Calculate);
             $('#Guard_settings').on('click', Guard.EditSettings);
+            $('#Guard_apply_filter_date').on('change', (e) => {
+                $('#Guard_date').prop('disabled', !e.target.checked);
+            });
 
             let getGroupsInfo = function () {
                 let url = TribalWars.buildURL('GET', 'groups', {mode: 'overview', ajax: 'load_group_menu'});
@@ -320,17 +367,31 @@
                 }
                 userInput['target'] = coordsInput.val();
                 userInput['strategy'] = $('#Guard_strategy').val();
+                try {
+                    if ($('#Guard_apply_filter_date').prop('checked')) {
+                        let target_date = Guard._parseDate($('#Guard_date').val());
+                        userInput['travel_time'] = (target_date.getTime() - Date.now()) / 60 / 1000;
+                    }
+                    else {
+                        userInput['travel_time'] = NaN;
+                    }
+                }
+                catch (e) {
+                    UI.ErrorMessage(e, 3e3);
+                    return false;
+                }
                 return true;
             };
 
             let normalizeVillages = function (villages) {
-
+                let target = userInput.target.split('|').map(x => Number(x));
                 let normalizeVillage = function (village) {
                     let normalized = {
                         deff: 0,
                         name: village.name,
                         id: village.id,
                         coords: village.coords,
+                        distance: Math.hypot(target[0] - village.coords[0], target[1] - village.coords[1]),
                         units: {}
                     };
                     for (const unit in Guard._defaultSettings.safeguard) {
@@ -342,6 +403,13 @@
                         normalized.units[unit] = village.units[unit] === undefined
                             ? 0
                             : Math.max(village.units[unit] - Number(Guard._settings.safeguard[unit]), 0);
+
+                        // check whether unit travel time is in time range
+                        if (!isNaN(userInput.travel_time) && Guard._worldInfo.unit_info.hasOwnProperty(unit)) {
+                            if (Number(Guard._worldInfo.unit_info[unit].speed) * normalized.distance > userInput.travel_time) {
+                                normalized.units[unit] = 0;
+                            }
+                        }
 
                         normalized.deff += Number(normalized.units[unit]) * ratio;
                     }
@@ -395,17 +463,7 @@
                 return lhs.distance !== rhs.distance ? lhs.distance > rhs.distance ? 1 : -1 : 0;
             };
 
-            let calculateDistanceToTarget = function (villages, userInput) {
-                let target = userInput.target.split('|').map(x => Number(x));
-                for (let village of villages) {
-                    let dx = target[0] - village.coords[0];
-                    let dy = target[1] - village.coords[1];
-                    village['distance'] = Math.hypot(dx, dy);
-                }
-            };
-
             let sortByDistance = function (villages, userInput) {
-                calculateDistanceToTarget(villages, userInput);
                 userInput.strategy === 'DIST_ASC'
                     ? villages.sort(sortByDistanceAsc)
                     : villages.sort(sortByDistanceDesc);
@@ -421,7 +479,7 @@
                 return villages;
             };
 
-            let preprocessVillages = function (normalized, userInput) {
+            let preprocessVillages = function (normalized) {
                 normalized.villages = normalized.villages.filter(village => village.deff >= userInput.minimumCount);
 
                 if (userInput.deffCount) {
@@ -458,8 +516,8 @@
                 return normalized;
             };
 
-            let selectDeff = function (normalized, userInput) {
-                normalized = preprocessVillages(normalized, userInput);
+            let selectDeff = function (normalized) {
+                normalized = preprocessVillages(normalized);
 
                 // deff selection
                 normalized.villages.sort(sortByOwnedDeffDesc);
@@ -507,7 +565,7 @@
             let selectedGroupId = $('#Guard_group').val();
             Guard.getUnitsForGroup(selectedGroupId).then(villages => {
                 let normalized = normalizeVillages(villages);
-                selectDeff(normalized, userInput);
+                selectDeff(normalized);
                 for (const village of normalized.villages) {
                     Guard.addToResults(village, userInput.target.split('|'), selectedGroupId);
                 }
@@ -695,9 +753,10 @@
             }
             Guard._settings = JSON.parse(storedSettingsJson);
         },
-        init: function () {
+        init: function (worldInfo) {
             let instance = $('#HermitianGuard');
             if (0 === instance.length) {
+                Guard._worldInfo = worldInfo;
                 Guard.initSettings();
                 Guard.createGui();
                 Guard.initGui();
@@ -707,6 +766,14 @@
             }
         },
     };
-    Guard.init();
+
+    $.getScript('https://media.innogamescdn.com/com_DS_PL/skrypty/MapFiles.js', () => {
+        GetWorldInfo({
+            config: {}, unit_info: {}
+        }).then(worldInfo => {
+            Guard.init(worldInfo);
+        });
+
+    });
 })(TribalWars);
 
