@@ -8,6 +8,7 @@
 (function (TribalWars) {
     let Info = {
         SETTINGS_SAVED: 'Zapisano pomy\u015Blnie',
+        CURRENT_SELECTED_GROUP: 'Obecnie wybrana grupa',
         LEGEND: {
             ratio: 'Przeliczniki',
             safeguard: 'Rezerwa',
@@ -19,7 +20,8 @@
                 spyCount: 'Ilo\u015B\u0107 zwiadu',
                 villageCount: 'Ilo\u015B\u0107 wiosek',
                 minimumCount: 'Ilo\u015B\u0107 minimalna',
-                strategy: 'Strategia wybierania'
+                strategy: 'Strategia wybierania',
+                group_id: 'Domyślna grupa'
             },
             strategy: {
                 TROOP_ASC: 'Ilość wojsk rosnaco',
@@ -268,7 +270,14 @@
             let getGroupsInfo = function () {
                 let url = TribalWars.buildURL('GET', 'groups', {mode: 'overview', ajax: 'load_group_menu'});
                 return fetch(url, {credentials: 'include'}).then(t => t.text()).then(response => {
-                    return JSON.parse(response);
+                    let groups = JSON.parse(response);
+                    groups.result.filter(x => x.type !== 'separator').map(x =>
+                    {
+                        Guard._groups.push(x.group_id);
+                        Guard._groupId2Name[x.group_id] = x.name;
+                        return x.group_id;
+                    });
+                    return groups;
                 });
             };
 
@@ -281,7 +290,9 @@
                     option.text(group.name);
                     select.append(option);
                 }
-                select.val(groupInfo.group_id);
+                select.val(Number(Guard._settings.initial.group_id) === Guard._defaultSettings.initial.group_id
+                    ? groupInfo.group_id
+                    : Guard._settings.initial.group_id);
                 $('#Guard_calculate').prop('disabled', false);
             });
 
@@ -568,7 +579,7 @@
             let addSettingsSelect = function (id, value, options, map) {
                 let html = `<td><select id="${id}">`;
                 for (let option of options) {
-                    html += `<option value="${option}">${map[option]}</option>`
+                    html += `<option value="${option}">${map ? map[option] : option}</option>`
                 }
                 html += '</select></td>';
                 return html;
@@ -584,6 +595,9 @@
                     fieldset += `<td><label for="${id}">${Info.DESCRIPTION[branch][key]}:</label></td>`;
                     if (key === 'strategy') {
                         fieldset += addSettingsSelect(id, value, Guard._strategies, Info.DESCRIPTION.strategy);
+                    }
+                    else if (key === 'group_id') {
+                        fieldset += addSettingsSelect(id, value, Guard._groups, Guard._groupId2Name);
                     }
                     else {
                         fieldset += addSettingsInput(id, value);
@@ -603,7 +617,7 @@
                         if (!Guard._defaultSettings[branch].hasOwnProperty(key)) continue;
                         let userInput = $(`#Guard_default_${branch}_${key}`);
                         let userValue = userInput.val();
-                        if (key === 'strategy') {
+                        if (['strategy', 'group_id'].indexOf(key) !== -1) {
                             settings[branch][key] = userValue;
                         }
                         else {
@@ -635,6 +649,10 @@
         _storageKey: 'GuardSettings',
         _unitsPerGroup: new Map(),
         _strategies: ['TROOP_DESC', 'TROOP_ASC', 'DIST_DESC', 'DIST_ASC', 'RANDOM'],
+        _groups: [ '-1' ],
+        _groupId2Name: {
+            '-1' : Info.CURRENT_SELECTED_GROUP
+        },
         _defaultSettings: {
             ratio: {
                 spear: 1,
@@ -654,7 +672,8 @@
                 spyCount: 0,
                 villageCount: 12,
                 minimumCount: 0,
-                strategy: 'TROOP_DESC'
+                strategy: 'TROOP_DESC',
+                group_id: -1
             },
         },
         _settings: {},
