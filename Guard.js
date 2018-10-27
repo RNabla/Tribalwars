@@ -8,6 +8,7 @@
 (function (TribalWars) {
     let Info = {
         SETTINGS_SAVED: 'Zapisano pomy\u015Blnie',
+        SETTINGS_RESET: 'Przywrócono domyślne ustawienia',
         CURRENT_SELECTED_GROUP: 'Obecnie wybrana grupa',
         LEGEND: {
             ratio: 'Przeliczniki',
@@ -46,6 +47,7 @@
             },
             BUTTONS: {
                 SAVE_SETTINGS: 'Zapisz',
+                RESET_SETTINGS: 'Przywróć domyślne',
                 CALCULATE: 'Oblicz',
                 SEND: 'Wykonaj'
             },
@@ -271,8 +273,7 @@
                 let url = TribalWars.buildURL('GET', 'groups', {mode: 'overview', ajax: 'load_group_menu'});
                 return fetch(url, {credentials: 'include'}).then(t => t.text()).then(response => {
                     let groups = JSON.parse(response);
-                    groups.result.filter(x => x.type !== 'separator').map(x =>
-                    {
+                    groups.result.filter(x => x.type !== 'separator').map(x => {
                         Guard._groups.push(x.group_id);
                         Guard._groupId2Name[x.group_id] = x.name;
                         return x.group_id;
@@ -637,21 +638,28 @@
                 $('.popup_box_close').trigger('click');
             };
 
+            let resetSettings = function () {
+                localStorage.removeItem(Guard._storageKey);
+                UI.SuccessMessage(Info.SETTINGS_RESET);
+                $('.popup_box_close').trigger('click');
+            };
             let gui = '<div>';
             gui += addUnitFieldset('ratio');
             gui += addUnitFieldset('safeguard');
             gui += addInfoFieldset('initial');
-            gui += `<button id="GuardSaveSettings" class="btn">${Info.DESCRIPTION.BUTTONS.SAVE_SETTINGS}</button><div>`;
+            gui += `<button id="GuardResetSettings" class="btn">${Info.DESCRIPTION.BUTTONS.RESET_SETTINGS}</button>`;
+            gui += `<button id="GuardSaveSettings" class="btn right">${Info.DESCRIPTION.BUTTONS.SAVE_SETTINGS}</button><div>`;
             Dialog.show('GuardOptionEditor', gui);
             $('#GuardSaveSettings').on('click', saveSettings);
+            $('#GuardResetSettings').on('click', resetSettings);
 
         },
         _storageKey: 'GuardSettings',
         _unitsPerGroup: new Map(),
         _strategies: ['TROOP_DESC', 'TROOP_ASC', 'DIST_DESC', 'DIST_ASC', 'RANDOM'],
-        _groups: [ '-1' ],
+        _groups: ['-1'],
         _groupId2Name: {
-            '-1' : Info.CURRENT_SELECTED_GROUP
+            '-1': Info.CURRENT_SELECTED_GROUP
         },
         _defaultSettings: {
             ratio: {
