@@ -12,29 +12,128 @@
             return UI.ErrorMessage("Tego typu raporty nie s\u0105 obs\u0142ugiwane");
         return UI.ErrorMessage("Czy aby na pewno jeste\u015B w przegl\u0105dzie raportu?")
     }
-    let playerIdSelector = 'data-player';
-    let villageIdSelector = 'data-id';
-    let context = '.contexted';
-    let sideInfo = '#attack_info_';
-    let att = $(sideInfo + 'att');
-    let def = $(sideInfo + 'def');
+    let att = $('#attack_info_att');
+    let def = $('#attack_info_def');
     let attPlayerName = $(att)[0].rows[0].cells[1].innerText.trim();
     let defPlayerName = $(def)[0].rows[0].cells[1].innerText.trim();
-    let attPlayerId = $(att).find(context).attr(playerIdSelector);
-    let defPlayerId = $(def).find(context).attr(playerIdSelector);
-    let attVillageId = $(att).find(context).attr(villageIdSelector);
-    let defVillageId = $(def).find(context).attr(villageIdSelector);
+    let attPlayerId = $(att).find('.contexted').attr('data-player');
+    let defPlayerId = $(def).find('.contexted').attr('data-player');
+    let attVillageId = $(att).find('.contexted').attr('data-id');
+    let defVillageId = $(def).find('.contexted').attr('data-id');
     let playerId = TribalWars.getGameData().player.id;
     let forwarder = getOriginPlayer();
-    if (playerId !== defPlayerId && playerId !== attPlayerId && forwarder !== attPlayerName && forwarder !== defPlayerName) {
-        UI.ErrorMessage('Nie wiem po kt\u00F3rej stronie doda\u0107 raport');
-    } else {
-        let title = getBattleTime();
-        let reportExport = $("#report_export_code").val();
-        let villageId = (playerId === attPlayerId || forwarder === attPlayerName) ? defVillageId : attVillageId;
-        let role = (villageId === defVillageId) ? "broni\u0105cego" : "atakuj\u0105cego";
-        appendInformation(TribalWars, villageId, reportExport, title, role);
+    let context = 'NONE';
+    let villageId = undefined;
+    if (playerId === attPlayerId || forwarder === attPlayerName) {
+        context = 'ATT';
+        villageId = defVillageId;
+    } else if (playerId === defPlayerId || forwarder === defPlayerName) {
+        context = 'DEF';
+        villageId = attVillageId;
     }
+    else {
+        return UI.ErrorMessage('Nie wiem po kt\u00F3rej stronie doda\u0107 raport');
+    }
+    let title = getBattleTime();
+
+    if (context === 'ATT') {
+        let church = getChurch();
+        if (church) {
+            title += ` | ${church.toUpperCase()}`;
+        }
+        let troopsType = guessTroopsType();
+        if (troopsType !== undefined) {
+            title += ` | ${troopsType}`;
+        }
+        let belief = checkBelief();
+        if (belief) {
+            title += ` | ${belief}`;
+        }
+        if (checkIfEmpty()) {
+            title += ' | PUSTA';
+        }
+        let bunkier = checkIfBunkier();
+        if (bunkier) {
+            title += ` | BUNKIER ${bunkier}`;
+        }
+
+    }
+    console.log(title);
+    let reportExport = $("#report_export_code").val();
+    let role = (villageId === defVillageId) ? "broni\u0105cego" : "atakuj\u0105cego";
+    appendInformation(TribalWars, villageId, reportExport, title, role);
+
+
+    function checkIfEmpty() {
+        let table = $('#attack_info_def_units')[0];
+        let count = table.rows[1];
+        let loses = table.rows[2];
+
+        for (let i = 1; i < table.rows[1].cells.length; i++) {
+            if (count.cells[i].innerText !== loses.cells[i].innerText) {
+               return false;
+            }
+        }
+        return true;
+    }
+
+    function checkBelief() {
+        if (def[0].rows[3].innerText.indexOf("walczyli bez wsparcia wiary") !== -1) {
+            return 'BEZ WIARY';
+        }
+        return undefined;
+    }
+
+    function accumulateTroopsDefense(row) {
+        let troops = {};
+        for (let i = 1; i < row.cells.length; i++) {
+            troops[game_data.units[i-1]] = Number(row.cells[i].innerText);
+        }
+        return accumulateUnitTypes(troops);
+    }
+
+    function checkIfBunkier() {
+        let village_troops = accumulateTroopsDefense($('#attack_info_def_units')[0].rows[1]);
+        if (village_troops.deffCount > 30000) {
+            return `${Math.floor(village_troops.deffCount / 1000)}K`;
+        }
+        return undefined;
+    }
+
+    function guessTroopsType() {
+        let units_away = getUnitsAway();
+        let units_away_verdict = verdict(units_away, 3000);
+        if (units_away_verdict) {
+            return units_away_verdict;
+        }
+        try {
+            let village_troops = accumulateTroopsDefense($('#attack_info_def_units')[0].rows[1]);
+            let village_troops_verdict = verdict(village_troops, 2000);
+            if (village_troops_verdict) {
+                return village_troops_verdict;
+            }
+        }
+        catch {
+
+        }
+        return undefined;
+    }
+
+    function verdict(units, threshold) {
+        if (units !== undefined) {
+            if (units.deffCount > threshold) {
+                return 'DEFF';
+            }
+            if (units.offCount > threshold) {
+                return 'OFF';
+            }
+            if (units.miscCount > threshold) {
+                return 'ZWIAD??';
+            }
+        }
+        return undefined;
+    }
+
 }(TribalWars);
 
 
@@ -69,6 +168,7 @@ function appendInformation(TribalWars, villageId, reportExport, title, role) {
                 note: fullNote
             }, function () {
                 UI.SuccessMessage(`Raport zosta\u0142 dodany do notatek wioski ${role}`);
+                location.href = $('#report-next')[0].href;
             });
         }
     });
@@ -121,15 +221,10 @@ function getUnitsAway() {
         let name = $(unitsAway[i]).attr('class').match('unit-item-[a-z]+')[0].substr(10);
         units[name] = count;
     }
-    return units;
+    return accumulateUnitTypes(units);;
 }
 
-function parseUnitsAway() {
-    let units = getUnitsAway();
-    let offCount = 0;
-    let deffCount = 0;
-    let miscCount = 0;
-
+function accumulateUnitTypes(units) {
     let offUnits = [
         {name: 'axe', population: 1},
         {name: 'light', population: 4},
@@ -149,13 +244,13 @@ function parseUnitsAway() {
         {name: 'snob', population: 100}
     ];
 
-    offCount = accumulateCount(units, offUnits);
-    deffCount = accumulateCount(units, deffUnits);
-    miscCount = accumulateCount(units, miscUnits);
+    let offCount = accumulateCount(units, offUnits);
+    let deffCount = accumulateCount(units, deffUnits);
+    let miscCount = accumulateCount(units, miscUnits);
     return {
         offCount: offCount,
-        deffCount : deffCount,
-        miscCount : miscCount,
+        deffCount: deffCount,
+        miscCount: miscCount,
         allCount: offCount + deffCount + miscCount
     };
 }
