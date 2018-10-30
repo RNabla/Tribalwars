@@ -653,6 +653,10 @@ function Faking() {
                     return poll;
                 }
 
+                for (const boundingBox of this._settings.boundingBoxes) {
+                    this._validateBoundingBox(boundingBox);
+                }
+
                 let coords = poll.map(c => {
                     let parts = c.split('|');
                     return {
@@ -663,7 +667,6 @@ function Faking() {
 
                 coords = coords.filter(c => {
                     return this._settings.boundingBoxes.some(boundingBox => {
-                        this._validateBoundingBox(boundingBox);
                         return (boundingBox.minX <= c.x && c.x <= boundingBox.maxX) &&
                             (boundingBox.minY <= c.y && c.y <= boundingBox.maxY);
                     });
@@ -687,7 +690,7 @@ function Faking() {
             },
             _validateBoundingBox(boundingBox) {
                 const properties = ['minX', 'maxX', 'minY', 'maxY'];
-                for (const property of boundingBox) {
+                for (const property in boundingBox) {
                     if (boundingBox.hasOwnProperty(property)) {
                         let boundary = Number(boundingBox[property]);
                         if (properties.indexOf(property) === -1 || isNaN(boundary)) {
