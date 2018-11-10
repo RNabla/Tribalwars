@@ -2,7 +2,6 @@ var HermitowskieSurki = {
     nearTimeThreshold: 30,
     resourceThreshold: [50000, 50000, 50000],
     populationAvailableThreshold: 200,
-    intervalMilliseconds: 300,
     tradersSafeguard: 10,
 };
 
@@ -157,7 +156,7 @@ var HermitowskieSurki = {
                 village.frees[i] -= piece[i];
             }
             trade_table.push({
-                form: {target_id: target.id, iron: piece[2], stone: piece[1], wood: piece[0]},
+                form: {target_id: target.id, target_name: target.name, iron: piece[2], stone: piece[1], wood: piece[0]},
                 village: {
                     id: village.id,
                     name: village.name
@@ -174,7 +173,7 @@ var HermitowskieSurki = {
             let takers = needs(production, options.resourceThreshold);
             let suppliers = frees(production, options.resourceThreshold);
             takers = takers.filter(e => e.farm.maximum - e.farm.current > options.populationAvailableThreshold);
-            takers = takers.sort((lhs, rhs) => {
+            takers.sort((lhs, rhs) => {
                 return lhs.farm.current - rhs.farm.current;
             });
 
@@ -188,22 +187,6 @@ var HermitowskieSurki = {
             return trade_table;
         });
     };
-
-    function doAjax(trade_table, time_offset) {
-        let i = 0;
-        let intervalId = setInterval(() => {
-            if (i === trade_table.length) {
-                clearInterval(intervalId);
-                return;
-            }
-            let entry = trade_table[i];
-            let url = TribalWars.buildURL('POST', "market", {ajaxaction: 'map_send', village: entry.village.id});
-            UI.SuccessMessage(`Supplying<br/>${entry.village.name} with:<br/>[wood: ${entry.form.wood}, stone: ${ entry.form.stone}, iron: ${entry.form.iron}]<br/>(${i + 1}/${trade_table.length})`);
-            $.post(url, entry.form);
-            i++;
-        }, time_offset);
-    }
-
 
     function normalize(arr, traders) {
         let sum = arr[0] + arr[1] + arr[2];
@@ -222,8 +205,83 @@ var HermitowskieSurki = {
         return Math.hypot(dx, dy);
     }
 
+    function createGui() {
+        let div$ = $('<div>', {
+            id: 'HermitianResources',
+            class: 'vis vis_item',
+            style: 'overflow-y:auto;height:200px'
+        });
+        let table$ = $('<table>', {
+            width: '100%',
+        });
+        let thead$ = $('<thead>');
+        let header$ = $('<tr>', {
+            html:
+            `<th>Z</th>` +
+            `<th>Do</th>` +
+            `<th>Drewno</th>` +
+            `<th>Glina</th>` +
+            `<th>Żelazo</th>` +
+            `<th>Rozkaz</th>`
+        });
+        thead$.append(header$);
+
+        let tbody$ = $('<tbody>', {
+            id: 'HermitianResourcesResults'
+        });
+
+        table$.append(thead$);
+        table$.append(tbody$);
+        div$.append(table$);
+        $('#contentContainer').prepend(div$);
+    }
+
+    if ($('#HermitianResources').length) {
+        $('#HermitianResources > table > tbody').empty()
+    } else {
+        createGui();
+    }
+
     generateTradeTable().then(trade_table => {
-        doAjax(trade_table, options.intervalMilliseconds);
+        try {
+            let results$ = $('#HermitianResourcesResults');
+            for (const entry of trade_table) {
+                let villageFromAnchor = $('<a>', {
+                    text: entry.village.name,
+                    href: TribalWars.buildURL('GET', 'info_village', {id: entry.village.id})
+                });
+                let villageToAnchor = $('<a>', {
+                    text: entry.form.target_name,
+                    href: TribalWars.buildURL('GET', 'info_village', {id: entry.form.target_id})
+                });
+                let tr$ = $('<tr>');
+                tr$.append($('<td>').append(villageFromAnchor));
+                tr$.append($('<td>').append(villageToAnchor));
+                tr$.append($('<td>', {text: entry.form.wood}));
+                tr$.append($('<td>', {text: entry.form.stone}));
+                tr$.append($('<td>', {text: entry.form.iron}));
+                let commandAnchor = $('<a>', {href: '#', text: 'Wykonaj'});
+                commandAnchor.on('click', () => {
+                    let url = TribalWars.buildURL('POST', "market", {
+                        ajaxaction: 'map_send',
+                        village: entry.village.id
+                    });
+                    commandAnchor.closest('tr').remove();
+                    $.post(url, entry.form).done((data, textStatus, jqXHR) => {
+                        UI.SuccessMessage(`Wysłano do <br/>${entry.village.name}<br/>[drewno: ${entry.form.wood}, glina: ${ entry.form.stone}, żelazo: ${entry.form.iron}]`);
+                    }).fail((jqXHR, textStatus, errorThrown) => {
+                        UI.ErrorMessage(errorThrown, 4e3);
+                        console.log(jqXHR, textStatus, errorThrown);
+                    });
+                });
+                tr$.append($('<td>').append(commandAnchor));
+                results$.append(tr$);
+            }
+        }
+        catch (e) {
+            UI.ErrorMessage('upsi ', e);
+            console.error(e);
+        }
     });
 
 })(TribalWars, HermitowskieSurki);
