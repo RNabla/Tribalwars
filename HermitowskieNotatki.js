@@ -564,7 +564,7 @@
             properties.push(info.bunker_plaintext);
         }
         if (info.player_id) {
-            properties.push(info.player_id);
+            properties.push(`[color=#F5EDDA]${info.player_id}[/color]`);
         }
         return properties.join(" | ");
     }
@@ -645,7 +645,7 @@
         // filter by date
         attack_infos = attack_infos.filter(x => x.battle_time.getTime() + Helper.attack_info_lifetime * 24 * 3600 * 1000 > Date.now());
         let attack_infos_text = attack_infos.map(x => generate_attack_info(x)).join("\n");
-        let note_text = `${generate_village_info()}\n\n${attack_infos_text}\n<<<TESTOWA>>>${user_notes}`;
+        let note_text = `${generate_village_info()}\n\n${attack_infos_text}\n<<<NOTATKI>>>${user_notes}`;
         return note_text;
     }
 
@@ -727,9 +727,9 @@
             old_village_info.bunker = true;
             old_village_info.bunker_plaintext = bunker_match;
         }
-        let player_id_match = village_info_properties_text.find(x => x.match(/\d+/));
+        let player_id_match = village_info_properties_text.find(x => x.match(/#F5EDDA\](\d+)/));
         if (player_id_match) {
-            old_village_info.player_id = player_id_match;
+            old_village_info.player_id = player_id_match.match(/\](\d+)/)[1];
         }
         return old_village_info;
     }
