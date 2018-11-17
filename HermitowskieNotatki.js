@@ -1,4 +1,7 @@
 !function (TribalWars) {
+    let Settings = {
+
+    };
     let Helper = {
         parse_datetime_string: function (datetime_string) {
             let date_time = datetime_string.split(" ");
@@ -21,14 +24,8 @@
             return `${days}.${month}.${year} ${hours}:${minutes}:${seconds}`;
         },
         calculate_rebuild_time: function (troops) {
-            function rebuild_time(units) {
-                let time = 0;
-                for (const unit of units) {
-                    if (troops.hasOwnProperty(unit)) {
-                        time += Helper.unit2rebuild_time[unit] * troops[unit];
-                    }
-                }
-                return time * 1000;
+            let rebuild_time = function (units) {
+                return units.reduce((time, unit) => Helper.unit2rebuild_time[unit] * troops[unit] + time, 0) * 1000;
             }
 
             let barracks_time = rebuild_time(['spear', 'sword', 'axe', 'archer']);
@@ -38,13 +35,7 @@
         },
         get_troops_summary: function (troops) {
             function count_population(units) {
-                let population = 0;
-                for (const unit of units) {
-                    if (troops.hasOwnProperty(unit)) {
-                        population += Helper.unit2population[unit] * troops[unit];
-                    }
-                }
-                return population;
+                return units.reduce((time, unit) => Helper.unit2population[unit] * troops[unit] + time, 0);
             }
 
             let deff_population = count_population(Helper.deff_units);
@@ -179,13 +170,22 @@
         get_rebuild_time();
         get_belief();
         get_troops_type();
-        get_current_notes().then(notes => {
+        console.log(info);
+        return;
+        get_current_notes().then(old_notes => {
             try {
-                let note_text = parse_notebook(notes);
-                append_note(note_text);
+                let new_note = parse_notebook(old_notes);
+                if (new_note.error) {
+                    throw new_note.error;
+                }
+                append_note(new_note);
             } catch (e) {
                 UI.ErrorMessage(e);
                 console.error(e);
+                let next_report = $('#report-next')[0];
+                if ($('#report-next')[0]) {
+                    location.href = next_report.href;
+                }
             }
         });
     }
@@ -232,7 +232,7 @@
         info.village_id = info.context === 'att' ? def_village_id : att_village_id;
         let village_player_id = (info.context === 'att' ? def : att)[0].rows[1].cells[1].children[0].getAttribute('data-player');
         if (info.player_id !== village_player_id) {
-            // TODO: maybe clear old notes
+            // TODO: maybe clear old old_notes
             location.href = TribalWars.buildURL('GET', 'report', {
                 action: 'del_one',
                 mode: 'attack',
@@ -271,10 +271,7 @@
             let troops = get_troops_by_row(row, 0);
             let summary = Helper.get_troops_summary(troops);
             info.units_away = summary;
-            return;
         }
-        info.units_away = undefined;
-
     }
 
     function get_troops_type() {
@@ -317,7 +314,9 @@
         let loses = get_loses(context);
         if (loses) {
             let rebuild_time = Helper.calculate_rebuild_time(loses);
-            info.rebuild_time = new Date(info.battle_time.getTime() + rebuild_time);
+            if (rebuild_time != 0) {
+                info.rebuild_time = new Date(info.battle_time.getTime() + rebuild_time);
+            }
         }
     }
 
@@ -569,11 +568,11 @@
         return properties.join(" | ");
     }
 
-    function append_note(note_text) {
+    function append_note(new_note) {
         TribalWars.post('info_village', {
             ajaxaction: 'edit_notes',
             id: info.village_id
-        }, { note: note_text }, on_note_updated);
+        }, { note: new_note }, on_note_updated);
     }
 
     function on_note_updated() {
@@ -610,17 +609,17 @@
         }
     }
 
-    function get_user_notes(notes) {
-        let start = notes.indexOf('>>>');
+    function get_user_notes(old_notes) {
+        let start = old_notes.indexOf('>>>');
         return start === -1
-            ? notes
-            : notes.substr(start + 3);
+            ? old_notes
+            : old_notes.substr(start + 3);
     }
 
-    function parse_notebook(notes) {
-        let old_village_info = get_old_village_info(notes);
-        let attack_infos = get_attack_infos(notes);
-        let user_notes = get_user_notes(notes);
+    function parse_notebook(old_notes) {
+        let old_village_info = get_old_village_info(old_notes);
+        let attack_infos = get_attack_infos(old_notes);
+        let user_notes = get_user_notes(old_notes);
         // check if village owner has changed
         if (old_village_info.player_id !== info.player_id) {
             attack_infos = [];
@@ -629,7 +628,7 @@
         }
         // check if village already has this report
         if (attack_infos.some(old_info => old_info.report_id === info.report_id)) {
-            throw 'Village already has this report';
+            return { error: 'Village already has this report' };
         }
         // add current attack_info
         attack_infos.push(info);
@@ -645,17 +644,17 @@
         // filter by date
         attack_infos = attack_infos.filter(x => x.battle_time.getTime() + Helper.attack_info_lifetime * 24 * 3600 * 1000 > Date.now());
         let attack_infos_text = attack_infos.map(x => generate_attack_info(x)).join("\n");
-        let note_text = `${generate_village_info()}\n\n${attack_infos_text}\n<<<NOTATKI>>>${user_notes}`;
-        return note_text;
+        let new_note = `${generate_village_info()}\n\n${attack_infos_text}\n<<<NOTATKI>>>${user_notes}`;
+        return new_note;
     }
 
-    function get_attack_infos(notes) {
-        let start = notes.indexOf('\n\n');
-        let end = notes.indexOf('>>>');
+    function get_attack_infos(old_notes) {
+        let start = old_notes.indexOf('\n\n');
+        let end = old_notes.indexOf('>>>');
         if (end === -1 || start === -1) {
             return [];
         }
-        let attack_infos_region = notes.substr(start + 2, end - start - 2);
+        let attack_infos_region = old_notes.substr(start + 2, end - start - 2);
         let attack_infos_text = attack_infos_region.match(/\[spoiler=.*\[\/spoiler]/g);
         let attack_infos = [];
         for (let i = 0; i < attack_infos_text.length; i++) {
@@ -705,8 +704,8 @@
         return properties;
     }
 
-    function get_old_village_info(notes) {
-        let village_info_text = notes.split('\n\n')[0];
+    function get_old_village_info(old_notes) {
+        let village_info_text = old_notes.split('\n\n')[0];
         let village_info_properties_text = village_info_text.split(" | ");
         let old_village_info = {};
         if (village_info_properties_text.some(x => x === 'OFF')) {
