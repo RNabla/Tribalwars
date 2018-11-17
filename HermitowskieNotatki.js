@@ -1,6 +1,16 @@
 !function (TribalWars) {
     let Settings = {
-
+        simulator_luck: -25,
+        simulator_def_wall: 20,
+        simulator_att_troops: {
+            axe: 6000,
+            light: 3000,
+            ram: 242
+        },
+        back_time_delta: 3, /* hours */
+        rebuild_time_delta: 48, /* hours */
+        rebuild_time_threshold: 6, /* hours */
+        attack_info_lifetime: 14, /* days */
     };
     let Helper = {
         parse_datetime_string: function (datetime_string) {
@@ -59,7 +69,7 @@
                 def_wall: 20
             };
 
-            function append_units(context, units) {
+            let append_units = function (context, units) {
                 for (const unit in units) {
                     if (units[unit] > 0) {
                         properties[`${context}_${unit}`] = units[unit];
@@ -73,12 +83,8 @@
             return TribalWars.buildURL('GET', 'place', properties);
         },
         get_march_time: function (troops) {
-            let march_time = 0;
-            for (const unit in troops) {
-                if (troops[unit] > 0) {
-                    march_time = Math.max(march_time, this.unit2speed[unit]);
-                }
-            }
+            let march_time = Object.keys(troops).filter(unit => troops[unit] > 0)
+                .reduce((time_per_field, unit) => Math.max(Helper.unit2speed[unit], time_per_field), 0);
             if (march_time === 0) {
                 throw 'xd';
             }
