@@ -2,7 +2,7 @@ var HermitowskieSurki = {
     nearTimeThreshold: 30,
     resourceThreshold: [50000, 50000, 50000],
     populationAvailableThreshold: 200,
-    tradersSafeguard: 10,
+    tradersSafeguard: 0,
 };
 
 (function (TribalWars, options) {
@@ -205,83 +205,30 @@ var HermitowskieSurki = {
         return Math.hypot(dx, dy);
     }
 
-    function createGui() {
-        let div$ = $('<div>', {
-            id: 'HermitianResources',
-            class: 'vis vis_item',
-            style: 'overflow-y:auto;height:200px'
-        });
-        let table$ = $('<table>', {
-            width: '100%',
-        });
-        let thead$ = $('<thead>');
-        let header$ = $('<tr>', {
-            html:
-            `<th>Z</th>` +
-            `<th>Do</th>` +
-            `<th>Drewno</th>` +
-            `<th>Glina</th>` +
-            `<th>Żelazo</th>` +
-            `<th>Rozkaz</th>`
-        });
-        thead$.append(header$);
-
-        let tbody$ = $('<tbody>', {
-            id: 'HermitianResourcesResults'
-        });
-
-        table$.append(thead$);
-        table$.append(tbody$);
-        div$.append(table$);
-        $('#contentContainer').prepend(div$);
-    }
-
-    if ($('#HermitianResources').length) {
-        $('#HermitianResources > table > tbody').empty()
-    } else {
-        createGui();
-    }
-
     generateTradeTable().then(trade_table => {
-        try {
-            let results$ = $('#HermitianResourcesResults');
-            for (const entry of trade_table) {
-                let villageFromAnchor = $('<a>', {
-                    text: entry.village.name,
-                    href: TribalWars.buildURL('GET', 'info_village', {id: entry.village.id})
-                });
-                let villageToAnchor = $('<a>', {
-                    text: entry.form.target_name,
-                    href: TribalWars.buildURL('GET', 'info_village', {id: entry.form.target_id})
-                });
-                let tr$ = $('<tr>');
-                tr$.append($('<td>').append(villageFromAnchor));
-                tr$.append($('<td>').append(villageToAnchor));
-                tr$.append($('<td>', {text: entry.form.wood}));
-                tr$.append($('<td>', {text: entry.form.stone}));
-                tr$.append($('<td>', {text: entry.form.iron}));
-                let commandAnchor = $('<a>', {href: '#', text: 'Wykonaj'});
-                commandAnchor.on('click', () => {
-                    let url = TribalWars.buildURL('POST', "market", {
-                        ajaxaction: 'map_send',
-                        village: entry.village.id
+        let generate_popups = function(i) {
+            let trade_entry = trade_table[i];
+            let coords = trade_entry.form.target_name.match(/\d{3}\|\d{3}/).pop().split('|');
+            TribalWars.post('market', {ajax: 'confirm'}, {
+                village: trade_entry.village.id,
+                input: '',
+                iron: trade_entry.form.iron,
+                stone: trade_entry.form.stone,
+                wood: trade_entry.form.wood,
+                x: coords[0],
+                y: coords[1],
+                h: game_data.csrf
+            }, function (result) {
+                Dialog.show('map_market', result.dialog);
+                $('#market-confirm-form').on('submit', TWMap.actionHandlers.market.confirmSendResources);
+                if (i < trade_table.length - 1) {
+                    $('#market-confirm-form').on('submit', () => {
+                        setTimeout(() => generate_popups(i + 1), 100);
                     });
-                    commandAnchor.closest('tr').remove();
-                    $.post(url, entry.form).done((data, textStatus, jqXHR) => {
-                        UI.SuccessMessage(`Wysłano do <br/>${entry.village.name}<br/>[drewno: ${entry.form.wood}, glina: ${ entry.form.stone}, żelazo: ${entry.form.iron}]`);
-                    }).fail((jqXHR, textStatus, errorThrown) => {
-                        UI.ErrorMessage(errorThrown, 4e3);
-                        console.log(jqXHR, textStatus, errorThrown);
-                    });
-                });
-                tr$.append($('<td>').append(commandAnchor));
-                results$.append(tr$);
-            }
-        }
-        catch (e) {
-            UI.ErrorMessage('upsi ', e);
-            console.error(e);
-        }
+                }
+            });
+        };
+        generate_popups(0);
     });
 
 })(TribalWars, HermitowskieSurki);
