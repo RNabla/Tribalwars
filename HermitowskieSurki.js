@@ -1,8 +1,8 @@
 var HermitowskieSurki = {
     nearTimeThreshold: 30,
-    resourceThreshold: [50000, 50000, 50000],
+    resourceThreshold: [100000, 100000, 100000],
     populationAvailableThreshold: 200,
-    tradersSafeguard: 0,
+    tradersSafeguard: 10,
 };
 
 (function (TribalWars, options) {
@@ -10,7 +10,8 @@ var HermitowskieSurki = {
     let fetchProductionTable = function () {
         let url = TribalWars.buildURL('GET', 'overview_villages', {
             mode: 'prod',
-            group: '0'
+            group: '0',
+            page: '-1'
         });
         return fetch(url, {
             credentials: 'include'
@@ -56,7 +57,8 @@ var HermitowskieSurki = {
         let url = TribalWars.buildURL('GET', 'overview_villages', {
             mode: 'trader',
             type: 'inc',
-            group: '0'
+            group: '0',
+            page: '-1'
         });
         return fetch(url, {
             credentials: 'include'
@@ -205,30 +207,101 @@ var HermitowskieSurki = {
         return Math.hypot(dx, dy);
     }
 
+    function createGui() {
+        let div$ = $('<div>', {
+            id: 'HermitianResources',
+            class: 'vis vis_item',
+            style: 'overflow-y:auto;height:200px'
+        });
+        let table$ = $('<table>', {
+            width: '100%',
+        });
+        let thead$ = $('<thead>');
+        let header$ = $('<tr>', {
+            html:
+            `<th>Z</th>` +
+            `<th>Do</th>` +
+            `<th><img src="${image_base}holz.png"/>Drewno</th>` +
+            `<th><img src="${image_base}lehm.png"/>Glina</th>` +
+            `<th><img src="${image_base}eisen.png"/>Żelazo</th>` +
+            `<th><img src="${image_base}buildings/market.png"/>Transport</th>`
+        });
+        thead$.append(header$);
+
+        let tbody$ = $('<tbody>', {
+            id: 'HermitianResourcesResults'
+        });
+
+        table$.append(thead$);
+        table$.append(tbody$);
+        div$.append(table$);
+        $('#contentContainer').prepend(div$);
+    }
+
+    if ($('#HermitianResources').length) {
+        $('#HermitianResources > table > tbody').empty()
+    } else {
+        createGui();
+    }
+
     generateTradeTable().then(trade_table => {
-        let generate_popups = function(i) {
-            let trade_entry = trade_table[i];
-            let coords = trade_entry.form.target_name.match(/\d{3}\|\d{3}/).pop().split('|');
-            TribalWars.post('market', {ajax: 'confirm'}, {
-                village: trade_entry.village.id,
-                input: '',
-                iron: trade_entry.form.iron,
-                stone: trade_entry.form.stone,
-                wood: trade_entry.form.wood,
-                x: coords[0],
-                y: coords[1],
-                h: game_data.csrf
-            }, function (result) {
-                Dialog.show('map_market', result.dialog);
-                $('#market-confirm-form').on('submit', TWMap.actionHandlers.market.confirmSendResources);
-                if (i < trade_table.length - 1) {
-                    $('#market-confirm-form').on('submit', () => {
-                        setTimeout(() => generate_popups(i + 1), 100);
+        try {
+            let results$ = $('#HermitianResourcesResults');
+            let generate_popup = function (trade_entry, anchor) {
+                let coords = trade_entry.form.target_name.match(/\d{3}\|\d{3}/).pop().split('|');
+                TribalWars.post('market', {ajax: 'confirm'}, {
+                    village: trade_entry.village.id,
+                    iron: trade_entry.form.iron,
+                    stone: trade_entry.form.stone,
+                    wood: trade_entry.form.wood,
+                    x: coords[0],
+                    y: coords[1],
+                    h: game_data.csrf
+                }, function (result) {
+                    Dialog.show('map_market', result.dialog);
+                    let market_confirm = $('#market-confirm-form');
+                    market_confirm.on('submit', function() {
+                        return TribalWars.post("market", {ajaxaction: "map_send"}, trade_entry.form, function (e) {
+                            Dialog.close();
+                            UI.SuccessMessage(e.message);
+                            anchor.closest('tr').remove();
+                        }), !1;
                     });
-                }
-            });
-        };
-        generate_popups(0);
+                });
+            };
+
+            if (!trade_table.length) {
+                $('#HermitianResources').remove();
+                return UI.SuccessMessage('Brak sugerowanych transportów');
+            }
+
+            for (const entry of trade_table) {
+                let villageFromAnchor = $('<a>', {
+                    text: entry.village.name,
+                    href: TribalWars.buildURL('GET', 'info_village', {id: entry.village.id})
+                });
+                let villageToAnchor = $('<a>', {
+                    text: entry.form.target_name,
+                    href: TribalWars.buildURL('GET', 'info_village', {id: entry.form.target_id})
+                });
+                let tr$ = $('<tr>');
+                tr$.append($('<td>').append(villageFromAnchor));
+                tr$.append($('<td>').append(villageToAnchor));
+                tr$.append($('<td>', {text: entry.form.wood}));
+                tr$.append($('<td>', {text: entry.form.stone}));
+                tr$.append($('<td>', {text: entry.form.iron}));
+                let commandAnchor = $('<a>', {href: '#', text: 'Wykonaj'});
+                commandAnchor.on('click', () => {
+                    generate_popup(entry, commandAnchor);
+                });
+                tr$.append($('<td>').append(commandAnchor));
+                results$.append(tr$);
+            }
+        }
+        catch (e) {
+            UI.ErrorMessage('upsi ', e);
+            console.error(e);
+        }
     });
 
 })(TribalWars, HermitowskieSurki);
