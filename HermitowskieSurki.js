@@ -1,6 +1,6 @@
 var HermitowskieSurki = {
     nearTimeThreshold: 30,
-    resourceThreshold: [50000, 50000, 50000],
+    resourceThreshold: [100000, 100000, 100000],
     populationAvailableThreshold: 200,
     tradersSafeguard: 10,
 };
@@ -10,7 +10,8 @@ var HermitowskieSurki = {
     let fetchProductionTable = function () {
         let url = TribalWars.buildURL('GET', 'overview_villages', {
             mode: 'prod',
-            group: '0'
+            group: '0',
+            page: '-1'
         });
         return fetch(url, {
             credentials: 'include'
@@ -56,7 +57,8 @@ var HermitowskieSurki = {
         let url = TribalWars.buildURL('GET', 'overview_villages', {
             mode: 'trader',
             type: 'inc',
-            group: '0'
+            group: '0',
+            page: '-1'
         });
         return fetch(url, {
             credentials: 'include'
@@ -219,10 +221,10 @@ var HermitowskieSurki = {
             html:
             `<th>Z</th>` +
             `<th>Do</th>` +
-            `<th>Drewno</th>` +
-            `<th>Glina</th>` +
-            `<th>Żelazo</th>` +
-            `<th>Rozkaz</th>`
+            `<th><img src="${image_base}holz.png"/>Drewno</th>` +
+            `<th><img src="${image_base}lehm.png"/>Glina</th>` +
+            `<th><img src="${image_base}eisen.png"/>Żelazo</th>` +
+            `<th><img src="${image_base}buildings/market.png"/>Transport</th>`
         });
         thead$.append(header$);
 
@@ -245,6 +247,34 @@ var HermitowskieSurki = {
     generateTradeTable().then(trade_table => {
         try {
             let results$ = $('#HermitianResourcesResults');
+            let generate_popup = function (trade_entry, anchor) {
+                let coords = trade_entry.form.target_name.match(/\d{3}\|\d{3}/).pop().split('|');
+                TribalWars.post('market', {ajax: 'confirm'}, {
+                    village: trade_entry.village.id,
+                    iron: trade_entry.form.iron,
+                    stone: trade_entry.form.stone,
+                    wood: trade_entry.form.wood,
+                    x: coords[0],
+                    y: coords[1],
+                    h: game_data.csrf
+                }, function (result) {
+                    Dialog.show('map_market', result.dialog);
+                    let market_confirm = $('#market-confirm-form');
+                    market_confirm.on('submit', function() {
+                        return TribalWars.post("market", {ajaxaction: "map_send"}, trade_entry.form, function (e) {
+                            Dialog.close();
+                            UI.SuccessMessage(e.message);
+                            anchor.closest('tr').remove();
+                        }), !1;
+                    });
+                });
+            };
+
+            if (!trade_table.length) {
+                $('#HermitianResources').remove();
+                return UI.SuccessMessage('Brak sugerowanych transportów');
+            }
+
             for (const entry of trade_table) {
                 let villageFromAnchor = $('<a>', {
                     text: entry.village.name,
@@ -262,17 +292,7 @@ var HermitowskieSurki = {
                 tr$.append($('<td>', {text: entry.form.iron}));
                 let commandAnchor = $('<a>', {href: '#', text: 'Wykonaj'});
                 commandAnchor.on('click', () => {
-                    let url = TribalWars.buildURL('POST', "market", {
-                        ajaxaction: 'map_send',
-                        village: entry.village.id
-                    });
-                    commandAnchor.closest('tr').remove();
-                    $.post(url, entry.form).done((data, textStatus, jqXHR) => {
-                        UI.SuccessMessage(`Wysłano do <br/>${entry.village.name}<br/>[drewno: ${entry.form.wood}, glina: ${ entry.form.stone}, żelazo: ${entry.form.iron}]`);
-                    }).fail((jqXHR, textStatus, errorThrown) => {
-                        UI.ErrorMessage(errorThrown, 4e3);
-                        console.log(jqXHR, textStatus, errorThrown);
-                    });
+                    generate_popup(entry, commandAnchor);
                 });
                 tr$.append($('<td>').append(commandAnchor));
                 results$.append(tr$);
