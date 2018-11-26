@@ -14,49 +14,32 @@
         deff_units: ['spear', 'sword', 'archer', 'heavy'],
         off_units: ['axe', 'light', 'marcher', 'ram'],
         misc_units: ['spy', 'catapult', 'snob'],
-        unit2speed: {
-            'pl121': {
-                spear: 18,
-                sword: 22,
-                axe: 18,
-                archer: 18,
-                spy: 9,
-                light: 10,
-                marcher: 10,
-                heavy: 11,
-                ram: 29.9999999976,
-                catapult: 29.9999999976,
-                snob: 35
+        population: {},
+        speed: {},
+        build_time: {},
+        init: function (worldInfo) {
+            for (const unit in worldInfo.unit_info) {
+                this.population[unit] = Number(worldInfo.unit_info[unit].pop);
+                this.speed[unit] = Number(worldInfo.unit_info[unit].speed);
             }
-        }[game_data.world],
-        unit2population: {
-            spear: 1,
-            sword: 1,
-            axe: 1,
-            archer: 1,
-            spy: 2,
-            light: 4,
-            marcher: 5,
-            heavy: 6,
-            ram: 5,
-            catapult: 8,
-            knight: 10,
-            snob: 100
-        },
-        unit2rebuild_time: {
-            'pl121': {
-                spear: 100,
-                sword: 146,
-                axe: 129,
-                archer: 175,
-                spy: 117,
-                light: 234,
-                marcher: 351,
-                heavy: 468,
-                ram: 1184,
-                catapult: 1776
+
+            switch (worldInfo.config.speed) {
+                case "1.6":
+                    this.build_time = {
+                        spear: 100,
+                        sword: 146,
+                        axe: 129,
+                        archer: 175,
+                        spy: 117,
+                        light: 234,
+                        marcher: 351,
+                        heavy: 468,
+                        ram: 835,
+                        catapult: 1252
+                    };
+                    break;
             }
-        }[game_data.world],
+        }
     };
     let Helper = {
         parse_datetime_string: function (datetime_string) {
@@ -81,7 +64,7 @@
         },
         calculate_rebuild_time: function (troops) {
             let rebuild_time = function (units) {
-                return units.reduce((time, unit) => Settings.unit2rebuild_time[unit] * troops[unit] + time, 0) * 1000;
+                return units.reduce((time, unit) => Settings.build_time[unit] * troops[unit] + time, 0) * 1000;
             }
 
             let barracks_time = rebuild_time(['spear', 'sword', 'axe', 'archer']);
@@ -91,7 +74,7 @@
         },
         get_troops_summary: function (troops) {
             function count_population(units) {
-                return units.reduce((time, unit) => Settings.unit2population[unit] * troops[unit] + time, 0);
+                return units.reduce((time, unit) => Settings.population[unit] * troops[unit] + time, 0);
             }
 
             let deff_population = count_population(Settings.deff_units);
@@ -128,13 +111,14 @@
 
             return TribalWars.buildURL('GET', 'place', properties).substr(1);
         },
-        get_march_time: function (troops) {
-            let march_time = Object.keys(troops).filter(unit => troops[unit] > 0)
-                .reduce((time_per_field, unit) => Math.max(Settings.unit2speed[unit], time_per_field), 0);
-            if (march_time === 0) {
+        get_march_time: function (troops, origin, destination) {
+            let march_time_per_field = Object.keys(troops).filter(unit => troops[unit] > 0)
+                .reduce((time_per_field, unit) => Math.max(Settings.speed[unit], time_per_field), 0);
+            if (march_time_per_field === 0) {
                 throw 'xd';
             }
-            return march_time * 60 * 1000;
+            let distance = Math.hypot(origin[0] - destination[0], origin[1] - destination[1]);
+            return Math.round(distance * march_time_per_field * 60) * 1000;
         },
         beautify_number: function (number) {
             if (number < 1000) {
@@ -183,10 +167,6 @@
                 NotesScript.get_rebuild_time();
                 NotesScript.get_belief();
                 NotesScript.get_troops_type();
-                // TODO: remove
-                console.log('context', NotesScript.context);
-                console.log('attack_info', NotesScript.attack_info);
-                console.log('village_info', NotesScript.village_info);
                 NotesScript.check_report();
                 NotesScript.get_current_notes().then(old_notes => {
                     try {
@@ -194,14 +174,14 @@
                         if (new_note.error) {
                             throw new_note.error;
                         }
-                        NotesScript.append_note(new_note);
+                        NotesScript.add_note(new_note);
                     } catch (e) {
                         UI.ErrorMessage(e);
                         console.error(e);
                     }
                 });
             }
-            catch (e) {
+            catch (response) {
                 UI.ErrorMessage(e);
                 console.error(e);
             }
@@ -265,15 +245,7 @@
             NotesScript.context.village_id = NotesScript.context.side === 'att' ? def_village_id : att_village_id;
             let village_player_id = (NotesScript.context.side === 'att' ? def : att)[0].rows[1].cells[1].children[0].getAttribute('data-player');
             if (NotesScript.village_info.player_id !== village_player_id) {
-                // TODO: maybe clear old old_notes
-                //setTimeout(() => {
-                location.href = TribalWars.buildURL('GET', 'report', {
-                    action: 'del_one',
-                    mode: 'attack',
-                    id: NotesScript.attack_info.report_id,
-                    h: game_data.csrf
-                });
-                //}, 1000);
+                NotesScript.add_note('');
                 throw 'Docelowa wioska zmieniła właściciela';
             }
 
@@ -358,21 +330,17 @@
             }
             let origin = match_coordinates($('#attack_info_att')[0].rows[1].innerText);
             let destination = match_coordinates($('#attack_info_def')[0].rows[1].innerText);
-            let distance = Math.hypot(origin[0] - destination[0], origin[1] - destination[1]);
-            let units = NotesScript.get_troops_by_row($('#attack_info_att_units')[0].rows[1], 1);
+
+            let units = Helper.get_troops_by_row($('#attack_info_att_units')[0].rows[1], 1);
             let survivors = NotesScript.get_survivors('att');
             let someone_survived = Object.values(survivors).some(x => x > 0);
             if (someone_survived) {
-                let march_time = Helper.get_march_time(units);
-                let back_time_timestamp = NotesScript.attack_info.battle_time.getTime() + march_time * distance;
-                // HACK: światy bez ms; a co z tymi co mają ms
+                let march_time = Helper.get_march_time(units, origin, destination);
+                let back_time_timestamp = NotesScript.attack_info.battle_time.getTime() + march_time;
                 let milliseconds = back_time_timestamp % 1000;
                 if (milliseconds !== 0) {
                     back_time_timestamp -= milliseconds;
-                    back_time_timestamp += 1000;
                 }
-                // TODO: światy z ms?????
-
                 NotesScript.attack_info.back_time = new Date(back_time_timestamp);
             }
         },
@@ -413,7 +381,6 @@
                 if (church) {
                     NotesScript.village_info.church = `${church.name} ${church.level}`;
                 }
-                // TODO: overwrite barracks/stable/garage level to better calculate rebuild
             }
         },
 
@@ -555,18 +522,28 @@
             }
             return properties.join(" | ");
         },
-        append_note: function (new_note) {
+        add_note: function (new_note) {
             TribalWars.post('info_village', {
                 ajaxaction: 'edit_notes',
                 id: NotesScript.context.village_id
             }, { note: new_note }, NotesScript.on_note_updated);
         },
 
-        on_note_updated: function () {
-            UI.SuccessMessage(`Notatka dodana do wioski ${NotesScript.context.side === 'def' ? 'atakującego' : 'broniącego'}`);
-            let next_report = $('#report-next')[0];
-            if (next_report) {
-                location.href = next_report.href;
+        on_note_updated: function (response) {
+            if (response.note_parsed) {
+                UI.SuccessMessage(`Notatka dodana do wioski ${NotesScript.context.side === 'def' ? 'atakującego' : 'broniącego'}`);
+                let next_report = $('#report-next')[0];
+                if (next_report) {
+                    location.href = next_report.href;
+                }
+            }
+            else {
+                location.href = TribalWars.buildURL('GET', 'report', {
+                    action: 'del_one',
+                    mode: 'attack',
+                    id: NotesScript.attack_info.report_id,
+                    h: game_data.csrf
+                });
             }
         },
         get_current_notes: function () {
@@ -584,13 +561,13 @@
             if (typeof (NotesScript.village_info.belief) === 'undefined') {
                 NotesScript.village_info.belief = old_village_info.belief;
             }
-            if (typeof (village_info.church) === 'undefined') {
+            if (typeof (NotesScript.village_info.church) === 'undefined') {
                 NotesScript.village_info.church = old_village_info.church;
             }
-            if (typeof (village_info.troops_type) === 'undefined') {
+            if (typeof (NotesScript.village_info.troops_type) === 'undefined') {
                 NotesScript.village_info.troops_type = old_village_info.troops_type;
             }
-            if (typeof (village_info.sim) === 'undefined') {
+            if (typeof (NotesScript.village_info.sim) === 'undefined') {
                 NotesScript.village_info.sim_plaintext = old_village_info.sim_plaintext;
             }
         },
@@ -718,7 +695,25 @@
         }
 
     }
+    let ExecuteScript = function () {
+        GetWorldInfo({
+            config: { caching: 'Mandatory' },
+            unit_info: { caching: 'Mandatory' }
+        }).then(worldInfo => {
+            Settings.init(worldInfo);
+            NotesScript.init();
+        });
+    }
 
-    NotesScript.init();
+    if (localStorage.getItem('GetWorldInfo') !== null) {
+        eval(localStorage.getItem('GetWorldInfo'));
+        ExecuteScript();
+    }
+    else {
+        $.ajax({
+            url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/MapFiles.js',
+            dataType: 'script',
+        }).then(ExecuteScript);
+    }
 
 }(TribalWars);
