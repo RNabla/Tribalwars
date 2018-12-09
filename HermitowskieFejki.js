@@ -612,14 +612,17 @@ function Faking() {
                     .map(entry => {
                         return {
                             key: `HermitowskieFejki_${entry[0].trim()}`,
-                            liveTime: Number(entry[1])
+                            liveTime: Number(entry[1]),
+                            countThreshold: entry.length == 2 ? 1 : Number(entry[2])
                         }
                     });
             },
             _applyLocalContext: function (poll) {
+                let entry = this._settings.localContext.split(':');
                 poll = this._omitRecentlySelectedCoords(poll, {
                     key: this._localContextKey,
-                    liveTime: Number(this._settings.localContext)
+                    liveTime: Number(entry[0]),
+                    countThreshold: entry.length == 1 ? 1 : Number(entry[1])
                 });
                 if (poll.length === 0) {
                     this.goToNextVillage(i18n.COORDS_EMPTY_CONTEXTS);
@@ -636,13 +639,32 @@ function Faking() {
                 }
                 return poll;
             },
-            _omitRecentlySelectedCoords(poll, context) {
-                let recent = localStorage.getItem(context.key);
-                if (recent === null) {
+            _omitRecentlySelectedCoords: function(poll, context) {
+                let coords = localStorage.getItem(context.key);
+                if (coords === null) {
                     return poll;
                 }
-                recent = JSON.parse(recent);
-                return this._exclude(poll, recent.map(entry => entry[0]));
+                coords = JSON.parse(coords);
+                coords = this._filterCoordsByCount(coords.map(entry => entry[0]), context.countThreshold)
+                return this._exclude(poll, );
+            },
+            _filterCoordsByCount: function(coords, countThreshold) {
+                let map = new Map();
+                for (const village of coords) {
+                    if (map.has(village)) {
+                        map.set(village, 1 + map.get(village));
+                    }
+                    else {
+                        map.set(village, 1);
+                    }
+                }
+                let result = [];
+                map.forEach((count, village) => {
+                    if (count < countThreshold) {
+                        result.push(village);
+                    }
+                });
+                return result;
             },
             _exclude: function (poll, excluded) {
                 let banned = new Set([...excluded]);
