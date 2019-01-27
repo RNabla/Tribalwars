@@ -346,7 +346,7 @@
         },
 
         get_battle_time: function () {
-            let rows = $('table.vis')[3].rows;
+            let rows = $('.content-border').find('table.vis')[3].rows;
             for (let i = 0; i < rows.length; i++) {
                 if (rows[i].cells[0].innerText === "Czas bitwy") {
                     NotesScript.attack_info.battle_time = Helper.parse_datetime_string(rows[i].cells[1].innerText);
