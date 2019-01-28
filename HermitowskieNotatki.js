@@ -214,7 +214,7 @@
             let def_village_id = def.find('.contexted').attr('data-id');
 
             let get_forwarder = function () {
-                let table = $('table.vis')[3];
+                let table = $('.content-border').find('table.vis')[3];
                 for (let i = 0; i < table.rows.length; i++) {
                     if (table.rows[i].cells[0].innerText === "Przes\u0142ane od:") {
                         return table.rows[i].cells[1].innerText;
