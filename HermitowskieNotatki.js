@@ -182,8 +182,11 @@
                 });
             }
             catch (e) {
-                UI.ErrorMessage(e);
-                console.error(e);
+                if (typeof (e) === 'string') {
+                    UI.ErrorMessage(e);
+                } else {
+                    throw e;
+                }
             }
         },
         check_report: function () {
@@ -700,9 +703,23 @@
             config: { caching: 'Mandatory' },
             unit_info: { caching: 'Mandatory' }
         }).then(worldInfo => {
-            Settings.init(worldInfo);
-            NotesScript.init();
-        });
+            try {
+                Settings.init(worldInfo);
+                NotesScript.init();
+            } catch (error) {
+                HandleError(error);
+            }
+        }).catch(HandleError);
+    }
+
+    function HandleError(error) {
+        const gui =
+            `<h2>WTF - What a Terrible Failure</h2>
+             <p><strong>Komunikat o b\u{142}\u{119}dzie:</strong><br/>
+                <textarea rows='5' cols='42'>${error}\n\n${error.stack}</textarea><br/>
+                <a href="https://forum.plemiona.pl/index.php?threads/hermitowskie-notatki.126752/">Link do w\u{105}tku na forum</a>
+             </p>`;
+        Dialog.show('scriptError', gui);
     }
 
     if (localStorage.getItem('GetWorldInfo') !== null) {
