@@ -38,6 +38,8 @@
                         catapult: 1252
                     };
                     break;
+                default:
+                    throw new Error('Nie uda\u{142}o si\u{119} za\u{142}adowa\u{107} czasu rekrutowania jednostek');
             }
         }
     };
@@ -64,7 +66,9 @@
         },
         calculate_rebuild_time: function (troops) {
             let rebuild_time = function (units) {
-                return units.reduce((time, unit) => Settings.build_time[unit] * troops[unit] + time, 0) * 1000;
+                return units
+                    .filter(unit => troops[unit] > 0)
+                    .reduce((time, unit) => Settings.build_time[unit] * troops[unit] + time, 0) * 1000;
             }
 
             let barracks_time = rebuild_time(['spear', 'sword', 'axe', 'archer']);
