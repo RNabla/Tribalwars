@@ -1,307 +1,244 @@
-var HermitowskieSurki = {
-    nearTimeThreshold: 30,
-    resourceThreshold: [100000, 100000, 100000],
-    populationAvailableThreshold: 200,
-    tradersSafeguard: 10,
-};
-
-(function (TribalWars, options) {
-
-    let fetchProductionTable = function () {
-        let url = TribalWars.buildURL('GET', 'overview_villages', {
-            mode: 'prod',
-            group: '0',
-            page: '-1'
-        });
-        return fetch(url, {
-            credentials: 'include'
-        }).then(t => t.text()).then(text => {
-            let page = document.createElement('trades_table');
-            page.innerHTML = text;
-            let table = $(page).find('#production_table')[0];
-            let villages = [];
-            for (let i = 1; i < table.rows.length; i++) {
-                let row = table.rows[i];
-                let resources = [];
-                for (let j = 0; j < 3; j++) {
-                    resources.push(Number(row.cells[3].children[j].innerText.replace(".", "")))
+(function () {
+    const HermitowskieSurkiCore = {
+        i18n: {
+            NOTHING_NEEDED: 'Wygl\u{105}da na to, \u{17C}e niczego nie potrzeba'
+        },
+        res: ['wood', 'stone', 'iron'],
+        total: [0, 0, 0],
+        calculatedNeeds: [0, 0, 0],
+        needs: [28, 30, 25].map(x => x * 1000),
+        delta: [0, 0, 0],
+        clipToMaxStorage: true,
+        storagePercentageLimit: [42, 42, 42],
+        storageLimit: [15, 15, 15].map(x => x * 1000),
+        idleTime: 15,
+        resourcesSafeguard: [28, 30, 25].map(x => x * 1000),
+        tradersSafeguard: 0,
+        perfectTiming: false,
+        clipToTraderCapacity: false,
+        traderCapacityClippingValue: 0,
+        enableAllByDefault: false,
+        init: function (config) {
+            this.getUserInput(config);
+            this.processNeeds();
+            this.misc();
+            this.process();
+        },
+        getUserInput: function (config) {
+            if (!config) { return; }
+            let settings = ['needs', 'delta', 'clipToMaxStorage', 'storagePercentageLimit',
+                'storageLimit', 'idleTime', 'resourcesSafeguard', 'tradersSafeguard',
+                'perfectTiming', 'clipToTraderCapacity', 'traderCapacityClippingValue', 'enableAllByDefault'];
+            for (const setting of settings) {
+                if (config[setting]) {
+                    this[setting] = config[setting];
                 }
-                let name = row.cells[1].innerText.trim();
-                let coords = name.match(/\d+\|\d+/);
-                coords = coords[coords.length - 1].split("|").map(coord => Number(coord));
-                let population = row.cells[6].innerText.match(/\d+/g).map(e => Number(e));
-                villages.push({
-                    id: row.cells[1].children[0].attributes['data-id'].value,
-                    name: name,
-                    coords: coords,
-                    resources: resources,
-                    needs: [0, 0, 0],
-                    incomes: {
-                        near: [0, 0, 0],
-                        far: [0, 0, 0]
-                    },
-                    frees: [0, 0, 0],
-                    storage: Number(row.cells[4].innerText.match(/\d+/)[0]),
-                    traders: Math.max(0, Number(row.cells[5].innerText.match(/\d+/)[0]) - options.tradersSafeguard),
-                    farm: {
-                        current: population[0],
-                        maximum: population[1]
+            }
+        },
+        processNeeds: function () {
+            let params = new URLSearchParams(location.href);
+            let queryResNames = this.res.map(x => `h${x}`);
+            for (let i = 0; i < 3; i++) {
+                if (params.has(queryResNames[i])) {
+                    let need = parseInt(params.get(queryResNames[i]));
+                    this.needs[i] = need;
+                    this.needs[i] += this.delta[i];
+                }
+                if (this.clipToMaxStorage) {
+                    let maxStorageLimit = Math.min(
+                        parseInt(game_data.village.storage_max * this.storagePercentageLimit[i] / 100),
+                        parseInt(game_data.village.storage_max - this.idleTime * 60 * game_data.village[`${this.res[i]}_prod`]),
+                        this.storageLimit[i]
+                    );
+                    if (this.needs[i] > maxStorageLimit) { this.needs[i] = maxStorageLimit; }
+                }
+                this.needs[i] -= parseInt(document.querySelector(`#total_${this.res[i]}`).innerText.replace('.', ''));
+                this.needs[i] -= game_data.village[this.res[i]];
+                if (this.needs[i] < 0) { this.needs[i] = 0; }
+                this.calculatedNeeds[i] = this.needs[i];
+            }
+
+        },
+        getDurations: function () {
+            let humanFormatToDuration = function (humanFormat) {
+                let parts = humanFormat.split(':').map(x => parseInt(x));
+                return (parts[0] * 60 + parts[1]) * 60 + parts[2];
+            }
+            return Array.from(document.querySelectorAll(".supply_location"))
+                .map(x => humanFormatToDuration(x.children[1].innerText));
+        },
+        getAvailableResources: function (supplier) {
+            let available = [];
+            for (let i = 0; i < 3; i++) {
+                available.push(Number(supplier.cells[2 + i].children[0].innerText.replace('.', '')));
+                available[i] -= this.resourcesSafeguard[i];
+                if (available[i] < 0) { available[i] = 0; }
+                if (this.needs[i] <= 0) { available[i] = 0; }
+            }
+            return available;
+        },
+        getAvailableTraders: function (supplier) {
+            return parseInt(supplier.cells[6].innerText.split('/')[0]) - this.tradersSafeguard;
+        },
+        selectResources: function (supplier, selected) {
+            for (let i = 0; i < 3; i++) {
+                this.needs[i] -= selected[i];
+                this.total[i] += selected[i];
+                supplier.cells[2 + i].children[1].value = selected[i];
+            }
+        },
+        updateSelfProduction: function (durations, step) {
+            let timePassed = step === 0
+                ? durations[0]
+                : durations[step] - durations[step - 1];
+
+            for (let i = 0; i < 3; i++) {
+                let production = Math.floor(game_data.village[`${this.res[i]}_prod`] * timePassed);
+                this.needs[i] -= production;
+                if (this.needs[i] < 0) { this.needs[i] = 0; }
+            }
+        },
+        isSupplierSelected: function (supplier) {
+            return supplier.cells[7].children[0].checked;
+        },
+        misc: function () {
+            if (this.enableAllByDefault) {
+                let checkbox = document.querySelector('[name=select-all]');
+                if (!checkbox.checked) {
+                    checkbox.click();
+                }
+            }
+        },
+        process: function () {
+            let suppliers = document.querySelectorAll(".supply_location");
+            let durations = this.getDurations();
+            for (let k = 0; k < suppliers.length; k++) {
+                let supplier = suppliers[k];
+                if (this.perfectTiming) { this.updateSelfProduction(durations, k); }
+                if (!this.isSupplierSelected(supplier)) { continue; }
+                let availableResources = this.getAvailableResources(supplier);
+                let availableResourcesSum = this.sum(availableResources);
+                let availableTradersCapacity = this.getAvailableTraders(supplier) * 1000;
+
+                let capacity = Math.min(
+                    availableTradersCapacity,
+                    availableResourcesSum,
+                    this.sum(this.needs)
+                );
+
+                if (this.clipToTraderCapacity && capacity < this.traderCapacityClippingValue) {
+                    capacity = 0;
+                }
+
+                let selected = [0, 0, 0];
+                let i = 0;
+
+                while (capacity != 0) {
+                    let normalized = this.normalize(availableResources, availableResourcesSum)
+                        .map(x => x * capacity);
+
+                    let taken = this.clip(normalized, capacity)
+
+                    for (let i = 0; i < 3; i++) {
+                        if (selected[i] + taken[i] > this.needs[i]) {
+                            taken[i] = this.needs[i] - selected[i];
+                        }
+                        selected[i] += taken[i];
+                        availableResources[i] -= taken[i];
+                        availableTradersCapacity -= taken[i];
+                        capacity -= taken[i];
+
+                        if (selected[i] + taken[i] >= this.needs[i]) {
+                            availableResources[i] = 0;
+                        }
+
                     }
-                });
-            }
-            return villages;
-        });
-    };
 
-    let fetchTradesTable = function () {
-        let url = TribalWars.buildURL('GET', 'overview_villages', {
-            mode: 'trader',
-            type: 'inc',
-            group: '0',
-            page: '-1'
-        });
-        return fetch(url, {
-            credentials: 'include'
-        }).then(t => t.text()).then(text => {
-            let page = document.createElement('trades_table');
-            page.innerHTML = text;
-            let table = $(page).find('#trades_table')[0];
-            let trades = [];
-            if (table === undefined)
-                return [];
-            let names = ["wood", "stone", "iron"];
+                    availableResourcesSum = this.sum(availableResources);
 
-            for (let i = 1; i < table.rows.length; i++) {
-                let row = table.rows[i];
-                let timeparts = row.cells[5].innerText.match(/\d+/g).map(x => Number(x));
-                let duration = convertTimepartsToDuration(timeparts);
-                let resources = [0, 0, 0];
-                for (let j = 0; j < row.cells[7].childElementCount; j++) {
-                    let name = row.cells[7].children[j].outerHTML.match("wood|stone|iron")[0];
-                    resources[names.indexOf(name)] = Number(row.cells[7].children[j].innerText.replace(".", ""));
+                    capacity = Math.min(
+                        availableTradersCapacity,
+                        availableResourcesSum,
+                        this.sum(this.needs)
+                    );
+
+                    if (i++ == 42) { throw new Error('Capacity does not converge'); }
                 }
-                trades.push({
-                    id: row.cells[3].children[0].href.match(/id=(\d+)/)[1],
-                    duration: duration,
-                    income: resources
-                });
-            }
-            return trades;
-        });
-    };
 
-    function convertTimepartsToDuration(timeparts) {
-        let duration = 0;
-        let length = timeparts.length - 1;
-        for (let i = 0; i < length; i++) {
-            let val = timeparts[i];
-            duration += val * 60;
-        }
-        duration += timeparts[length];
-        return duration;
-    }
-
-    let nonZeroCell = function (arr) {
-        return arr.some(x => x > 0);
-    };
-
-    let needs = function (villages, threshold) {
-        let output = [];
-        for (let i = 0; i < villages.length; i++) {
-            let village = villages[i];
-            for (let j = 0; j < threshold.length; j++) {
-                village.needs[j] = Math.max(Math.min(threshold[j], village.storage) - village.resources[j] - village.incomes.far[j], 0)
-            }
-            if (nonZeroCell(village.needs)) {
-                output.push(villages[i]);
-            }
-        }
-        return output;
-    };
-
-    let frees = function (villages, safeguard) {
-        let output = [];
-        for (const village of villages) {
-            for (let i = 0; i < safeguard.length; i++) {
-                village.frees[i] = Math.max(0, village.resources[i] - Math.max(0, safeguard[i] - village.incomes.near[i]))
-            }
-            if (village.traders > 0 && nonZeroCell(village.frees)) {
-                output.push(village)
-            }
-        }
-        return output;
-    };
-
-    let accumulateIncome = function (trades, production) {
-        for (const trade of trades) {
-            let village = production.find(v => v.id === trade.id);
-            let isNear = trade.duration <= options.nearTimeThreshold * 60;
-            for (let i = 0; i < trade.income.length; i++) {
-                village.incomes.far[i] += trade.income[i];
-                if (isNear)
-                    village.incomes.near[i] += trade.income[i];
-
-            }
-        }
-    };
-
-    let generateTradeEntry = function (suppliers, target, trade_table) {
-        for (const village of suppliers) {
-            let piece = [];
-            for (let i = 0; i < 3; i++) {
-                piece.push(Math.min(target.needs[i], village.frees[i]))
-            }
-            if (!nonZeroCell(piece)) continue;
-            village.traders -= normalize(piece, village.traders);
-            for (let i = 0; i < 3; i++) {
-                target.needs[i] -= piece[i];
-                village.frees[i] -= piece[i];
-            }
-            trade_table.push({
-                form: {target_id: target.id, target_name: target.name, iron: piece[2], stone: piece[1], wood: piece[0]},
-                village: {
-                    id: village.id,
-                    name: village.name
+                if (this.clipToTraderCapacity) {
+                    selected = this.clipTransport(selected);
                 }
-            });
-        }
-    };
 
-    let generateTradeTable = function () {
-        return Promise.all([fetchTradesTable(), fetchProductionTable()]).then(a => {
-            let trades = a[0];
-            let production = a[1];
-            accumulateIncome(trades, production);
-            let takers = needs(production, options.resourceThreshold);
-            let suppliers = frees(production, options.resourceThreshold);
-            takers = takers.filter(e => e.farm.maximum - e.farm.current > options.populationAvailableThreshold);
-            takers.sort((lhs, rhs) => {
-                return lhs.farm.current - rhs.farm.current;
-            });
-
-            let trade_table = [];
-
-            for (const target of takers) {
-                suppliers.sort((a, b) => distance(a.coords, target.coords) - distance(b.coords, target.coords));
-                generateTradeEntry(suppliers, target, trade_table);
-                suppliers = suppliers.filter(v => v.traders > 0);
-            }
-            return trade_table;
-        });
-    };
-
-    function normalize(arr, traders) {
-        let sum = arr[0] + arr[1] + arr[2];
-        let capacity = traders * 1000;
-        if (sum > capacity) {
-            let ratio = capacity / sum;
-            for (let i = 0; i < 3; i++)
-                arr[i] = Math.floor(ratio * arr[i]);
-        }
-        return Math.ceil((arr[0] + arr[1] + arr[2]) / 1000);
-    }
-
-    function distance(A, B) {
-        let dx = A[0] - B[0];
-        let dy = A[1] - B[1];
-        return Math.hypot(dx, dy);
-    }
-
-    function createGui() {
-        let div$ = $('<div>', {
-            id: 'HermitianResources',
-            class: 'vis vis_item',
-            style: 'overflow-y:auto;height:200px'
-        });
-        let table$ = $('<table>', {
-            width: '100%',
-        });
-        let thead$ = $('<thead>');
-        let header$ = $('<tr>', {
-            html:
-            `<th>Z</th>` +
-            `<th>Do</th>` +
-            `<th><img src="${image_base}holz.png"/>Drewno</th>` +
-            `<th><img src="${image_base}lehm.png"/>Glina</th>` +
-            `<th><img src="${image_base}eisen.png"/>Żelazo</th>` +
-            `<th><img src="${image_base}buildings/market.png"/>Transport</th>`
-        });
-        thead$.append(header$);
-
-        let tbody$ = $('<tbody>', {
-            id: 'HermitianResourcesResults'
-        });
-
-        table$.append(thead$);
-        table$.append(tbody$);
-        div$.append(table$);
-        $('#contentContainer').prepend(div$);
-    }
-
-    if ($('#HermitianResources').length) {
-        $('#HermitianResources > table > tbody').empty()
-    } else {
-        createGui();
-    }
-
-    generateTradeTable().then(trade_table => {
-        try {
-            let results$ = $('#HermitianResourcesResults');
-            let generate_popup = function (trade_entry, anchor) {
-                let coords = trade_entry.form.target_name.match(/\d{3}\|\d{3}/).pop().split('|');
-                TribalWars.post('market', {ajax: 'confirm'}, {
-                    village: trade_entry.village.id,
-                    iron: trade_entry.form.iron,
-                    stone: trade_entry.form.stone,
-                    wood: trade_entry.form.wood,
-                    x: coords[0],
-                    y: coords[1],
-                    h: game_data.csrf
-                }, function (result) {
-                    Dialog.show('map_market', result.dialog);
-                    let market_confirm = $('#market-confirm-form');
-                    market_confirm.on('submit', function() {
-                        return TribalWars.post("market", {ajaxaction: "map_send"}, trade_entry.form, function (e) {
-                            Dialog.close();
-                            UI.SuccessMessage(e.message);
-                            anchor.closest('tr').remove();
-                        }), !1;
-                    });
-                });
-            };
-
-            if (!trade_table.length) {
-                $('#HermitianResources').remove();
-                return UI.SuccessMessage('Brak sugerowanych transportów');
+                this.selectResources(supplier, selected);
             }
 
-            for (const entry of trade_table) {
-                let villageFromAnchor = $('<a>', {
-                    text: entry.village.name,
-                    href: TribalWars.buildURL('GET', 'info_village', {id: entry.village.id})
-                });
-                let villageToAnchor = $('<a>', {
-                    text: entry.form.target_name,
-                    href: TribalWars.buildURL('GET', 'info_village', {id: entry.form.target_id})
-                });
-                let tr$ = $('<tr>');
-                tr$.append($('<td>').append(villageFromAnchor));
-                tr$.append($('<td>').append(villageToAnchor));
-                tr$.append($('<td>', {text: entry.form.wood}));
-                tr$.append($('<td>', {text: entry.form.stone}));
-                tr$.append($('<td>', {text: entry.form.iron}));
-                let commandAnchor = $('<a>', {href: '#', text: 'Wykonaj'});
-                commandAnchor.on('click', () => {
-                    generate_popup(entry, commandAnchor);
-                });
-                tr$.append($('<td>').append(commandAnchor));
-                results$.append(tr$);
-            }
-        }
-        catch (e) {
-            UI.ErrorMessage('upsi ', e);
-            console.error(e);
-        }
-    });
+            CallResources.checkOverflow();
+            this.displayMetrics();
 
-})(TribalWars, HermitowskieSurki);
+        },
+        displayMetrics: function () {
+            if (this.sum(this.calculatedNeeds) === 0) {
+                UI.SuccessMessage(this.i18n.NOTHING_NEEDED);
+            }
+            console.log('Needs    ', this.calculatedNeeds);
+            console.log('Summoned ', this.total);
+            console.log('Available in', this.calculateTime(), '[s]');
+        },
+        calculateTime: function () {
+            let time = 0;
+            for (let i = 0; i < 3; i++) {
+                let diff = this.calculatedNeeds[i] - this.total[i];
+                let res_time = diff / game_data.village[`${this.res[i]}_prod`];
+                time = Math.max(time, res_time);
+            }
+            return Math.ceil(time);
+        },
+        clipTransport: function (transport) {
+            let capacity = this.sum(transport);
+            if (capacity % 1000 < this.traderCapacityClippingValue) {
+                let threshold = parseInt(capacity / 1000) * 1000;
+                return this.clip(this.normalize(transport, capacity).map(x => x * threshold), threshold);
+            }
+            return transport;
+        },
+        sum: function (array) {
+            return array.reduce((pv, cv) => pv + cv);
+        },
+        normalize: function (array, threshold) {
+            return threshold === 0
+                ? array
+                : array.map(x => x / threshold);
+        },
+        clip: function (array, threshold) {
+            let wholeParts = array.map(x => parseInt(x));
+            let fractions = [];
+            let buffer = threshold - this.sum(wholeParts);
+            for (let i = 0; i < 3; i++) {
+                let fraction = array[i] - wholeParts[i];
+                fractions.push(fraction);
+                let taken = Math.min(buffer, Math.round(fraction));
+                wholeParts[i] += taken;
+                buffer -= taken;
+            }
+            if (buffer) {
+                wholeParts[this.argmax(fractions)] += buffer;
+            }
+            return wholeParts;
+        },
+        argmax: function (array) {
+            let max = Math.max(...array);
+            return array.indexOf(max);
+        }
+    }
+    try {
+        if (typeof (HermitowskieSurki) === "undefined") {
+            HermitowskieSurkiCore.init({});
+        }
+        else {
+            HermitowskieSurkiCore.init(HermitowskieSurki);
+        }
+    }
+    catch (e) {
+        UI.ErrorMessage([e, '', e.stack].join('<br>'));
+    }
+})();
