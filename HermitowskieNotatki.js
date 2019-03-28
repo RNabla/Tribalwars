@@ -37,7 +37,7 @@
                 this.population[unit] = Number(worldInfo.unit_info[unit].pop);
                 this.speed[unit] = Number(worldInfo.unit_info[unit].speed);
                 if (core_build_time[unit]) {
-                    this.build_time[unit] = core_build_time[unit] * world_speed;
+                    this.build_time[unit] = core_build_time[unit] / world_speed;
                 }
             }
         }
