@@ -18,28 +18,27 @@
         speed: {},
         build_time: {},
         init: function (worldInfo) {
+            const core_build_time = {
+                spear: 150.9,
+                sword: 221.92,
+                axe: 192.88,
+                archer: 266.3,
+                spy: 178.2,
+                light: 356.35,
+                marcher: 534.55,
+                heavy: 712.7,
+                ram: 1514.6,
+                catapult: 2271.9
+            };
+
+            let world_speed = Number(worldInfo.config.speed);
+
             for (const unit in worldInfo.unit_info) {
                 this.population[unit] = Number(worldInfo.unit_info[unit].pop);
                 this.speed[unit] = Number(worldInfo.unit_info[unit].speed);
-            }
-
-            switch (worldInfo.config.speed) {
-                case "1.6":
-                    this.build_time = {
-                        spear: 100,
-                        sword: 146,
-                        axe: 129,
-                        archer: 175,
-                        spy: 117,
-                        light: 234,
-                        marcher: 351,
-                        heavy: 468,
-                        ram: 835,
-                        catapult: 1252
-                    };
-                    break;
-                default:
-                    throw new Error('Nie uda\u{142}o si\u{119} za\u{142}adowa\u{107} czasu rekrutowania jednostek');
+                if (core_build_time[unit]) {
+                    this.build_time[unit] = core_build_time[unit] * world_speed;
+                }
             }
         }
     };
