@@ -1,8 +1,8 @@
 !function (TribalWars) {
     let TechnologyEnum = {
-        TEN_LEVELS: "0",
-        THREE_LEVELS: "1",
-        SIMPLE: "2"
+        TEN_LEVELS: '0',
+        THREE_LEVELS: '1',
+        SIMPLE: '2'
     };
     let Settings = {
         simulator_luck: -25, // Hermitowski nigdy nie ma szczęścia
@@ -52,9 +52,9 @@
     };
     let Helper = {
         parse_datetime_string: function (datetime_string) {
-            let date_time = datetime_string.split(" ");
-            let date = date_time[0].split(".").map(x => Number(x));
-            let time = date_time[1].split(":").map(x => Number(x));
+            let date_time = datetime_string.split(' ');
+            let date = date_time[0].split('.').map(x => Number(x));
+            let time = date_time[1].split(':').map(x => Number(x));
             return new Date(2000 + date[2], date[1] - 1, date[0], time[0], time[1], time[2]);
         },
         date_to_datetime_string: function (date) {
@@ -221,9 +221,9 @@
         check_screen: function () {
             if ($('.report_ReportAttack').length !== 1) {
                 if ($('[class*=report_Report]').length !== 0) {
-                    throw "Tego typu raporty nie s\u0105 obs\u0142ugiwane";
+                    throw 'Tego typu raporty nie s\u0105 obs\u0142ugiwane';
                 }
-                throw "Czy aby na pewno jeste\u015B w przegl\u0105dzie raportu?";
+                throw 'Czy aby na pewno jeste\u015B w przegl\u0105dzie raportu?';
             }
         },
         get_context: function () {
@@ -239,7 +239,7 @@
             let get_forwarder = function () {
                 let table = $('.content-border').find('table.vis')[3];
                 for (let i = 0; i < table.rows.length; i++) {
-                    if (table.rows[i].cells[0].innerText === "Przes\u0142ane od:") {
+                    if (table.rows[i].cells[0].innerText === 'Przes\u0142ane od:') {
                         return table.rows[i].cells[1].innerText;
                     }
                 }
@@ -256,7 +256,7 @@
                 NotesScript.context.side = 'def';
             }
             if (NotesScript.context.side !== 'att' && NotesScript.context.side !== 'def') {
-                let user_answer = prompt("Wpisz 'att', jeżeli jesteś agresorem w tym raporcie; 'def' jeżeli się bronisz", 'att');
+                let user_answer = prompt('Wpisz \'att\', jeżeli jesteś agresorem w tym raporcie; \'def\' jeżeli się bronisz, \'att\'');
                 if (user_answer !== null && (user_answer.trim() === 'att' || user_answer.trim() === 'def')) {
                     NotesScript.context.side = user_answer;
                 } else {
@@ -274,7 +274,7 @@
 
         },
         get_export_code: function () {
-            NotesScript.attack_info.export_code = $("#report_export_code").val().match(/\[report_export].*\[\/report_export\]/)[0];
+            NotesScript.attack_info.export_code = $('#report_export_code').val().match(/\[report_export].*\[\/report_export\]/)[0];
         },
         get_report_id: function () {
             NotesScript.attack_info.report_id = Number(location.href.match(/view=(\d+)/)[1]);
@@ -341,7 +341,7 @@
         get_back_time: function () {
             let match_coordinates = function (text) {
                 let matches = text.match(/\d{1,3}\|\d{1,3}/g);
-                return matches[matches.length - 1].split("|").map(x => Number(x));
+                return matches[matches.length - 1].split('|').map(x => Number(x));
             }
             let origin = match_coordinates($('#attack_info_att')[0].rows[1].innerText);
             let destination = match_coordinates($('#attack_info_def')[0].rows[1].innerText);
@@ -362,7 +362,7 @@
         get_battle_time: function () {
             let rows = $('.content-border').find('table.vis')[3].rows;
             for (let i = 0; i < rows.length; i++) {
-                if (rows[i].cells[0].innerText === "Czas bitwy") {
+                if (rows[i].cells[0].innerText === 'Czas bitwy') {
                     NotesScript.attack_info.battle_time = Helper.parse_datetime_string(rows[i].cells[1].innerText);
                     return;
                 }
@@ -411,7 +411,7 @@
                 }
                 if (is_clean) {
                     for (let i = 1; i < troops.cells.length; i++) {
-                        if (loses.cells[i].innerText !== "0") {
+                        if (loses.cells[i].innerText !== '0') {
                             is_empty = false;
                         }
                     }
@@ -427,7 +427,7 @@
             if (attack_info) {
                 let belief_match = attack_info[0].innerText.match(/Siła uderzenia: (\d+)%/);
                 if (belief_match) {
-                    NotesScript.village_info.belief = belief_match[1] === "100";
+                    NotesScript.village_info.belief = belief_match[1] === '100';
                 }
             }
         },
@@ -487,7 +487,7 @@
                     if (attack_info.units_away.off_population) {
                         away.push(`off: ${Helper.beautify_number(attack_info.units_away.off_population)}`)
                     }
-                    properties.push(`Poza: { ${away.join(", ")} }`)
+                    properties.push(`Poza: { ${away.join(', ')} }`)
                 }
             }
             if (attack_info.catapult_attack_result_plaintext) {
@@ -496,7 +496,7 @@
             if (attack_info.ram_attack_result_plaintext) {
                 properties.push(attack_info.ram_attack_result_plaintext);
             }
-            let attack_info_text = `[spoiler=${properties.join(" | ")}]${attack_info.export_code}[color=#EFE6C9]#${(attack_info.report_id.toString(36))}[/color][/spoiler]`;
+            let attack_info_text = `[spoiler=${properties.join(' | ')}]${attack_info.export_code}[color=#EFE6C9]#${(attack_info.report_id.toString(36))}[/color][/spoiler]`;
             return attack_info_text;
         },
         generate_village_info() {
@@ -521,7 +521,7 @@
             if (NotesScript.village_info.player_id) {
                 properties.push(`[color=#F5EDDA]${NotesScript.village_info.player_id}[/color]`);
             }
-            return properties.join(" | ");
+            return properties.join(' | ');
         },
         add_note: function (new_note) {
             TribalWars.post('info_village', {
@@ -552,7 +552,7 @@
                 try {
                     return $(t).find('textarea[name=note]')[0].innerText.trim();
                 } catch (e) {
-                    return "";
+                    return '';
                 }
             });
         },
@@ -603,7 +603,7 @@
             });
             // filter by date
             attack_infos = attack_infos.filter(x => x.battle_time.getTime() + Settings.attack_info_lifetime > Date.now());
-            let attack_infos_text = attack_infos.map(x => NotesScript.generate_attack_info(x)).join("\n");
+            let attack_infos_text = attack_infos.map(x => NotesScript.generate_attack_info(x)).join('\n');
             let new_note = `${NotesScript.generate_village_info()}\n\n${attack_infos_text}\n<<<NOTATKI>>>${user_notes}`;
             return new_note;
         },
@@ -628,7 +628,7 @@
             return attack_infos;
         },
         parse_old_attack_info_properties: function (properties_text) {
-            let properties_texts = properties_text.split(" | ");
+            let properties_texts = properties_text.split(' | ');
             let properties = {};
 
             let battle_time_match = properties_texts.find(x => x.match(/^\d{2}.\d{2}.\d{2} \d{2}:\d{2}:\d{2}$/));
@@ -651,11 +651,11 @@
             if (away_match) {
                 properties.units_away_plaintext = away_match;
             }
-            let catapult_attack_result_match = properties_texts.find(x => x.startsWith("K:"));
+            let catapult_attack_result_match = properties_texts.find(x => x.startsWith('K:'));
             if (catapult_attack_result_match) {
                 properties.catapult_attack_result_plaintext = catapult_attack_result_match;
             }
-            let ram_attack_result_match = properties_texts.find(x => x.startsWith("T:"));
+            let ram_attack_result_match = properties_texts.find(x => x.startsWith('T:'));
             if (catapult_attack_result_match) {
                 properties.ram_attack_result_plaintext = ram_attack_result_match;
             }
@@ -663,7 +663,7 @@
         },
         get_old_village_info: function (old_notes) {
             let village_info_text = old_notes.split('\n\n')[0];
-            let village_info_properties_text = village_info_text.split(" | ");
+            let village_info_properties_text = village_info_text.split(' | ');
             let old_village_info = {};
             if (village_info_properties_text.some(x => x === 'OFF')) {
                 old_village_info.troops_type = 'OFF';
@@ -710,7 +710,7 @@
             `<h2>WTF - What a Terrible Failure</h2>
              <p><strong>Komunikat o b\u{142}\u{119}dzie:</strong><br/>
                 <textarea rows='5' cols='42'>${error}\n\n${error.stack}</textarea><br/>
-                <a href="https://forum.plemiona.pl/index.php?threads/hermitowskie-notatki.126752/">Link do w\u{105}tku na forum</a>
+                <a href='https://forum.plemiona.pl/index.php?threads/hermitowskie-notatki.126752/'>Link do w\u{105}tku na forum</a>
              </p>`;
         Dialog.show('scriptError', gui);
     }
