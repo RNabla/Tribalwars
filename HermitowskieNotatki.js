@@ -1,4 +1,9 @@
 !function (TribalWars) {
+    let TechnologyEnum = {
+        TEN_LEVELS: "0",
+        THREE_LEVELS: "1",
+        SIMPLE: "2"
+    };
     let Settings = {
         simulator_luck: -25, // Hermitowski nigdy nie ma szczęścia
         simulator_def_wall: 20,
@@ -17,6 +22,7 @@
         population: {},
         speed: {},
         build_time: {},
+        tech: undefined,
         init: function (worldInfo) {
             const core_build_time = {
                 spear: 158.44,
@@ -30,6 +36,8 @@
                 ram: 1335.3,
                 catapult: 2002.9
             };
+
+            this.tech = worldInfo.config.game.tech;
 
             let world_speed = Number(worldInfo.config.speed);
 
@@ -105,6 +113,15 @@
                 for (const unit in units) {
                     if (units[unit] > 0) {
                         properties[`${context}_${unit}`] = units[unit];
+                        switch (Settings.tech) {
+                            case TechnologyEnum.TEN_LEVELS:
+                                properties[`${context}_tech_${unit}`] = 10;
+                                break;
+                            case TechnologyEnum.THREE_LEVELS:
+                                properties[`${context}_tech_${unit}`] = 3;
+                                break;
+                        }
+
                     }
                 }
             }
@@ -256,16 +273,12 @@
             }
 
         },
-
-
         get_export_code: function () {
             NotesScript.attack_info.export_code = $("#report_export_code").val().match(/\[report_export].*\[\/report_export\]/)[0];
         },
-
         get_report_id: function () {
             NotesScript.attack_info.report_id = Number(location.href.match(/view=(\d+)/)[1]);
         },
-
         get_units_away: function () {
             let spy_away = $('#attack_spy_away');
             if (spy_away.length === 1) {
@@ -275,9 +288,7 @@
                 NotesScript.attack_info.units_away = summary;
             }
         },
-
         get_troops_type: function () {
-
             let verdict = function (summary, threshold) {
                 if (summary.off_population > threshold) {
                     return 'OFF';
@@ -312,7 +323,6 @@
                 }
             }
         },
-
         get_rebuild_time: function () {
             let get_loses = function () {
                 let attack_info_units = $(`#attack_info_${NotesScript.context.opponent_side}_units`)[0];
@@ -328,7 +338,6 @@
                 }
             }
         },
-
         get_back_time: function () {
             let match_coordinates = function (text) {
                 let matches = text.match(/\d{1,3}\|\d{1,3}/g);
@@ -350,7 +359,6 @@
                 NotesScript.attack_info.back_time = new Date(back_time_timestamp);
             }
         },
-
         get_battle_time: function () {
             let rows = $('.content-border').find('table.vis')[3].rows;
             for (let i = 0; i < rows.length; i++) {
@@ -360,7 +368,6 @@
                 }
             }
         },
-
         get_attack_results: function () {
             let attack_results = $('#attack_results')[0];
             if (attack_results) {
@@ -378,7 +385,6 @@
                 }
             }
         },
-
         get_church: function () {
             let table = $('#attack_spy_building_data');
             if (table.length === 1) {
@@ -389,7 +395,6 @@
                 }
             }
         },
-
         check_if_is_empty: function () {
             let def_units = $('#attack_info_def_units');
             if (def_units.length === 1) {
@@ -417,7 +422,6 @@
                 }
             }
         },
-
         get_belief: function () {
             let attack_info = $(`#attack_info_${NotesScript.context.opponent_side}`);
             if (attack_info) {
@@ -427,11 +431,6 @@
                 }
             }
         },
-
-
-
-
-
         get_survivors: function (context) {
             let attack_info_units = $(`#attack_info_${context}_units`)[0];
             if (attack_info_units) {
@@ -444,7 +443,6 @@
                 return survivors;
             }
         },
-
         get_sim: function () {
             let survivors = NotesScript.get_survivors('def');
             if (survivors) {
@@ -456,10 +454,8 @@
                 }
             }
         },
-
         generate_attack_info: function (attack_info) {
             let properties = [Helper.date_to_datetime_string(attack_info.battle_time)];
-
             if (attack_info.is_empty) {
                 properties.push(attack_info.is_empty);
             }
@@ -503,7 +499,6 @@
             let attack_info_text = `[spoiler=${properties.join(" | ")}]${attack_info.export_code}[color=#EFE6C9]#${(attack_info.report_id.toString(36))}[/color][/spoiler]`;
             return attack_info_text;
         },
-
         generate_village_info() {
             let properties = [];
             if (NotesScript.village_info.troops_type) {
@@ -534,7 +529,6 @@
                 id: NotesScript.context.village_id
             }, { note: new_note }, NotesScript.on_note_updated);
         },
-
         on_note_updated: function (response) {
             if (response.note_parsed) {
                 UI.SuccessMessage(`Notatka dodana do wioski ${NotesScript.context.side === 'def' ? 'atakującego' : 'broniącego'}`);
@@ -562,7 +556,6 @@
                 }
             });
         },
-
         merge_village_info: function (old_village_info) {
             if (typeof (NotesScript.village_info.belief) === 'undefined') {
                 NotesScript.village_info.belief = old_village_info.belief;
@@ -614,7 +607,6 @@
             let new_note = `${NotesScript.generate_village_info()}\n\n${attack_infos_text}\n<<<NOTATKI>>>${user_notes}`;
             return new_note;
         },
-
         get_attack_infos: function (old_notes) {
             let start = old_notes.indexOf('\n\n');
             let end = old_notes.indexOf('>>>');
@@ -635,7 +627,6 @@
             }
             return attack_infos;
         },
-
         parse_old_attack_info_properties: function (properties_text) {
             let properties_texts = properties_text.split(" | ");
             let properties = {};
@@ -670,7 +661,6 @@
             }
             return properties;
         },
-
         get_old_village_info: function (old_notes) {
             let village_info_text = old_notes.split('\n\n')[0];
             let village_info_properties_text = village_info_text.split(" | ");
