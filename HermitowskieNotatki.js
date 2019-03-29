@@ -19,16 +19,16 @@
         build_time: {},
         init: function (worldInfo) {
             const core_build_time = {
-                spear: 150.9,
-                sword: 221.92,
-                axe: 192.88,
-                archer: 266.3,
-                spy: 178.2,
-                light: 356.35,
-                marcher: 534.55,
-                heavy: 712.7,
-                ram: 1514.6,
-                catapult: 2271.9
+                spear: 158.44,
+                sword: 233,
+                axe: 205.04,
+                archer: 279.6,
+                spy: 187.1,
+                light: 374.2,
+                marcher: 561.25,
+                heavy: 748.35,
+                ram: 1335.3,
+                catapult: 2002.9
             };
 
             let world_speed = Number(worldInfo.config.speed);
