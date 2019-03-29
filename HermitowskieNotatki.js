@@ -389,10 +389,10 @@
             let table = $('#attack_spy_building_data');
             if (table.length === 1) {
                 let buildings = JSON.parse(table.val());
-                let church = buildings.find(x => x.id.match(/church/));
-                if (church) {
-                    NotesScript.village_info.church = `${church.name} ${church.level}`;
-                }
+                let church_match = buildings.find(x => x.id.match(/church/));
+                NotesScript.village_info.church = church_match
+                    ? `${church_match.name} ${church_match.level}`
+                    : false;
             }
         },
         check_if_is_empty: function () {
@@ -504,7 +504,7 @@
             if (NotesScript.village_info.troops_type) {
                 properties.push(NotesScript.village_info.troops_type);
             }
-            if (NotesScript.village_info.church) {
+            if (typeof(NotesScript.village_info.church) === 'string') {
                 properties.push(NotesScript.village_info.church);
             }
             if (typeof (NotesScript.village_info.belief) === 'boolean' && !NotesScript.village_info.belief) {
