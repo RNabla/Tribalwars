@@ -5,7 +5,7 @@
         SIMPLE: '2'
     };
     let Settings = {
-        simulator_luck: -25, // Hermitowski nigdy nie ma szczęścia
+        simulator_luck: -25, // Hermitowski nigdy nie ma szcz\u{119}\u{15B}cia
         simulator_def_wall: 20,
         simulator_att_troops: {
             axe: 6000,
@@ -212,7 +212,7 @@
         check_report: function () {
             if (Object.keys(NotesScript.village_info).length === 1 &&
                 Object.keys(NotesScript.attack_info).length === 3) {
-                let ignore = prompt('Wydaje się, że ten raport nic nie wnosi.\nWpisz dodaj, aby dodać go pomimo tego');
+                let ignore = prompt('Wydaje si\u{119}, \u{17C}e ten raport nic nie wnosi.\nWpisz dodaj, aby doda\u{107} go pomimo tego');
                 if (!ignore || ignore.trim() !== 'dodaj') {
                     throw 'Ten raport nic nie wnosi';
                 }
@@ -256,11 +256,11 @@
                 NotesScript.context.side = 'def';
             }
             if (NotesScript.context.side !== 'att' && NotesScript.context.side !== 'def') {
-                let user_answer = prompt('Wpisz \'att\', jeżeli jesteś agresorem w tym raporcie; \'def\' jeżeli się bronisz, \'att\'');
+                let user_answer = prompt('Wpisz \'att\', je\u{17C}eli jeste\u{15B} agresorem w tym raporcie; \'def\' je\u{17C}eli si\u{119} bronisz, \'att\'');
                 if (user_answer !== null && (user_answer.trim() === 'att' || user_answer.trim() === 'def')) {
                     NotesScript.context.side = user_answer;
                 } else {
-                    throw 'Nie wiem po której stronie dodać notatkę';
+                    throw 'Nie wiem po kt\u{F3}rej stronie doda\u{107} notatk\u{119}';
                 }
             }
             NotesScript.context.opponent_side = NotesScript.context.side === 'att' ? 'def' : 'att';
@@ -269,7 +269,7 @@
             let village_player_id = (NotesScript.context.side === 'att' ? def : att)[0].rows[1].cells[1].children[0].getAttribute('data-player');
             if (NotesScript.village_info.player_id !== village_player_id) {
                 NotesScript.add_note('');
-                throw 'Docelowa wioska zmieniła właściciela';
+                throw 'Docelowa wioska zmieni\u{142}a w\u{142}a\u{15B}ciciela';
             }
 
         },
@@ -373,7 +373,7 @@
             if (attack_results) {
                 NotesScript.attack_info.attack_results = {};
                 let ram_match = attack_results.innerText.match(/Uszkodzenie przez tarany:\s*Mur uszkodzony z poziomu (\d+) do poziomu (\d+)/);
-                let catapult_match = attack_results.innerText.match(/Szkody spowodowane ostrzałem katapult:\s*(.*) uszkodzono z poziomu (\d+) do poziomu (\d+)/);
+                let catapult_match = attack_results.innerText.match(/Szkody spowodowane ostrza\u{142}em katapult:\\s*(.*) uszkodzono z poziomu (\\d+) do poziomu (\\d+)/);
                 if (ram_match) {
                     NotesScript.attack_info.attack_results.ram_result = ram_match.slice(1).map(x => Number(x));
                 }
@@ -425,7 +425,7 @@
         get_belief: function () {
             let attack_info = $(`#attack_info_${NotesScript.context.opponent_side}`);
             if (attack_info) {
-                let belief_match = attack_info[0].innerText.match(/Siła uderzenia: (\d+)%/);
+                let belief_match = attack_info[0].innerText.match(/Si\u{142}a uderzenia: (\\d+)%/);
                 if (belief_match) {
                     NotesScript.village_info.belief = belief_match[1] === '100';
                 }
@@ -531,7 +531,7 @@
         },
         on_note_updated: function (response) {
             if (response.note_parsed) {
-                UI.SuccessMessage(`Notatka dodana do wioski ${NotesScript.context.side === 'def' ? 'atakującego' : 'broniącego'}`);
+                UI.SuccessMessage(`Notatka dodana do wioski ${NotesScript.context.side === 'def' ? 'atakuj\u{105}cego' : 'broni\u{105}cego'}`);
                 let next_report = $('#report-next')[0];
                 if (next_report) {
                     location.href = next_report.href;
@@ -674,7 +674,7 @@
             if (village_info_properties_text.some(x => x === 'Bez wiary')) {
                 old_village_info.belief = false;
             }
-            let church_match = village_info_properties_text.find(x => x.toLowerCase().indexOf('kościół') !== -1)
+            let church_match = village_info_properties_text.find(x => x.toLowerCase().indexOf('ko\u{15B}ci\u{F3}\u{142}') !== -1)
             if (church_match) {
                 old_village_info.church = church_match;
             }
