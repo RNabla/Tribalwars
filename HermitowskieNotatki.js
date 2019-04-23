@@ -173,6 +173,7 @@
                 NotesScript.get_report_id();
                 NotesScript.get_battle_time();
                 NotesScript.get_context();
+                NotesScript.get_village_coords();
                 if (NotesScript.context.side === 'att') {
                     NotesScript.get_church();
                     NotesScript.get_attack_results();
@@ -217,6 +218,21 @@
                     throw 'Ten raport nic nie wnosi';
                 }
             }
+            if (NotesScript.village_info.troops_type) {
+                NotesScript.save_coords(NotesScript.village_info.troops_type);
+            }
+            if (typeof (NotesScript.village_info.belief) === 'boolean' && !NotesScript.village_info.belief) {
+                NotesScript.save_coords('without_belief');
+            }
+        },
+        save_coords: function (key) {
+            const full_key = ['HermitowskieNotatki', key].join("_");
+            let item = localStorage.getItem(full_key);
+            const arr = item === null
+                ? []
+                : JSON.parse(item);
+            arr.push(NotesScript.context.village_coords);
+            localStorage.setItem(full_key, JSON.stringify([...new Set(arr)]));
         },
         check_screen: function () {
             if ($('.report_ReportAttack').length !== 1) {
@@ -225,6 +241,9 @@
                 }
                 throw 'Czy aby na pewno jeste\u015B w przegl\u0105dzie raportu?';
             }
+        },
+        get_village_coords: function () {
+            NotesScript.context.village_coords = $(`#attack_info_${NotesScript.context.opponent_side}`)[0].rows[1].cells[1].innerText.match(/\d+\|\d+/g).pop()
         },
         get_context: function () {
             let att = $('#attack_info_att');
@@ -504,7 +523,7 @@
             if (NotesScript.village_info.troops_type) {
                 properties.push(NotesScript.village_info.troops_type);
             }
-            if (typeof(NotesScript.village_info.church) === 'string') {
+            if (typeof (NotesScript.village_info.church) === 'string') {
                 properties.push(NotesScript.village_info.church);
             }
             if (typeof (NotesScript.village_info.belief) === 'boolean' && !NotesScript.village_info.belief) {
