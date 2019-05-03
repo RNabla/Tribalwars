@@ -15,6 +15,7 @@
  * Modified on: 04/08/2018 - version 2.11 - added 'excludeCoords'
  * --- VERSION 3.0 ---
  * Modified on: 29/08/2018 - version 3.0a - major cleanup
+ * Modified on: 03/05/2019 - blocking the selection of more than one village of the same player in local context
  */
 
 function Faking() {
@@ -33,6 +34,7 @@ function Faking() {
         COORDS_EMPTY_SNOBS: 'Pula wiosek le\u{17C}y poza zasi\u{119}iem szlachcic\u{F3}w',
         COORDS_EMPTY_TIME: 'Pula wiosek jest pusta z powodu wybranych ram czasowych',
         COORDS_EMPTY_CONTEXTS: 'W puli wiosek zosta\u{142}y tylko wioski, kt\u{F3}re zosta\u{142}y wybrane chwil\u{119} temu',
+        NO_MORE_UNIQUE_PLAYERS: 'W puli wiosek zosta\u{142}y tylko wioski, kt\u{F3}re nale\u{17C}\u{105} do ostatnio wybranych graczy',
         ATTACK_TIME: 'Atak dojdzie __DAY__.__MONTH__ na __HOURS__:__MINUTES__',
         UNKNOWN_UNIT: 'Podana jednostka nie istnieje: __UNIT_NAME__',
         UNKNOWN_OPTION: 'Nieznana opcja: __PROPERTY__',
@@ -83,16 +85,19 @@ function Faking() {
         let misc = {};
         if (typeof HermitowskieFejki !== 'undefined') {
             let requirePlayerFiles = HermitowskieFejki.players !== undefined && HermitowskieFejki.players.trim() !== '';
+            let requireVillageFiles = requirePlayerFiles || HermitowskieFejki.targetUniquePlayers === true;
             let isCacheMandatory = true;
             if (HermitowskieFejki.hasOwnProperty('mandatoryCaching') && !HermitowskieFejki['mandatoryCaching']) {
                 isCacheMandatory = false;
                 delete HermitowskieFejki['mandatoryCaching'];
             }
             if (requirePlayerFiles) {
-                config['village'] = {
+                config['player'] = {
                     caching: isCacheMandatory ? 'Mandatory' : 'Preferred'
                 };
-                config['player'] = {
+            }
+            if (requireVillageFiles) {
+                config['village'] = {
                     caching: isCacheMandatory ? 'Mandatory' : 'Preferred'
                 };
             }
@@ -130,10 +135,10 @@ function Faking() {
                 days: '1-31',
                 intervals: '0:00-23:59',
                 templates: [
-                    {spy: 1, ram: 1},
-                    {spy: 1, catapult: 1},
-                    {ram: 1},
-                    {catapult: 1}
+                    { spy: 1, ram: 1 },
+                    { spy: 1, catapult: 1 },
+                    { ram: 1 },
+                    { catapult: 1 }
                 ],
                 fillWith: 'spear,sword,axe,archer,spy,light,marcher,heavy,ram,catapult',
                 fillExact: 'false',
@@ -142,7 +147,8 @@ function Faking() {
                 localContext: '0',
                 customContexts: '',
                 boundingBoxes: [],
-                purgeCache: false
+                purgeCache: false,
+                targetUniquePlayers: false
             },
             _localContextKey: `HermitowskieFejki_${game_data.village.id}`,
             _cache_control_key: `HermitowskieFejki_CacheControl`,
@@ -160,7 +166,7 @@ function Faking() {
                 }
             },
             checkConfig: function () {
-                if (typeof(HermitowskieFejki) === 'undefined')
+                if (typeof (HermitowskieFejki) === 'undefined')
                     throw i18n.MISSING_CONFIGURATION;
                 this._fixConfig(HermitowskieFejki);
             },
@@ -187,7 +193,7 @@ function Faking() {
                     this.goToNextVillage(i18n.VILLAGE_OUT_OF_GROUP);
                 }
                 if (game_data.screen !== 'place' || $('#command-data-form').length !== 1) {
-                    location = TribalWars.buildURL('GET', 'place', {mode: 'command'});
+                    location = TribalWars.buildURL('GET', 'place', { mode: 'command' });
                     throw i18n.BAD_SCREEN;
                 }
                 // disable executing script on screen with command confirmation
@@ -229,6 +235,7 @@ function Faking() {
                 poll = this._removeUnreachableVillages(poll, troops, slowest);
                 poll = this._applyLocalContext(poll);
                 poll = this._applyCustomContexts(poll);
+                poll = this._targetUniquePlayers(poll);
                 return this._selectCoordinates(poll);
             },
             displayTargetInfo: function (troops, target) {
@@ -448,10 +455,10 @@ function Faking() {
                 }
             },
             _toBoolean: function (input) {
-                if (typeof(input) === 'boolean') {
+                if (typeof (input) === 'boolean') {
                     return input;
                 }
-                if (typeof(input) === 'string') {
+                if (typeof (input) === 'string') {
                     return input.trim().toLowerCase() === 'true';
                 }
                 return false;
@@ -501,7 +508,7 @@ function Faking() {
                     .replace('__VALUE__', interval);
                 let convertTimeToMinutes = time => {
                     let parts = time.split(':');
-                    if (parts.length !== 2){
+                    if (parts.length !== 2) {
                         throw error;
                     }
                     let hours = Number(parts[0]);
@@ -639,16 +646,16 @@ function Faking() {
                 }
                 return poll;
             },
-            _omitRecentlySelectedCoords: function(poll, context) {
+            _omitRecentlySelectedCoords: function (poll, context) {
                 let coords = localStorage.getItem(context.key);
                 if (coords === null) {
                     return poll;
                 }
                 coords = JSON.parse(coords);
                 coords = this._filterCoordsByCount(coords.map(entry => entry[0]), context.countThreshold)
-                return this._exclude(poll, );
+                return this._exclude(poll, coords);
             },
-            _filterCoordsByCount: function(coords, countThreshold) {
+            _filterCoordsByCount: function (coords, countThreshold) {
                 let map = new Map();
                 for (const village of coords) {
                     if (map.has(village)) {
@@ -665,6 +672,36 @@ function Faking() {
                     }
                 });
                 return result;
+            },
+            _targetUniquePlayers: function (poll) {
+                if (!this._settings.targetUniquePlayers) {
+                    return poll;
+                }
+
+                let recentVillages = localStorage.getItem(this._localContextKey);
+
+                if (recentVillages == null) {
+                    return poll;
+                }
+
+                recentVillages = JSON.parse(recentVillages);
+
+                const coords2village = new Map(worldInfo.village.map(x => [x.coords, x]));
+                const recentPlayerIds = new Set([
+                    ...recentVillages.map(v => coords2village.get(v[0]))
+                        .filter(x => x)
+                        .map(x => x.playerId)
+                ]);
+
+                poll = poll.map(x => coords2village.get(x))
+                    .filter(x => x)
+                    .filter(x => !recentPlayerIds.has(x.playerId))
+                    .map(x => x.coords);
+
+                if (poll.length === 0) {
+                    throw i18n.NO_MORE_UNIQUE_PLAYERS;
+                }
+                return poll;
             },
             _exclude: function (poll, excluded) {
                 let banned = new Set([...excluded]);
