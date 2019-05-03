@@ -625,7 +625,9 @@ function Faking() {
                     });
             },
             _applyLocalContext: function (poll) {
-                let entry = this._settings.localContext.split(':');
+                let entry = typeof (this._settings.localContext) === 'string'
+                    ? this._settings.localContext.split(':')
+                    : [this._settings.localContext];
                 poll = this._omitRecentlySelectedCoords(poll, {
                     key: this._localContextKey,
                     liveTime: Number(entry[0]),
