@@ -94,7 +94,7 @@
             if (HermitowskiLicznikWojsk.group2result.has(group_id)) {
                 return new Promise((resolve) => resolve(HermitowskiLicznikWojsk.group2result.get(group_id)));
             }
-            let url = TribalWars.buildURL('GET', 'overview_villages', { mode: 'units', group: group_id });
+            let url = TribalWars.buildURL('GET', 'overview_villages', { mode: 'units', group: group_id, page: -1 });
             return fetch(url, { credentials: 'include' }).then(t => t.text()).then(response => {
                 try {
                     let responseBody = document.createElement('body');
