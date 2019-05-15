@@ -27,7 +27,7 @@
         count_units_in_row: function (row, start) {
             let units = [];
             for (let i = 0; i < game_data.units.length; i++) {
-                units.push(Number(row.cells[i + start].innerText));
+                units.push(Number(row.cells[i + start].innerText.match(/\d+/).pop()));
             }
             return units;
         },
@@ -137,7 +137,7 @@
             let create_html = function () {
                 let create_unit_cell = function (unit) {
                     let html = '<div style="flex:0 0 50%;max-width:50%">'
-                    html += `<img src="${image_base}/unit/unit_${unit}.png"></span>`;
+                    html += `<img src="${image_base}/unit/unit_${unit}.png" alt="${unit}" title="${unit}"></span>`;
                     html += `<span id="${HermitowskiLicznikWojsk.namespace}_${unit}">0</span>`;
                     html += '</div>';
                     return html;
