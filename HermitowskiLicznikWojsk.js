@@ -59,10 +59,14 @@
             for (let i = 0; i < values.length; i++) {
                 let option = document.createElement('option');
                 option.value = values[i];
-                option.text = names[i];
+                option.innerText = names[i];
                 option.selected = selected_value == values[i];
                 select_list.add(option);
             }
+        },
+        get_selected_label: function (id) {
+            const select_list = document.querySelector(`#${id}`);
+            return select_list.options[select_list.selectedIndex].innerText;
         }
     }
     const HermitowskiLicznikWojsk = {
@@ -150,10 +154,9 @@
                 html += '</thead><tbody>';
                 html += '<tr><td colspan="2">';
                 html += `<div id="${HermitowskiLicznikWojsk.namespace}_results" style="display:flex;flex-wrap: wrap;">`
-                for (let i = 0; i < game_data.units.length; i += 2) {
-                    html += create_unit_cell(game_data.units[i]);
-                    if (i + 1 < game_data.units.length) {
-                        html += create_unit_cell(game_data.units[i + 1]);
+                for (let i = 0; i < game_data.units.length; i++) {
+                    if (game_data.units[i] !== 'militia') {
+                        html += create_unit_cell(game_data.units[i]);
                     }
                 }
                 html += `</div></td></tr></tbody><tfoot><tr><th colspan="2"><div id="${HermitowskiLicznikWojsk.namespace}_status"></div></th></tr></tfoot>`;
@@ -198,7 +201,13 @@
                 }
                 else {
                     HermitowskiLicznikWojsk.show_results(result[type]);
-                    const clipboard_text = result[type].map((x, i) => `[unit]${game_data.units[i]}[/unit]${x}`).join(' ');
+                    const clipboard_text = [
+                        `[b]${i18n.group}:[/b] ${Helper.get_selected_label(`${HermitowskiLicznikWojsk.namespace}_group`)}`,
+                        `[b]${i18n.type}:[/b] ${Helper.get_selected_label(`${HermitowskiLicznikWojsk.namespace}_type`)}`
+                        , ...result[type]
+                            .map((x, i) => `[unit]${game_data.units[i]}[/unit]${x}`)
+                            .filter(x => x.indexOf('militia') === -1)
+                    ].join('&nbsp;');
                     const export_html = `<span style="float:right"><a href="javascript:prompt('CTRL + C', '${clipboard_text}');void(0);">${i18n.export}<a></span>`;
                     HermitowskiLicznikWojsk.change_status(`${i18n.villages_count}: ${result.villages_count} ${export_html}`, true);
                 }
@@ -214,7 +223,9 @@
         },
         show_results: function (units) {
             for (let i = 0; i < game_data.units.length; i++) {
-                document.querySelector(`#${HermitowskiLicznikWojsk.namespace}_${game_data.units[i]}`).innerHTML = `&nbsp;${units[i]} `;
+                if (game_data.units[i] !== 'militia') {
+                    document.querySelector(`#${HermitowskiLicznikWojsk.namespace}_${game_data.units[i]}`).innerHTML = `&nbsp;${units[i]} `;
+                }
             }
         },
         change_status: function (message, innerHTML) {
