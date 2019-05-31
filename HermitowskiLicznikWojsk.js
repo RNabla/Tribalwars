@@ -88,10 +88,7 @@
             let url = TribalWars.buildURL('GET', 'groups', { mode: 'overview', ajax: 'load_group_menu' });
             return fetch(url, { credentials: 'include' }).then(t => t.text()).then(response => {
                 let groups = JSON.parse(response);
-                groups.result.filter(x => x.type !== 'separator').map(x => {
-                    return x.group_id;
-                });
-                return groups;
+                return groups.result.filter(x => x.type !== 'separator');
             });
         },
         fetch_units: function (group_id) {
@@ -172,7 +169,7 @@
                 const html = create_html();
                 Dialog.show(HermitowskiLicznikWojsk.namespace, html);
                 setTimeout(() => {
-                    Helper.add_options(`${HermitowskiLicznikWojsk.namespace}_group`, groups.result.map(x => x.group_id), groups.result.map(x => x.group.name), groups.group_id);
+                    Helper.add_options(`${HermitowskiLicznikWojsk.namespace}_group`, groups.map(x => x.group_id), groups.map(x => x.group.name), groups.group_id);
                     Helper.add_options(`${HermitowskiLicznikWojsk.namespace}_type`, Object.keys(HermitowskiLicznikWojsk.types), Object.values(HermitowskiLicznikWojsk.types));
                     add_on_change_handler(`${HermitowskiLicznikWojsk.namespace}_group`, HermitowskiLicznikWojsk.on_change);
                     add_on_change_handler(`${HermitowskiLicznikWojsk.namespace}_type`, HermitowskiLicznikWojsk.on_change);
