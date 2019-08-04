@@ -31,7 +31,7 @@ async function get_world_info(settings) {
         player: {
             id: { idx: 0, sts_mapper: Number, sto_mapper: String },
             name: { idx: 1, sts_mapper: _decode, },
-            ally_id: { idx: 2, sts_mapper: Number },
+            ally_id: { idx: 2, sts_mapper: Number, sto_mapper: String },
             villages_count: { idx: 3, sts_mapper: Number },
             points: { idx: 4, sts_mapper: Number },
             ranking: { idx: 5, sts_mapper: Number }
@@ -51,7 +51,7 @@ async function get_world_info(settings) {
             name: { idx: 1, sts_mapper: _decode },
             x: { idx: 2, sts_mapper: Number },
             y: { idx: 3, sts_mapper: Number },
-            player_id: { idx: 4, sts_mapper: Number, },
+            player_id: { idx: 4, sts_mapper: Number, sto_mapper: String},
             points: { idx: 5, sts_mapper: Number },
             bonus: { idx: 6, sts_mapper: Number, sto_mapper: _bonus }
         }
