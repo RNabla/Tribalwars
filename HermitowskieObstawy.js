@@ -4,79 +4,78 @@
  * Modified on: 30/03/2018 - version 2.0 - initial release
  * Modified on: 25/10/2018 - version 2.1 - added strategy for selecting villages
  * Modified on: 27/10/2018 - version 2.2 - added time range filter
+ * Modified on: 12/08/2019 - version 2.2 - refactor + integration with new map files api
  */
 
-(function (TribalWars) {
-    let Info = {
-        SETTINGS_SAVED: 'Zapisano pomy\u{15B}lnie',
-        SETTINGS_RESET: 'Przywr\u{F3}cono domy\u{15B}lne ustawienia',
+(async function (TribalWars) {
+    const start = Date.now();
+    const namespace = 'Hermitowski.Guard';
+    const i18n = {
+        SETTINGS_SAVED: 'Zapisano pomy\u{15B}lnie. Nowe ustawienia będą zastosowane przy następnym uruchomieniu skryptu',
+        SETTINGS_RESET: 'Przywr\u{F3}cono domy\u{15B}lne ustawienia. Nowe ustawienia będą zastosowane przy następnym uruchomieniu skryptu',
         CURRENT_SELECTED_GROUP: 'Obecnie wybrana grupa',
-        LEGEND: {
-            ratio: 'Przeliczniki',
-            safeguard: 'Rezerwa',
-            initial: 'Domy\u{15B}lne warto\u{15B}ci'
+        ERROR_MESSAGE: 'Komunikat o b\u{142}\u{119}dzie: ',
+        FORUM_THREAD: 'Link do w\u{105}tku na forum',
+        FORUM_THREAD_HREF: 'https://forum.plemiona.pl/index.php?threads/hermitowska-obstawa.124587/',
+        STRATEGY: {
+            TROOP_ASC: 'Ilo\u{15B}\u{107} wojsk rosn\u{105}co',
+            TROOP_DESC: 'Ilo\u{15B}\u{107} wojsk malej\u{105}co',
+            DIST_ASC: 'Odleg\u{142}o\u{15B}\u{107} rosn\u{105}co',
+            DIST_DESC: 'Odleg\u{142}o\u{15B}\u{107} malej\u{105}co',
+            RANDOM: 'Losowo'
         },
-        DESCRIPTION: {
+        FIELDSET: {
             initial: {
-                deffCount: 'Ilo\u{15B}\u{107} deffa',
-                spyCount: 'Ilo\u{15B}\u{107} zwiadu',
-                villageCount: 'Ilo\u{15B}\u{107} wiosek',
-                minimumCount: 'Ilo\u{15B}\u{107} minimalna',
+                name: 'Domy\u{15B}lne warto\u{15B}ci',
+                deff_count: 'Ilo\u{15B}\u{107} deffa',
+                spy_count: 'Ilo\u{15B}\u{107} zwiadu',
+                village_count: 'Ilo\u{15B}\u{107} wiosek',
+                minimal_deff_count: 'Ilo\u{15B}\u{107} minimalna',
                 strategy: 'Strategia wybierania',
-                group_id: 'Domy\u{15B}lna grupa',
+                group: 'Grupa',
                 date: 'Data dotarcia'
             },
-            strategy: {
-                TROOP_ASC: 'Ilo\u{15B}\u{107} wojsk rosnaco',
-                TROOP_DESC: 'Ilo\u{15B}\u{107} wojsk malej\u{105}co',
-                DIST_ASC: 'Odleg\u{142}o\u{15B}\u{107} rosn\u{105}co',
-                DIST_DESC: 'Odleg\u{142}o\u{15B}\u{107} malej\u{105}co',
-                RANDOM: 'Losowo xD'
-            },
-            ratio: {
-                spear: 'Przelicznik - Pikinier',
-                sword: 'Przelicznik - Miecznik',
-                archer: 'Przelicznik - \u{141}ucznik',
-                spy: 'Przelicznik - Zwiadowca',
-                heavy: 'Przelicznik - Ci\u{119}\u{17C}ka kawaleria',
-            },
-            safeguard: {
-                spear: 'Rezerwa - Pikinier',
-                sword: 'Rezerwa - Miecznik',
-                archer: 'Rezerwa - \u{141}ucznik',
-                spy: 'Rezerwa - Zwiadowca',
-                heavy: 'Rezerwa - Ci\u{119}\u{17C}ka kawaleria',
-            },
-            BUTTONS: {
-                SAVE_SETTINGS: 'Zapisz',
-                RESET_SETTINGS: 'Przywr\u{F3}\u{107} domy\u{15B}lne',
-                CALCULATE: 'Oblicz',
-                SEND: 'Wykonaj'
-            },
-            HEADERS: {
-                TARGET: 'Cel',
-                GROUP: 'Grupa',
-                PROCESS: 'Oblicz',
-                SELECTED: 'Wybrano'
-            },
+            ratio: { name: 'Przeliczniki' },
+            safeguard: { name: 'Rezerwa' },
+        },
+        UNITS: {
+            spear: 'Pikinier',
+            sword: 'Miecznik',
+            archer: '\u{141}ucznik',
+            spy: 'Zwiadowca',
+            heavy: 'FCi\u{119}\u{17C}ka kawaleria',
         },
         ERROR: {
             BLANK: 'Pole <strong>__1__</strong> jest puste',
             NAN: 'Pole <strong>__1__</strong> nie reprezentuje liczby',
             NEGATIVE_NUMBER: 'Pole <strong>__1__</strong> jest ujemne',
             BAD_FORMAT: 'Pole <strong>__1__</strong> ma z\u{142}y format'
+        },
+        LABELS: {
+            target: 'Cel',
+            group: 'Grupa',
+            deff_count: 'Ilo\u{15B}\u{107} deffa',
+            spy_count: 'Ilo\u{15B}\u{107} zwiadu',
+            village_count: 'Ilo\u{15B}\u{107} wiosek',
+            minimal_deff_count: 'Ilo\u{15B}\u{107} minimalna',
+            strategy: 'Strategia wybierania',
+            arrival_date: 'Data dotarcia',
+            generate: 'Generuj',
+            command: 'Rozkaz',
+            execute: 'Wykonaj',
+            save_settings: 'Zapisz',
+            reset_settings: 'Przywr\u{F3}\u{107} domy\u{15B}lne',
         }
     };
-
-    let Guard = {
-        _beautifyNumber: function (number) {
+    const Helper = {
+        beautify_number: function (number) {
             let prefix = ['', 'K', 'M', 'G'];
             for (let i = 0; i < prefix.length; i++) {
                 if (number >= 1000) {
                     number /= 1000;
                 } else {
                     if (i === 0)
-                        return number.toFixed(2);
+                        return number.toFixed();
                     let fraction = 2;
                     if (number >= 10)
                         fraction = 1;
@@ -87,9 +86,18 @@
             }
             return `${number.toFixed(0)}T`;
         },
-        _parseDate: function (dateString) {
-            dateString = dateString.trim();
-            let parts = dateString.split(' ');
+        parse_date: function (date_string) {
+            // TODO: handle this formats
+            // jutro o 07:08:00:667
+            // dzisiaj o 23:29:30:546
+            // dnia 14.08. o 18:02:51:644
+            // 13.8 7:00:00
+            // 13.8 7:00
+            // 13.08 7:00:00
+            // 13.08 <spaces> 7:00:00
+            // 12.08.19 23:29:30:546	
+            date_string = date_string.replace(/\s\s+/g, ' ').trim();
+            let parts = date_string.split(' ');
             if (parts.length !== 2) {
                 throw 'Invalid date';
             }
@@ -118,358 +126,360 @@
             }
             return new Date(result.year, result.month - 1, result.day, result.hour, result.minute, result.second);
         },
-        _isNumber: function (selector, replacement) {
-            let emptyRegex = new RegExp(/^\s*$/);
-            let input = $(selector);
-            let value = input.val();
-            if (emptyRegex.test(value)) {
-                UI.ErrorMessage(Info.ERROR.BLANK.replace('__1__', replacement));
-                input.trigger('focus');
-                return false;
+        assert_non_negative_number: function (input, replacement) {
+            const empty_regex = new RegExp(/^\s*$/);
+            const value = input.value;
+            if (empty_regex.test(value)) {
+                input.focus();
+                throw i18n.ERROR.BLANK.replace('__1__', replacement);
             }
-            let numericValue = Number(value);
-            if (isNaN(numericValue)) {
-                UI.ErrorMessage(Info.ERROR.NAN.replace('__1__', replacement));
-                input.trigger('focus');
-                return false;
+            const numeric_value = Number(value);
+            if (isNaN(numeric_value)) {
+                input.focus();
+                throw i18n.ERROR.NAN.replace('__1__', replacement);
             }
-            if (numericValue < 0) {
-                UI.ErrorMessage(Info.ERROR.NEGATIVE_NUMBER.replace('__1__', replacement));
-                input.trigger('focus');
-                return false;
+            if (numeric_value < 0) {
+                input.focus();
+                throw i18n.ERROR.NEGATIVE_NUMBER.replace('__1__', replacement);
             }
-            return true;
         },
-
-        addToResults: function (village, coords, groupId) {
-            let misc = {
-                x: coords[0],
-                y: coords[1],
+        get_id: function (control_name) {
+            return control_name
+                ? `${namespace}.${control_name}`
+                : namespace;
+        },
+        get_control: function (control_name) {
+            const escaped_id = Helper.get_id(control_name).replace(/\./g, '\\.');
+            return document.querySelector(`#${escaped_id}`);
+        },
+        handle_error: function (error) {
+            if (typeof (error) === 'string') {
+                UI.ErrorMessage(error);
+                return;
+            }
+            const gui =
+                `<h2>WTF - What a Terrible Failure</h2>
+                 <p><strong>${i18n.ERROR_MESSAGE}</strong><br/>
+                    <textarea rows='5' cols='42'>${error}\n\n${error.stack}</textarea><br/>
+                    <a href="${i18n.FORUM_THREAD_HREF}">${i18n.FORUM_THREAD}</a>
+                 </p>`;
+            Dialog.show(namespace, gui);
+        }
+    };
+    const Guard = {
+        add_command: function (village, target, group_id) {
+            const url_params = {
+                x: target[0],
+                y: target[1],
                 from: 'simulator',
                 village: village.id
             };
-            let anyUnit = false;
-            for (const unit in Guard._defaultSettings.safeguard) {
-                if (!Guard._defaultSettings.safeguard.hasOwnProperty(unit)) continue;
-                if (village.units[unit] !== 0) {
-                    misc[unit] = village.units[unit];
-                    anyUnit = true;
-                }
-            }
-            // empty entry
-            if (anyUnit === false)
+
+            const non_empty_units = Object.keys(Guard.default_settings.safeguard)
+                .filter(unit_name => village.units[unit_name] !== 0);
+
+            if (non_empty_units.length === 0) {
                 return;
-            let row = $('<tr>');
+            }
 
-            let villageLink = TribalWars.buildURL('GET', 'info_village', {id: village.id});
-
-
-            let placeLink = TribalWars.buildURL('GET', 'place', misc);
-
-
-            let villageCell = $('<td>', {
-                html: `<a href="${villageLink}">${village.name}</a>`
+            non_empty_units.forEach(unit_name => {
+                url_params[unit_name] = village.units[unit_name];
             });
-            row.append(villageCell);
+
+            const row = document.createElement('tr');
+
+            const village_cell = document.createElement('td');
+            const village_anchor = document.createElement('a');
+            village_anchor.setAttribute('href', TribalWars.buildURL('GET', 'info_village', { id: village.id }))
+            village_anchor.textContent = village.name;
+            village_cell.append(village_anchor);
+            row.append(village_cell);
 
             for (const unit in village.units) {
-                if (!village.units.hasOwnProperty(unit)) continue;
-                let unitCell = $('<td>');
-                unitCell.text(village.units[unit]);
+                const unit_cell = document.createElement('td');
+                unit_cell.textContent = village.units[unit];
                 if (village.units[unit] === 0) {
-                    unitCell.addClass('hidden');
+                    unit_cell.classList.add('hidden');
                 }
-                row.append(unitCell);
+                row.append(unit_cell);
             }
 
-            let placeCell = $('<td>');
-
-            let placeA = $('<a>', {
-                href: placeLink,
-                text: Info.DESCRIPTION.BUTTONS.SEND
+            const place_cell = document.createElement('td');
+            const place_anchor = document.createElement('a');
+            place_anchor.setAttribute('href', TribalWars.buildURL('GET', 'place', url_params));
+            place_anchor.textContent = i18n.LABELS.execute;
+            place_cell.append(place_anchor);
+            place_cell.addEventListener('click', () => {
+                Guard.group_id2villages.delete(group_id);
+                row.remove();
             });
-            placeCell.attr('href', placeLink);
-            let deleteRow = function () {
-                // delete cached information for future recalculations as the command may be issued
-                Guard._unitsPerGroup.delete(groupId);
-                $(this).closest('tr').remove();
-            };
-            placeA.on('click', deleteRow);
-            placeCell.append(placeA);
-            row.append(placeCell);
-            $('#GuardResultList').append(row);
+            row.append(place_cell);
+            Helper.get_control('output').append(row);
         },
-        createGui: function () {
-            let div = $('<div>', {
-                id: 'HermitianGuard',
-                class: 'vis vis_item'
-            });
-            let mainTable = $('<table>', {
-                width: '100%'
-            });
-            let head = $('<thead>');
-            let header = $('<tr>', {
-                html:
-                `<th><label class="center" for="Guard_target">${Info.DESCRIPTION.HEADERS.TARGET}</label></th>` +
-                `<th><label class="center" for="Guard_group">${Info.DESCRIPTION.HEADERS.GROUP}</label></th>` +
-                `<th><label class="center" for="Guard_deffCount">${Info.DESCRIPTION.initial.deffCount}</label></th>` +
-                `<th><label class="center" for="Guard_spyCount">${Info.DESCRIPTION.initial.spyCount}</label></th>` +
-                `<th><label class="center" for="Guard_villageCount">${Info.DESCRIPTION.initial.villageCount}</label></th>` +
-                `<th><label class="center" for="Guard_minimumCount">${Info.DESCRIPTION.initial.minimumCount}</label></th>` +
-                `<th><label class="center" for="Guard_strategy">${Info.DESCRIPTION.initial.strategy}</label></th>` +
-                `<th><label class="center" for="Guard_date">${Info.DESCRIPTION.initial.date}</label></th>` +
-                `<th></th>` + // padding for buttton
-                `<th><img id="Guard_settings" src="${image_base}icons/settings.png" alt="settings"/></th>`
-            });
-            let inputRow = $('<tr>', {
-                html:
-                `<td><input id='Guard_target' type='text' size='8' pattern="\\s*\\d{1,3}\\|\\d{1,3}\\s*"/></td>` +
-                `<td><select id='Guard_group'></select></td>` +
-                `<td><input size="16" id='Guard_deffCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
-                `<td><input size="16" id='Guard_spyCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
-                `<td><input size="16" id='Guard_villageCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
-                `<td><input size="16" id='Guard_minimumCount' type="text" pattern="\\s*\\d+\\s*"></td>` +
-                `<td><select id='Guard_strategy'/></td>` +
-                `<td><span><input id='Guard_apply_filter_date' type="checkbox"><input id='Guard_date' size="16" type="text" disabled/></span></td>` +
-                `<td><input id='Guard_calculate' class="btn" type="button" disabled="disabled" value="${Info.DESCRIPTION.BUTTONS.CALCULATE}"/></td>` +
-                `<td></td>` // padding for settings icon
-            });
-            head.append(header);
-            head.append(inputRow);
+        create_main_panel: function () {
+            const options = [
+                { name: 'target', controls: [{ type: 'input', attributes: { id: 'target', size: 12 } }] },
+                { name: 'group', controls: [{ type: 'select', attributes: { id: 'group' } }] },
+                { name: 'deff_count', controls: [{ type: 'input', attributes: { id: 'deff_count', size: 12 } }] },
+                { name: 'spy_count', controls: [{ type: 'input', attributes: { id: 'spy_count', size: 12 } }] },
+                { name: 'village_count', controls: [{ type: 'input', attributes: { id: 'village_count', size: 12 } }] },
+                { name: 'minimal_deff_count', controls: [{ type: 'input', attributes: { id: 'minimal_deff_count', size: 12 } }] },
+                { name: 'strategy', controls: [{ type: 'select', attributes: { id: 'strategy' } }] },
+                { name: 'arrival_date', controls: [{ type: 'input', attributes: { id: 'is_arrival_date_enabled', type: 'checkbox' } }, { type: 'input', attributes: { id: 'arrival_date', size: 12 } }] },
+            ];
 
-            let createResultTable = function () {
+            const create_option_label = function (option) {
+                const option_cell = document.createElement('th');
+                const option_label = document.createElement('label');
+                option_label.classList.add('center');
+                option_label.setAttribute('for', Helper.get_id(option.name));
+                option_label.textContent = i18n.LABELS[option.name];
+                option_cell.append(option_label)
+                return option_cell;
+            }
 
-                let table = $('<table>', {
-                    width: '100%'
-                });
-                let head = $('<thead>');
-                let body = $('<tbody>', {
-                    id: 'GuardResultList'
-                });
-
-                let addCell = function (unit_name) {
-                    let html = `<th>`;
-                    html += `<img src="${image_base}unit/unit_${unit_name}.png" alt="${unit_name}"/>`;
-                    html += `(<span id="Guard_selected_${unit_name}">0</span>`;
-                    html += `/`;
-                    html += `<span id="Guard_all_${unit_name}">0</span>)`;
-                    html += `</th>`;
-                    return html;
-                };
-
-                let header = `<th><img src="${image_base}face.png" alt="deff"/>`;
-                header += `(<span id="Guard_selected_deff">0</span>/<span id="Guard_all_deff">0</span>)</th>`;
-                for (const unit in Guard._defaultSettings.safeguard) {
-                    if (!Guard._defaultSettings.safeguard.hasOwnProperty(unit)) continue;
-                    header += addCell(unit);
+            const create_option_input = function (option) {
+                const option_cell = document.createElement('td');
+                const option_span = document.createElement('span');
+                option_span.style.display = 'flex';
+                for (const control_definition of option.controls) {
+                    const option_control = document.createElement(control_definition.type);
+                    const attributes = control_definition.attributes;
+                    for (const attribute_name in attributes) {
+                        const attribute_value = attribute_name === 'id'
+                            ? Helper.get_id(attributes.id)
+                            : attributes[attribute_name];
+                        option_control.setAttribute(attribute_name, attribute_value);
+                    }
+                    option_control.disabled = true;
+                    option_span.append(option_control);
                 }
-                header += '<th>Rozkaz</th>';
-                head.append(header);
-                table.append(head);
-                table.append(body);
-                return table;
-            };
+                option_cell.append(option_span);
+                return option_cell;
+            }
 
-            let resultTable = createResultTable();
+            const option_labels_row = document.createElement('tr');
+            const option_inputs_row = document.createElement('tr');
 
-            let subDiv = $('<div class="vis vis_item" style="overflow-y:auto;height:200px">');
+            for (const option of options) {
+                option_labels_row.append(create_option_label(option));
+                option_inputs_row.append(create_option_input(option));
+            }
 
-            subDiv.append(resultTable);
+            const settings_cell = document.createElement('th');
+            const settings_image = document.createElement('img');
+            settings_image.setAttribute('id', Helper.get_id('settings'));
+            settings_image.setAttribute('src', `${image_base}icons/settings.png`);
+            settings_image.setAttribute('alt', 'settings');
+            settings_image.style.cssFloat = 'right';
+            settings_cell.append(settings_image);
+            option_labels_row.append(settings_cell);
 
-            mainTable.append(head);
-            div.append(mainTable);
-            div.append(subDiv);
+            const generate_cell = document.createElement('td');
+            const generate_button = document.createElement('button');
+            generate_button.setAttribute('id', Helper.get_id('generate'));
+            generate_button.textContent = i18n.LABELS.generate;
+            generate_button.classList.add('btn');
+            generate_button.disabled = true;
+            generate_cell.append(generate_button);
+            option_inputs_row.append(generate_cell);
 
-            $('#contentContainer').prepend(div);
-
+            const panel = document.createElement('table');
+            panel.style.width = '100%';
+            panel.append(option_labels_row);
+            panel.append(option_inputs_row);
+            return panel;
         },
-        initGui: function () {
-            // target
-            let input = $('#Guard_target');
-            input.val(`${game_data.village.x}|${game_data.village.y}`);
-            if (game_data.screen === 'info_village') {
-                input.val(`${TWMap.pos[0]}|${TWMap.pos[1]}`);
+        create_output_panel: function () {
+            const header = document.createElement('thead');
+
+            const create_unit_counter_cell = function (unit_name) {
+                const cell = document.createElement('th');
+                if (game_data.units.includes(unit_name)) {
+                    const unit_image = document.createElement('img');
+                    unit_image.setAttribute('src', `${image_base}unit/unit_${unit_name}.png`);
+                    unit_image.setAttribute('alt', unit_name);
+                    cell.append(unit_image);
+                }
+                const selected_counter = document.createElement('span');
+                selected_counter.setAttribute('id', Helper.get_id(`${unit_name}.selected`));
+                selected_counter.textContent = 0;
+                const all_counter = document.createElement('span');
+                all_counter.setAttribute('id', Helper.get_id(`${unit_name}.all`));
+                all_counter.textContent = 0;
+                cell.append(document.createTextNode('('));
+                cell.append(selected_counter);
+                cell.append(document.createTextNode('/'));
+                cell.append(all_counter);
+                cell.append(document.createTextNode(')'));
+                return cell;
             }
-            let strategy$ = $('#Guard_strategy');
-            for (const key of Guard._strategies) {
-                let option$ = $('<option>', {text: Info.DESCRIPTION.strategy[key], value: key});
-                strategy$.append(option$);
+
+            const deff_cell = create_unit_counter_cell('deff');
+            const deff_image = document.createElement('img');
+            deff_image.setAttribute('src', `${image_base}face.png`);
+            deff_image.setAttribute('alt', 'face.png');
+            deff_cell.prepend(deff_image);
+            header.append(deff_cell);
+
+            for (const unit_name in Guard.default_settings.safeguard) {
+                if (game_data.units.includes(unit_name)) {
+                    header.append(create_unit_counter_cell(unit_name));
+                }
             }
-            for (const key in Guard._defaultSettings.initial) {
-                if (!Guard._defaultSettings.initial.hasOwnProperty(key)) continue;
-                $(`#Guard_${key}`).val(Guard._settings.initial[key]);
+
+            const command_cell = document.createElement('th');
+            command_cell.append(document.createTextNode(i18n.LABELS.command));
+            header.append(command_cell);
+
+            const body = document.createElement('tbody');
+            body.setAttribute('id', Helper.get_id('output'));
+
+            const panel = document.createElement('table');
+            panel.style.width = '100%';
+            panel.append(header);
+            panel.append(body);
+
+            const div = document.createElement('div');
+            div.classList.add('vis', 'vis_item');
+            div.style.overflowY = 'auto';
+            div.style.height = '200px';
+            div.append(panel);
+            return div;
+        },
+        create_gui: function () {
+            const div = document.createElement('div');
+            div.setAttribute('id', namespace);
+            div.classList.add('vis', 'vis_item');
+            const main_panel = Guard.create_main_panel();
+            const output_panel = Guard.create_output_panel();
+            div.append(main_panel);
+            div.append(output_panel);
+            document.querySelector('#contentContainer').prepend(div);
+        },
+        init_gui: async function () {
+            const target = Helper.get_control('target');
+            target.value = game_data.screen === 'info_village'
+                ? `${TWMap.pos[0]}|${TWMap.pos[1]}`
+                : `${game_data.village.x}|${game_data.village.y}`;
+            target.disabled = false;
+
+            const strategy = Helper.get_control('strategy');
+            for (const key in Guard.strategies) {
+                const option = document.createElement('option');
+                option.setAttribute('value', key);
+                option.text = Guard.strategies[key];
+                strategy.append(option);
             }
+            strategy.value = Guard.settings.initial.strategy;
+            strategy.disabled = false;
+
+            for (const option_name of ['deff_count', 'spy_count', 'minimal_deff_count', 'village_count']) {
+                const control = Helper.get_control(option_name);
+                control.value = Guard.settings.initial[option_name];
+                control.disabled = false;
+            }
+
+            const groups_info = await Guard.get_groups_info();
+            const group = Helper.get_control('group');
+            for (const group_info of groups_info.result) {
+                const option = document.createElement('option');
+                option.setAttribute('value', group_info.group_id);
+                option.text = group_info.name;
+                group.append(option);
+            }
+            group.value = Guard.settings.initial.group === '-1'
+                ? groups_info.group_id
+                : Guard.settings.initial.group;
+            group.disabled = false;
+
+            await Guard.get_world_info();
+
             let default_date = new Date();
-            if (Guard._worldInfo.config.night.active) {
-                let end_hour = Number(Guard._worldInfo.config.night.end_hour);
+            if (Guard.world_info.config.night.active) {
+                let end_hour = Number(Guard.world_info.config.night.end_hour);
                 if (default_date.getHours() >= end_hour) {
                     default_date.setDate(default_date.getDate() + 1);
                 }
                 default_date.setHours(end_hour);
             }
 
-            $('#Guard_date').val(`${default_date.getDate()}.${default_date.getMonth() + 1} ${default_date.getHours()}:00:00`);
-            // handlers
-            $('#Guard_calculate').on('click', Guard.Calculate);
-            $('#Guard_settings').on('click', Guard.EditSettings);
-            $('#Guard_apply_filter_date').on('change', (e) => {
-                $('#Guard_date').prop('disabled', !e.target.checked);
+            Helper.get_control('arrival_date').value = `${default_date.getDate()}.${default_date.getMonth() + 1} ${default_date.getHours()}:00:00`;
+            Helper.get_control('generate').addEventListener('click', async () => {
+                try { await Guard.generate_commands(); } catch (ex) { Helper.handle_error(ex); }
             });
-
-            let getGroupsInfo = function () {
-                let url = TribalWars.buildURL('GET', 'groups', {mode: 'overview', ajax: 'load_group_menu'});
-                return fetch(url, {credentials: 'include'}).then(t => t.text()).then(response => {
-                    let groups = JSON.parse(response);
-                    groups.result.filter(x => x.type !== 'separator').map(x => {
-                        Guard._groups.push(x.group_id);
-                        Guard._groupId2Name[x.group_id] = x.name;
-                        return x.group_id;
-                    });
-                    return groups;
-                });
-            };
-
-            getGroupsInfo().then(groupInfo => {
-                let select = $("#Guard_group");
-                for (const group of groupInfo.result) {
-                    if (group.type === 'separator') continue;
-                    let option = $('<option>');
-                    option.val(group.group_id);
-                    option.text(group.name);
-                    select.append(option);
-                }
-                select.val(Number(Guard._settings.initial.group_id) === Guard._defaultSettings.initial.group_id
-                    ? groupInfo.group_id
-                    : Guard._settings.initial.group_id);
-                $('#Guard_calculate').prop('disabled', false);
+            Helper.get_control('settings').addEventListener('click', () => {
+                try { Guard.edit_settings(); } catch (ex) { Helper.handle_error(ex); }
             });
-
+            const enable_arrival_date = Helper.get_control('is_arrival_date_enabled');
+            enable_arrival_date.addEventListener('change', event => {
+                Helper.get_control('arrival_date').disabled = !event.target.checked;
+            });
+            enable_arrival_date.disabled = false;
+            Helper.get_control('generate').disabled = false;
         },
-
-        Calculate: function () {
-
-            let checkInput = function (userInput) {
-                let numeric = ['deffCount', 'spyCount', 'villageCount', 'minimumCount'];
-                for (const key of numeric) {
-                    let input = $(`#Guard_${key}`);
-                    let value = input.val();
-                    if (!Guard._isNumber(`#Guard_${key}`, Info.DESCRIPTION.initial[key]))
-                        return false;
-                    userInput[key] = Number(value);
+        get_groups_info: async function () {
+            let url = TribalWars.buildURL('GET', 'groups', { mode: 'overview', ajax: 'load_group_menu' });
+            const response = await fetch(url, { credentials: 'include' });
+            const text = await response.text();
+            const payload = JSON.parse(text);
+            payload.result = payload.result.filter(group => group.type !== 'separator');
+            payload.result.forEach(group => {
+                Guard.group_id2group_name[group.group_id] = group.name;
+            });
+            return payload;
+        },
+        get_world_info: async function () {
+            Guard.world_info = await get_world_info({ configs: ['config', 'unit_info'] });
+        },
+        generate_commands: async function () {
+            let get_user_input = function () {
+                const user_input = {};
+                const numeric_fields = ['deff_count', 'spy_count', 'village_count', 'minimal_deff_count'];
+                for (const numeric_field of numeric_fields) {
+                    const input = Helper.get_control(numeric_field);
+                    Helper.assert_non_negative_number(input, i18n.FIELDSET.initial[numeric_field]);
+                    user_input[numeric_field] = Number(input.value);
                 }
 
-                let coordsRegex = new RegExp(/^\s*\d{1,3}\|\d{1,3}\s*$/);
-                let coordsInput = $('#Guard_target');
-                if (!coordsRegex.test(coordsInput.val())) {
-                    UI.ErrorMessage(Info.ERROR.BAD_FORMAT.replace('__1__', Info.DESCRIPTION.HEADERS.TARGET));
-                    coordsInput.trigger('focus');
-                    return false;
+                const coords_regex = new RegExp(/^\s*\d{1,3}\|\d{1,3}\s*$/);
+                const target = Helper.get_control('target');
+                if (!coords_regex.test(target.value)) {
+                    target.focus();
+                    throw i18n.ERROR.BAD_FORMAT.replace('__1__', i18n.LABELS.target);
                 }
-                userInput['target'] = coordsInput.val();
-                userInput['strategy'] = $('#Guard_strategy').val();
-                try {
-                    if ($('#Guard_apply_filter_date').prop('checked')) {
-                        let target_date = Guard._parseDate($('#Guard_date').val());
-                        userInput['travel_time'] = (target_date.getTime() - Date.now()) / 60 / 1000;
-                    }
-                    else {
-                        userInput['travel_time'] = NaN;
-                    }
+                user_input.target = target.value.trim().split('|').map(x => Number(x));
+                user_input.strategy = Helper.get_control('strategy').value;
+                user_input.travel_time = NaN;
+                if (Helper.get_control('is_arrival_date_enabled').checked) {
+                    let arrival_date = Helper.parse_date(Helper.get_control('arrival_date').value);
+                    user_input.travel_time = (arrival_date.getTime() - Date.now()) / 60 / 1000;
                 }
-                catch (e) {
-                    UI.ErrorMessage(e, 3e3);
-                    return false;
-                }
-                return true;
+                return user_input;
             };
 
-            let normalizeVillages = function (villages) {
-                let target = userInput.target.split('|').map(x => Number(x));
-                let normalizeVillage = function (village) {
-                    let normalized = {
-                        deff: 0,
-                        name: village.name,
-                        id: village.id,
-                        coords: village.coords,
-                        distance: Math.hypot(target[0] - village.coords[0], target[1] - village.coords[1]),
-                        units: {}
-                    };
-                    for (const unit in Guard._defaultSettings.safeguard) {
-                        if (!Guard._defaultSettings.safeguard.hasOwnProperty(unit)) continue;
-                        let ratio = Guard._settings.ratio[unit] === undefined
-                            ? 0
-                            : Number(Guard._settings.ratio[unit]);
-
-                        normalized.units[unit] = village.units[unit] === undefined
-                            ? 0
-                            : Math.max(village.units[unit] - Number(Guard._settings.safeguard[unit]), 0);
-
-                        // check whether unit travel time is in time range
-                        if (!isNaN(userInput.travel_time) && Guard._worldInfo.unit_info.hasOwnProperty(unit)) {
-                            if (Number(Guard._worldInfo.unit_info[unit].speed) * normalized.distance > userInput.travel_time) {
-                                normalized.units[unit] = 0;
-                            }
-                        }
-
-                        normalized.deff += Number(normalized.units[unit]) * ratio;
-                    }
-                    return normalized;
-                };
-
-
-                let normalizedVillages = {
-                    villages: [],
-                    all: {deff: 0},
-                    selected: {deff: 0}
-                };
-
-                for (const unit in Guard._defaultSettings.safeguard) {
-                    if (!Guard._defaultSettings.safeguard.hasOwnProperty(unit)) continue;
-                    normalizedVillages.all[unit] = 0;
-                    normalizedVillages.selected[unit] = 0;
-                }
-
-                for (const village of villages) {
-                    let normalized = normalizeVillage(village);
-
-                    for (const unit in Guard._defaultSettings.safeguard) {
-                        if (!Guard._defaultSettings.safeguard.hasOwnProperty(unit)) continue;
-                        normalizedVillages.all[unit] += normalized.units[unit];
-                    }
-                    normalizedVillages.all.deff += normalized.deff;
-                    normalizedVillages.villages.push(normalized);
-                }
-                return normalizedVillages;
-            };
-
-            let sortByOwnedDeffAsc = function (lhs, rhs) {
+            let sort_by_deff_asc = function (lhs, rhs) {
                 return lhs.deff !== rhs.deff ? lhs.deff > rhs.deff ? 1 : -1 : 0;
             };
-            let sortByOwnedDeffDesc = function (lhs, rhs) {
+            let sort_by_deff_desc = function (lhs, rhs) {
                 return lhs.deff !== rhs.deff ? lhs.deff > rhs.deff ? -1 : 1 : 0;
             };
 
-            let sortByOwnedSpiesDesc = function (lhs, rhs) {
+            let sort_by_spy_desc = function (lhs, rhs) {
                 return lhs.units.spy !== rhs.units.spy ? lhs.units.spy > rhs.units.spy ? -1 : 1 : 0;
             };
-            let sortByOwnedSpiesAsc = function (lhs, rhs) {
+            let sort_by_spy_asc = function (lhs, rhs) {
                 return lhs.units.spy !== rhs.units.spy ? lhs.units.spy > rhs.units.spy ? 1 : -1 : 0;
             };
 
-            let sortByDistanceDesc = function (lhs, rhs) {
+            let sort_by_distance_desc = function (lhs, rhs) {
                 return lhs.distance !== rhs.distance ? lhs.distance > rhs.distance ? -1 : 1 : 0;
             };
-            let sortByDistanceAsc = function (lhs, rhs) {
+            let sort_by_distance_asc = function (lhs, rhs) {
                 return lhs.distance !== rhs.distance ? lhs.distance > rhs.distance ? 1 : -1 : 0;
             };
 
-            let sortByDistance = function (villages, userInput) {
-                userInput.strategy === 'DIST_ASC'
-                    ? villages.sort(sortByDistanceAsc)
-                    : villages.sort(sortByDistanceDesc);
-            };
-
-            let randomSort = function (villages) {
+            let random_sort = function (villages) {
                 for (let i = villages.length - 1; i > 0; i--) {
                     let j = Math.floor(Math.random() * (i + 1));
                     let x = villages[i];
@@ -479,151 +489,151 @@
                 return villages;
             };
 
-            let preprocessVillages = function (normalized) {
-                normalized.villages = normalized.villages.filter(village => village.deff >= userInput.minimumCount);
+            let get_troops_info = function (villages, user_input) {
+                const troops_info = {
+                    villages: [],
+                    all: { deff: 0 },
+                    selected: { deff: 0 }
+                };
 
-                if (userInput.deffCount) {
-                    normalized.villages = normalized.villages.filter(village => village.deff !== 0);
-                }
-                else {
-                    // we need only spies
-                    normalized.villages = normalized.villages.filter(village => village.units.spy !== 0);
-                }
-                switch (userInput.strategy) {
-                    case 'DIST_ASC':
-                    case 'DIST_DESC':
-                        sortByDistance(normalized.villages, userInput);
-                        break;
-                    case 'RANDOM':
-                        randomSort(normalized.villages);
-                        break;
-                    case 'TROOP_ASC':
-                        normalized.villages.sort(userInput.deffCount
-                            ? sortByOwnedDeffAsc
-                            : sortByOwnedSpiesAsc
-                        );
-                        break;
-                    case 'TROOP_DESC':
-                    default:
-                        normalized.villages.sort(userInput.deffCount
-                            ? sortByOwnedDeffDesc
-                            : sortByOwnedSpiesDesc
-                        );
-                        break;
-                }
-                // take as many villages as user wanted
-                normalized.villages = normalized.villages.slice(0, userInput.villageCount);
-                return normalized;
-            };
-
-            let selectDeff = function (normalized) {
-                normalized = preprocessVillages(normalized);
-
-                // deff selection
-                normalized.villages.sort(sortByOwnedDeffDesc);
-                for (let i = normalized.villages.length; i > 0; i--) {
-                    let village = normalized.villages[i - 1];
-                    // on average we should pick this amount deff to balance distribution
-                    let threshold = (userInput.deffCount - normalized.selected.deff) / i;
-                    let ratio = threshold < village.deff ? threshold / village.deff : 1.0;
-                    for (const unit in Guard._defaultSettings.ratio) {
-                        if (!Guard._defaultSettings.ratio.hasOwnProperty(unit)) continue;
-                        let selectedCount = Math.min(Math.round(ratio * village.units[unit]), village.units[unit]);
-                        normalized.selected[unit] += selectedCount;
-                        normalized.selected['deff'] += selectedCount * Number(Guard._settings.ratio[unit]);
-                        village.units[unit] = selectedCount;
-                    }
-                }
-                // spy selection
-                normalized.villages.sort(sortByOwnedSpiesDesc);
-                for (let i = normalized.villages.length; i > 0; i--) {
-                    let village = normalized.villages[i - 1];
-                    let threshold = (userInput.spyCount - normalized.selected.spy) / i;
-                    let ratio = threshold < village.units.spy ? threshold / village.units.spy : 1.0;
-                    let selectedCount = Math.min(Math.round(ratio * village.units.spy), village.units.spy);
-                    normalized.selected.spy += selectedCount;
-                    village.units.spy = selectedCount;
-                }
-                for (const name in normalized.all) {
-                    if (!normalized.all.hasOwnProperty(name)) continue;
-                    let selected = Guard._beautifyNumber(normalized.selected[name]);
-                    let all = Guard._beautifyNumber(normalized.all[name]);
-                    $(`#Guard_selected_${name}`).text(selected);
-                    $(`#Guard_all_${name}`).text(all);
+                for (const unit_name of Guard.deff_units) {
+                    troops_info.all[unit_name] = 0;
+                    troops_info.selected[unit_name] = 0;
                 }
 
-                return normalized;
-            };
+                for (const village of villages) {
+                    const village_troop_info = {
+                        deff: 0,
+                        name: village.name,
+                        id: village.id,
+                        coords: village.coords,
+                        distance: Math.hypot(user_input.target[0] - village.coords[0], user_input.target[1] - village.coords[1]),
+                        units: {}
+                    };
 
-            let userInput = {};
-            if (!checkInput(userInput)) {
-                return;
-            }
-            // clear output
-            $('#GuardResultList').find('tr').remove();
-            $('#Guard_calculate').prop('disabled', true);
-            let selectedGroupId = $('#Guard_group').val();
-            Guard.getUnitsForGroup(selectedGroupId).then(villages => {
-                let normalized = normalizeVillages(villages);
-                selectDeff(normalized);
-                for (const village of normalized.villages) {
-                    Guard.addToResults(village, userInput.target.split('|'), selectedGroupId);
-                }
-                $('#Guard_calculate').prop('disabled', false);
-            });
-        },
-        getUnitsForGroup: function (group_id) {
-            if (Guard._unitsPerGroup.has(group_id)) {
-                let villages = Guard._unitsPerGroup.get(group_id);
-                return new Promise(resolve => resolve(villages));
-            }
-            let url = TribalWars.buildURL('GET', 'overview_villages', {
-                mode: 'units',
-                type: 'own_home',
-                group: group_id
-            });
-            return fetch(url, {credentials: "same-origin"}).then(t => t.text()).then(response => {
-                let requestedBody = $('<body>', {
-                    html: response
-                });
-                let unitsTable = requestedBody.find('#units_table').get(0);
-                let villages = [];
-                if (unitsTable !== undefined) {
-                    for (let i = 1; i < unitsTable.rows.length; i++) {
-                        let row = unitsTable.rows[i];
-                        // scan for units
-                        let units = {};
-                        const offset = 2;
-                        for (let j = 0; j < game_data.units.length; j++) {
-                            let unit_name = game_data.units[j];
-                            units[unit_name] = Number(row.cells[offset + j].textContent);
+                    for (const unit_name of Guard.deff_units) {
+                        const ratio = Guard.settings.ratio[unit_name] === undefined
+                            ? 0
+                            : Number(Guard.settings.ratio[unit_name]);
+
+                        village_troop_info.units[unit_name] = village.units[unit_name] === undefined
+                            ? 0
+                            : Math.max(village.units[unit_name] - Number(Guard.settings.safeguard[unit_name]), 0);
+
+                        if (!isNaN(user_input.travel_time) && Guard.world_info.unit_info.hasOwnProperty(unit_name)) {
+                            if (Number(Guard.world_info.unit_info[unit_name].speed) * village_troop_info.distance > user_input.travel_time) {
+                                village_troop_info.units[unit_name] = 0;
+                            }
                         }
-                        // general info
-                        let mainCell = row.cells[0];
-                        let name = mainCell.textContent.trim();
-                        let villageInfo = {
-                            name: name,
-                            coords: name.match(/\d+\|\d+/).pop().split('|').map(x => Number(x)),
-                            id: mainCell.children[0].getAttribute('data-id'),
-                            units: units
-                        };
-                        villages.push(villageInfo);
+
+                        village_troop_info.deff += Number(village_troop_info.units[unit_name]) * ratio;
+                        troops_info.all[unit_name] += village_troop_info.units[unit_name];
+                    }
+                    troops_info.all.deff += village_troop_info.deff;
+                    troops_info.villages.push(village_troop_info);
+                }
+                return troops_info;
+            }
+
+            const preprocess = function (troops_info, user_input) {
+                troops_info.villages = troops_info.villages.filter(village => village.deff >= user_input.minimal_deff_count);
+
+                switch (user_input.strategy) {
+                    case 'DIST_ASC': troops_info.villages.sort(sort_by_distance_asc); break;
+                    case 'DIST_DESC': troops_info.villages.sort(sort_by_distance_desc); break;
+                    case 'TROOP_ASC': troops_info.villages.sort(user_input.deff_count ? sort_by_deff_asc : sort_by_spy_asc); break;
+                    case 'TROOP_DESC': troops_info.villages.sort(user_input.deff_count ? sort_by_deff_desc : sort_by_spy_desc); break;
+                    default: random_sort(troops_info.villages); break;
+                }
+
+                troops_info.villages = troops_info.villages.slice(0, user_input.village_count);
+            }
+
+            let select_troops = function (troops_info, user_input) {
+                troops_info.villages.sort(sort_by_deff_desc);
+                for (let i = troops_info.villages.length; i > 0; i--) {
+                    const village = troops_info.villages[i - 1];
+                    const threshold = (user_input.deff_count - troops_info.selected.deff) / i;
+                    const ratio = threshold < village.deff ? threshold / village.deff : 1.0;
+                    for (const unit in Guard.default_settings.ratio) {
+                        const selected_count = Math.min(Math.round(ratio * village.units[unit]), village.units[unit]);
+                        troops_info.selected[unit] += selected_count;
+                        troops_info.selected['deff'] += selected_count * Number(Guard.settings.ratio[unit]);
+                        village.units[unit] = selected_count;
                     }
                 }
-                Guard._unitsPerGroup.set(group_id, villages);
-                return villages;
-            });
+                troops_info.villages.sort(sort_by_spy_desc);
+                for (let i = troops_info.villages.length; i > 0; i--) {
+                    const village = troops_info.villages[i - 1];
+                    const threshold = (user_input.spy_count - troops_info.selected.spy) / i;
+                    const ratio = threshold < village.units.spy ? threshold / village.units.spy : 1.0;
+                    const selected_count = Math.min(Math.round(ratio * village.units.spy), village.units.spy);
+                    troops_info.selected.spy += selected_count;
+                    village.units.spy = selected_count;
+                }
+                for (const unit_name in troops_info.all) {
+                    Helper.get_control(`${unit_name}.all`).textContent = Helper.beautify_number(troops_info.all[unit_name])
+                    Helper.get_control(`${unit_name}.selected`).textContent = Helper.beautify_number(troops_info.selected[unit_name]);
+                }
+            };
+            const user_input = get_user_input();
+            const generate_button = Helper.get_control('generate');
+            generate_button.disabled = true;
+            for (const child of Helper.get_control('output').children) {
+                child.remove();
+            }
+            const group_id = Helper.get_control('group').value;
+            const villages = await Guard.get_villages(group_id);
+            const troops_info = get_troops_info(villages, user_input);
+            preprocess(troops_info, user_input);
+            select_troops(troops_info, user_input);
+            for (const village of troops_info.villages) {
+                Guard.add_command(village, user_input.target, group_id);
+            }
+            generate_button.disabled = false;
         },
-        EditSettings: function () {
+        get_villages: async function (group_id) {
+            if (Guard.group_id2villages.has(group_id)) {
+                return Guard.group_id2villages.get(group_id);
+            }
+            let url = TribalWars.buildURL('GET', 'overview_villages', { mode: 'units', type: 'own_home', group: group_id, page: -1, });
+            const request = await fetch(url, { credentials: "same-origin" });
+            const response = await request.text();
+            const requested_body = document.createElement('body');
+            requested_body.innerHTML = response;
+            const units_table = requested_body.querySelector('#units_table');
+            const villages = [];
+            for (let i = 1; i < units_table.rows.length; i++) {
+                let row = units_table.rows[i];
+                let units = {};
+                const offset = 2;
+                for (let j = 0; j < game_data.units.length; j++) {
+                    let unit_name = game_data.units[j];
+                    units[unit_name] = Number(row.cells[offset + j].textContent);
+                }
+                let main_cell = row.cells[0];
+                let name = main_cell.textContent.trim();
+                let villagei18n = {
+                    name: name,
+                    coords: name.match(/\d+\|\d+/).pop().split('|').map(x => Number(x)),
+                    id: main_cell.children[0].getAttribute('data-id'),
+                    units: units
+                };
+                villages.push(villagei18n);
+            }
+            Guard.group_id2villages.set(group_id, villages);
+            return villages;
+        },
 
-            let addUnitFieldset = function (branch) {
-                let fieldset = `<fieldset><legend>${Info.LEGEND[branch]}</legend><table>`;
-                for (const unit_name in Guard._defaultSettings[branch]) {
-                    if (!Guard._defaultSettings[branch].hasOwnProperty(unit_name)) continue;
-                    let id = `Guard_default_${branch}_${unit_name}`;
-                    let value = Guard._settings[branch][unit_name];
+        edit_settings: function () {
+            let add_unit_fieldset = function (branch) {
+                let fieldset = `<fieldset><legend>${i18n.FIELDSET[branch].name}</legend><table>`;
+                for (const unit_name in Guard.default_settings[branch]) {
+                    const id = Helper.get_id(`${branch}.${unit_name}`);
+                    const value = Guard.settings[branch][unit_name];
+                    const title = `${i18n.FIELDSET[branch].name} - ${i18n.UNITS[unit_name]}`
                     fieldset += '<tr>';
-                    fieldset += `<td><label for="${id}"><image src="${image_base}unit/unit_${unit_name}.png" alt="${unit_name}"></image></label></td>`;
+                    fieldset += `<td><label for="${id}" title="${title}"><image src="${image_base}unit/unit_${unit_name}.png" alt="${unit_name}"></image></label></td>`;
                     fieldset += `<td><input id="${id}" value="${value}"/></td>`;
                     fieldset += '</tr>';
                 }
@@ -631,35 +641,30 @@
                 return fieldset;
             };
 
-            let addSettingsInput = function (id, value) {
+            let add_setttings_input = function (id, value) {
                 return `<td><input id="${id}" value="${value}"/></td>`;
             };
 
-            let addSettingsSelect = function (id, value, options, map) {
+            let add_settings_select = function (id, options) {
                 let html = `<td><select id="${id}">`;
-                for (let option of options) {
-                    html += `<option value="${option}">${map ? map[option] : option}</option>`
+                for (let key in options) {
+                    html += `<option value="${key}">${options[key]}</option>`
                 }
                 html += '</select></td>';
                 return html;
             };
 
-            let addInfoFieldset = function (branch) {
-                let fieldset = `<fieldset><legend>${Info.LEGEND[branch]}</legend><table>`;
-                for (const key in Guard._defaultSettings[branch]) {
-                    if (!Guard._defaultSettings[branch].hasOwnProperty(key)) continue;
-                    let id = `Guard_default_${branch}_${key}`;
-                    let value = Guard._settings[branch][key];
+            let add_input_fieldset = function (branch) {
+                let fieldset = `<fieldset><legend>${i18n.FIELDSET[branch].name}</legend><table>`;
+                for (const key in Guard.default_settings[branch]) {
+                    const id = Helper.get_id(`${branch}.${key}`);
+                    const value = Guard.settings[branch][key];
                     fieldset += '<tr>';
-                    fieldset += `<td><label for="${id}">${Info.DESCRIPTION[branch][key]}:</label></td>`;
-                    if (key === 'strategy') {
-                        fieldset += addSettingsSelect(id, value, Guard._strategies, Info.DESCRIPTION.strategy);
-                    }
-                    else if (key === 'group_id') {
-                        fieldset += addSettingsSelect(id, value, Guard._groups, Guard._groupId2Name);
-                    }
-                    else {
-                        fieldset += addSettingsInput(id, value);
+                    fieldset += `<td><label for="${id}">${i18n.FIELDSET[branch][key]}:</label></td>`;
+                    switch (key) {
+                        case 'strategy': fieldset += add_settings_select(id, Guard.strategies); break;
+                        case 'group': fieldset += add_settings_select(id, Guard.group_id2group_name); break;
+                        default: fieldset += add_setttings_input(id, value); break;
                     }
                     fieldset += '</tr>';
                 }
@@ -667,59 +672,61 @@
                 return fieldset;
             };
 
-            let saveSettings = function () {
-                let settings = {};
-                for (const branch in Guard._defaultSettings) {
-                    if (!Guard._defaultSettings.hasOwnProperty(branch)) continue;
-                    settings[branch] = {};
-                    for (const key in Guard._defaultSettings[branch]) {
-                        if (!Guard._defaultSettings[branch].hasOwnProperty(key)) continue;
-                        let userInput = $(`#Guard_default_${branch}_${key}`);
-                        let userValue = userInput.val();
-                        if (['strategy', 'group_id'].indexOf(key) !== -1) {
-                            settings[branch][key] = userValue;
-                        }
-                        else {
-                            if (!Guard._isNumber(`#Guard_default_${branch}_${key}`, Info.DESCRIPTION[branch][key])) {
-                                return;
+            let save_settings = function () {
+                const settings = {};
+                try {
+                    for (const branch in Guard.default_settings) {
+                        settings[branch] = {};
+                        for (const key in Guard.default_settings[branch]) {
+                            const user_input = Helper.get_control(`${branch}.${key}`);
+                            const user_value = user_input.value;
+                            if (['strategy', 'group'].includes(key)) {
+                                settings[branch][key] = user_value;
+                            } else {
+                                Helper.assert_non_negative_number(user_input, i18n.FIELDSET[branch][key]);
+                                settings[branch][key] = Number(user_value);
                             }
-                            settings[branch][key] = Number(userValue);
-                        }
-                        // apply changes to current setttings, but don't change user's input
-                        if (branch !== 'initial') {
-                            Guard._settings[branch][key] = settings[branch][key];
                         }
                     }
+                    localStorage.setItem(namespace, JSON.stringify(settings));
+                    UI.SuccessMessage(i18n.SETTINGS_SAVED);
+                    document.querySelector('.popup_box_close').click();
+                } catch (ex) {
+                    Helper.handle_error(ex);
                 }
-                localStorage[Guard._storageKey] = JSON.stringify(settings);
-                UI.SuccessMessage(Info.SETTINGS_SAVED);
-                $('.popup_box_close').trigger('click');
             };
 
-            let resetSettings = function () {
-                localStorage.removeItem(Guard._storageKey);
-                UI.SuccessMessage(Info.SETTINGS_RESET);
-                $('.popup_box_close').trigger('click');
+            let reset_settings = function () {
+                localStorage.removeItem(namespace);
+                UI.SuccessMessage(i18n.SETTINGS_RESET);
+                document.querySelector('.popup_box_close').click();
             };
+
             let gui = '<div>';
-            gui += addUnitFieldset('ratio');
-            gui += addUnitFieldset('safeguard');
-            gui += addInfoFieldset('initial');
-            gui += `<button id="GuardResetSettings" class="btn">${Info.DESCRIPTION.BUTTONS.RESET_SETTINGS}</button>`;
-            gui += `<button id="GuardSaveSettings" class="btn right">${Info.DESCRIPTION.BUTTONS.SAVE_SETTINGS}</button><div>`;
+            gui += add_unit_fieldset('ratio');
+            gui += add_unit_fieldset('safeguard');
+            gui += add_input_fieldset('initial');
+            const reset_settings_id = Helper.get_id('reset_settings');
+            const save_settings_id = Helper.get_id('save_settings');
+            gui += `<button id="${reset_settings_id}" class="btn">${i18n.LABELS.reset_settings}</button>`;
+            gui += `<button id="${save_settings_id}" class="btn right">${i18n.LABELS.save_settings}</button><div>`;
             Dialog.show('GuardOptionEditor', gui);
-            $('#GuardSaveSettings').on('click', saveSettings);
-            $('#GuardResetSettings').on('click', resetSettings);
+            Helper.get_control('reset_settings').addEventListener('click', reset_settings);
+            Helper.get_control('save_settings').addEventListener('click', save_settings);
 
         },
-        _storageKey: 'GuardSettings',
-        _unitsPerGroup: new Map(),
-        _strategies: ['TROOP_DESC', 'TROOP_ASC', 'DIST_DESC', 'DIST_ASC', 'RANDOM'],
-        _groups: ['-1'],
-        _groupId2Name: {
-            '-1': Info.CURRENT_SELECTED_GROUP
+        group_id2villages: new Map(),
+        group_id2group_name: {
+            '-1': i18n.CURRENT_SELECTED_GROUP
         },
-        _defaultSettings: {
+        strategies: {
+            'TROOP_DESC': i18n.STRATEGY.TROOP_DESC,
+            'TROOP_ASC': i18n.STRATEGY.TROOP_ASC,
+            'DIST_DESC': i18n.STRATEGY.DIST_DESC,
+            'DIST_ASC': i18n.STRATEGY.DIST_ASC,
+            'RANDOM': i18n.STRATEGY.RANDOM
+        },
+        default_settings: {
             ratio: {
                 spear: 1,
                 sword: 1,
@@ -734,46 +741,46 @@
                 heavy: 0
             },
             initial: {
-                deffCount: 0,
-                spyCount: 0,
-                villageCount: 12,
-                minimumCount: 0,
+                deff_count: 0,
+                spy_count: 0,
+                village_count: 12,
+                minimal_deff_count: 0,
                 strategy: 'TROOP_DESC',
-                group_id: -1
+                group: '-1'
             },
         },
-        _settings: {},
-        initSettings: function () {
-            let storedSettingsJson = localStorage.getItem(Guard._storageKey);
-            if (storedSettingsJson === null) {
-                let settingsJson = JSON.stringify(Guard._defaultSettings);
-                localStorage.setItem(Guard._storageKey, settingsJson);
-                Guard._settings = JSON.parse(settingsJson);
+        deff_units: [],
+        settings: {},
+        init_settings: function () {
+            let stored_settings = localStorage.getItem(namespace);
+            Guard.settings = stored_settings
+                ? JSON.parse(stored_settings)
+                : JSON.parse(JSON.stringify(Guard.default_settings));
+            Guard.deff_units = Object.keys(Guard.default_settings.safeguard)
+                .filter(unit_name => game_data.units.includes(unit_name));
+        },
+        main: async function () {
+            let instance = Helper.get_control();
+            if (instance) {
+                instance.remove();
                 return;
             }
-            Guard._settings = JSON.parse(storedSettingsJson);
-        },
-        init: function (worldInfo) {
-            let instance = $('#HermitianGuard');
-            if (0 === instance.length) {
-                Guard._worldInfo = worldInfo;
-                Guard.initSettings();
-                Guard.createGui();
-                Guard.initGui();
+            Guard.init_settings();
+            Guard.create_gui();
+            if (uneval && localStorage.hasOwnProperty('Hermitowski.MapFiles')) {
+                (1, eval)(localStorage.getItem('Hermitowski.MapFiles'));
+                try { await Guard.init_gui(); } catch (ex) { Helper.handle_error(ex); }
+            } else {
+                $.ajax({
+                    url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/HermitowskiePlikiMapy.js',
+                    dataType: 'script',
+                }).then(() => {
+                    Guard.init_gui().catch(Helper.handle_error);
+                });
             }
-            else {
-                instance.remove();
-            }
-        },
+        }
     };
-
-    $.getScript('https://media.innogamescdn.com/com_DS_PL/skrypty/MapFiles.js', () => {
-        GetWorldInfo({
-            config: {}, unit_info: {}
-        }).then(worldInfo => {
-            Guard.init(worldInfo);
-        });
-
-    });
+    await Guard.main();
+    console.log(`${namespace} | Elapsed time: ${Date.now() - start} [ms]`);
 })(TribalWars);
 
