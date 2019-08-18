@@ -5,15 +5,16 @@
  * Modified on: 25/10/2018 - version 2.1 - added strategy for selecting villages
  * Modified on: 27/10/2018 - version 2.2 - added time range filter
  * Modified on: 12/08/2019 - version 2.2 - refactor + integration with new map files api
+ * Modified on: 18/08/2019 - version 2.3 - added open commands in new tabs
  */
 
 (async function (TribalWars) {
     const start = Date.now();
     const namespace = 'Hermitowski.Guard';
     const i18n = {
-        SETTINGS_SAVED: 'Zapisano pomy\u{15B}lnie. Nowe ustawienia będą zastosowane przy następnym uruchomieniu skryptu',
-        SETTINGS_RESET: 'Przywr\u{F3}cono domy\u{15B}lne ustawienia. Nowe ustawienia będą zastosowane przy następnym uruchomieniu skryptu',
-        CURRENT_SELECTED_GROUP: 'Obecnie wybrana grupa',
+        SETTINGS_SAVED: 'Zapisano pomy\u{15B}lnie. Nowe ustawienia b\u{119}d\u{105} zastosowane przy nast\u{119}pnym uruchomieniu skryptu',
+        SETTINGS_RESETED: 'Przywr\u{F3}cono domy\u{15B}lne ustawienia. Nowe ustawienia b\u{119}d\u{105} zastosowane przy nast\u{119}pnym uruchomieniu skryptu',
+        CURRENTLY_SELECTED_GROUP: 'Obecnie wybrana grupa',
         ERROR_MESSAGE: 'Komunikat o b\u{142}\u{119}dzie: ',
         FORUM_THREAD: 'Link do w\u{105}tku na forum',
         FORUM_THREAD_HREF: 'https://forum.plemiona.pl/index.php?threads/hermitowska-obstawa.124587/',
@@ -24,19 +25,12 @@
             DIST_DESC: 'Odleg\u{142}o\u{15B}\u{107} malej\u{105}co',
             RANDOM: 'Losowo'
         },
-        FIELDSET: {
-            initial: {
-                name: 'Domy\u{15B}lne warto\u{15B}ci',
-                deff_count: 'Ilo\u{15B}\u{107} deffa',
-                spy_count: 'Ilo\u{15B}\u{107} zwiadu',
-                village_count: 'Ilo\u{15B}\u{107} wiosek',
-                minimal_deff_count: 'Ilo\u{15B}\u{107} minimalna',
-                strategy: 'Strategia wybierania',
-                group: 'Grupa',
-                date: 'Data dotarcia'
-            },
-            ratio: { name: 'Przeliczniki' },
-            safeguard: { name: 'Rezerwa' },
+        ERROR: {
+            BLANK: 'Pole <strong>__1__</strong> jest puste',
+            NAN: 'Pole <strong>__1__</strong> nie reprezentuje liczby',
+            NEGATIVE_NUMBER: 'Pole <strong>__1__</strong> jest ujemne',
+            BAD_FORMAT: 'Pole <strong>__1__</strong> ma z\u{142}y format',
+            PAST_DATE: 'Podany punkt w czasie nale\u{17C}y do przesz\u{142}o\u{15B}ci'
         },
         UNITS: {
             spear: 'Pikinier',
@@ -45,11 +39,10 @@
             spy: 'Zwiadowca',
             heavy: 'FCi\u{119}\u{17C}ka kawaleria',
         },
-        ERROR: {
-            BLANK: 'Pole <strong>__1__</strong> jest puste',
-            NAN: 'Pole <strong>__1__</strong> nie reprezentuje liczby',
-            NEGATIVE_NUMBER: 'Pole <strong>__1__</strong> jest ujemne',
-            BAD_FORMAT: 'Pole <strong>__1__</strong> ma z\u{142}y format'
+        FIELDSET: {
+            input: 'Domy\u{15B}lne warto\u{15B}ci',
+            ratio: 'Przeliczniki',
+            safeguard: 'Rezerwa',
         },
         LABELS: {
             target: 'Cel',
@@ -65,6 +58,9 @@
             execute: 'Wykonaj',
             save_settings: 'Zapisz',
             reset_settings: 'Przywr\u{F3}\u{107} domy\u{15B}lne',
+            tab_count: 'Liczba kart',
+            open_tabs: 'Otw\u{F3}rz rozkazy',
+            open_tabs_title: 'Otw\u{F3}rz rozkazy w nowych kartach'
         }
     };
     const Helper = {
@@ -86,45 +82,36 @@
             }
             return `${number.toFixed(0)}T`;
         },
-        parse_date: function (date_string) {
-            // TODO: handle this formats
-            // jutro o 07:08:00:667
-            // dzisiaj o 23:29:30:546
-            // dnia 14.08. o 18:02:51:644
-            // 13.8 7:00:00
-            // 13.8 7:00
-            // 13.08 7:00:00
-            // 13.08 <spaces> 7:00:00
-            // 12.08.19 23:29:30:546	
+        parse_date: function (date_string, replacement) {
             date_string = date_string.replace(/\s\s+/g, ' ').trim();
-            let parts = date_string.split(' ');
-            if (parts.length !== 2) {
-                throw 'Invalid date';
+            const date_matches = date_string.match(/jutro|dzisiaj|\d+\.\d+(?:\.\d+)?/g);
+            const time_matches = date_string.match(/\d+:\d+(?::\d+)?/g);
+            if (!date_matches || !time_matches || date_matches.length > 1 || time_matches.length > 1) {
+                throw i18n.ERROR.BAD_FORMAT.replace('__1__', replacement);
             }
-
-            let result = {};
-            let dateParts = parts[0].split('.').filter(x => x.trim().length !== 0);
-            let timeParts = parts[1].split(':').filter(x => x.trim().length !== 0);
-            if (dateParts.length < 2 || timeParts.length < 2) {
-                throw 'Invalid date';
-            }
-            result['day'] = Number(dateParts[0]);
-            result['month'] = Number(dateParts[1]);
-            result['year'] = dateParts.length === 3
-                ? Number(dateParts[2])
-                : new Date().getFullYear();
-
-            result['hour'] = Number(timeParts[0]);
-            result['minute'] = Number(timeParts[1]);
-            result['second'] = timeParts.length === 3
-                ? Number(timeParts[2])
-                : 0;
-            for (const key in result) {
-                if (isNaN(result[key])) {
-                    throw `${key} is invalid`;
+            const date = new Date();
+            const date_match = date_matches[0];
+            const time_match = time_matches[0];
+            if (date_match === 'jutro') {
+                date.setDate(date.getDate() + 1);
+            } else if (date_match === 'dzisiaj') {
+                // default
+            } else {
+                const date_parts = date_match.split('.').map(x => Number(x));
+                if (date_parts.length === 3) {
+                    if (date_parts[2] < 100) {
+                        date_parts[2] += 2000;
+                    }
+                    date.setFullYear(date_parts[2])
                 }
+                date.setMonth(date_parts[1] - 1);
+                date.setDate(date_parts[0]);
             }
-            return new Date(result.year, result.month - 1, result.day, result.hour, result.minute, result.second);
+            const time_parts = time_match.split(':').map(x => Number(x));
+            date.setHours(time_parts[0]);
+            date.setMinutes(time_parts[1]);
+            date.setSeconds(time_parts[2] || 0);
+            return date;
         },
         assert_non_negative_number: function (input, replacement) {
             const empty_regex = new RegExp(/^\s*$/);
@@ -208,13 +195,46 @@
             const place_anchor = document.createElement('a');
             place_anchor.setAttribute('href', TribalWars.buildURL('GET', 'place', url_params));
             place_anchor.textContent = i18n.LABELS.execute;
-            place_cell.append(place_anchor);
-            place_cell.addEventListener('click', () => {
+            place_anchor.addEventListener('click', (e) => {
                 Guard.group_id2villages.delete(group_id);
                 row.remove();
+                return true;
             });
+            place_cell.append(place_anchor);
             row.append(place_cell);
             Helper.get_control('output').append(row);
+        },
+        open_commands: function () {
+            const open_tabs_button = Helper.get_control('open_tabs');
+            const tab_count_control = Helper.get_control('tab_count');
+            Helper.assert_non_negative_number(tab_count_control, i18n.LABELS.tab_count);
+            const tab_count = Number(tab_count_control.value);
+            const rows = [...Helper.get_control('output').rows].slice(0, tab_count);
+            if (rows.length === 0) {
+                return;
+            }
+            const last_row = rows[rows.length - 1];
+            const tabs_per_second = 5;
+            const no_delay_rows = rows.slice(0, tabs_per_second);
+            const throttled_rows = rows.slice(tabs_per_second, tab_count);
+            const open_tab = function (row) {
+                window.open([...row.children].pop().children[0].href, '_blank');
+                row.remove();
+                if (row === last_row) {
+                    open_tabs_button.disabled = false;
+                }
+            }
+
+            open_tabs_button.disabled = true;
+            for (const row of no_delay_rows) {
+                open_tab(row);
+            }
+
+            for (let i = 0; i < throttled_rows.length; i++) {
+                setTimeout(row => {
+                    open_tab(row);
+                }, (1000 / tabs_per_second) * i, throttled_rows[i]);
+            }
         },
         create_main_panel: function () {
             const options = [
@@ -284,10 +304,13 @@
             generate_cell.append(generate_button);
             option_inputs_row.append(generate_cell);
 
-            const panel = document.createElement('table');
-            panel.style.width = '100%';
-            panel.append(option_labels_row);
-            panel.append(option_inputs_row);
+            const panel = document.createElement('div');
+            const table = document.createElement('table');
+            panel.classList.add('vis', 'vis_item');
+            panel.append(table);
+            table.style.width = '100%';
+            table.append(option_labels_row);
+            table.append(option_inputs_row);
             return panel;
         },
         create_output_panel: function () {
@@ -335,17 +358,49 @@
             const body = document.createElement('tbody');
             body.setAttribute('id', Helper.get_id('output'));
 
-            const panel = document.createElement('table');
-            panel.style.width = '100%';
-            panel.append(header);
-            panel.append(body);
+            const table = document.createElement('table');
+            table.style.width = '100%';
+            table.append(header);
+            table.append(body);
 
-            const div = document.createElement('div');
-            div.classList.add('vis', 'vis_item');
-            div.style.overflowY = 'auto';
-            div.style.height = '200px';
-            div.append(panel);
-            return div;
+            const panel = document.createElement('div');
+            panel.classList.add('vis', 'vis_item');
+            panel.style.overflowY = 'auto';
+            panel.style.height = '200px';
+            panel.style.marginBottom = '5px';
+            panel.append(table);
+            return panel;
+        },
+        create_open_tabs_panel: function () {
+            const panel = document.createElement('div');
+            panel.classList.add('vis_item');
+            const open_tabs_table = document.createElement('table');
+            open_tabs_table.style.width = '100%';
+            const open_tabs_tr = document.createElement('tr');
+            const open_tabs_td = document.createElement('td');
+            const open_tabs_span = document.createElement('span');
+            open_tabs_span.style.display = 'flex';
+            open_tabs_span.style.float = 'right';
+            const open_tabs_label = document.createElement('label');
+            open_tabs_label.setAttribute('for', Helper.get_id('tab_count'));
+            open_tabs_label.textContent = i18n.LABELS.tab_count;
+            const open_tabs_input = document.createElement('input');
+            open_tabs_input.setAttribute('id', Helper.get_id('tab_count'));
+            open_tabs_input.setAttribute('size', 2);
+            const open_tabs_button = document.createElement('button');
+            open_tabs_button.setAttribute('id', Helper.get_id('open_tabs'));
+            open_tabs_button.textContent = i18n.LABELS.open_tabs;
+            open_tabs_button.setAttribute('title', i18n.LABELS.open_tabs_title);
+            open_tabs_button.classList.add('btn');
+            open_tabs_button.disabled = true;
+            open_tabs_span.append(open_tabs_label);
+            open_tabs_span.append(open_tabs_input);
+            open_tabs_span.append(open_tabs_button);
+            open_tabs_table.append(open_tabs_tr);
+            open_tabs_tr.append(open_tabs_td);
+            open_tabs_td.append(open_tabs_span);
+            panel.append(open_tabs_table)
+            return panel;
         },
         create_gui: function () {
             const div = document.createElement('div');
@@ -355,6 +410,7 @@
             const output_panel = Guard.create_output_panel();
             div.append(main_panel);
             div.append(output_panel);
+            div.append(Guard.create_open_tabs_panel());
             document.querySelector('#contentContainer').prepend(div);
         },
         init_gui: async function () {
@@ -371,12 +427,12 @@
                 option.text = Guard.strategies[key];
                 strategy.append(option);
             }
-            strategy.value = Guard.settings.initial.strategy;
+            strategy.value = Guard.settings.input.strategy;
             strategy.disabled = false;
 
             for (const option_name of ['deff_count', 'spy_count', 'minimal_deff_count', 'village_count']) {
                 const control = Helper.get_control(option_name);
-                control.value = Guard.settings.initial[option_name];
+                control.value = Guard.settings.input[option_name];
                 control.disabled = false;
             }
 
@@ -388,9 +444,9 @@
                 option.text = group_info.name;
                 group.append(option);
             }
-            group.value = Guard.settings.initial.group === '-1'
+            group.value = Guard.settings.input.group === '-1'
                 ? groups_info.group_id
-                : Guard.settings.initial.group;
+                : Guard.settings.input.group;
             group.disabled = false;
 
             await Guard.get_world_info();
@@ -416,6 +472,12 @@
                 Helper.get_control('arrival_date').disabled = !event.target.checked;
             });
             enable_arrival_date.disabled = false;
+            Helper.get_control('tab_count').value = Guard.settings.input.tab_count;
+            const open_tabs = Helper.get_control('open_tabs');
+            open_tabs.addEventListener('click', () => {
+                try { Guard.open_commands(); } catch (ex) { Helper.handle_error(ex); }
+            });
+            open_tabs.disabled = false;
             Helper.get_control('generate').disabled = false;
         },
         get_groups_info: async function () {
@@ -438,7 +500,7 @@
                 const numeric_fields = ['deff_count', 'spy_count', 'village_count', 'minimal_deff_count'];
                 for (const numeric_field of numeric_fields) {
                     const input = Helper.get_control(numeric_field);
-                    Helper.assert_non_negative_number(input, i18n.FIELDSET.initial[numeric_field]);
+                    Helper.assert_non_negative_number(input, i18n.FIELDSET.input[numeric_field]);
                     user_input[numeric_field] = Number(input.value);
                 }
 
@@ -452,7 +514,11 @@
                 user_input.strategy = Helper.get_control('strategy').value;
                 user_input.travel_time = NaN;
                 if (Helper.get_control('is_arrival_date_enabled').checked) {
-                    let arrival_date = Helper.parse_date(Helper.get_control('arrival_date').value);
+                    let arrival_date = Helper.parse_date(Helper.get_control('arrival_date').value, i18n.LABELS.arrival_date);
+                    if (arrival_date.getTime() <= Date.now()) {
+                        Helper.get_control('arrival_date').focus();
+                        throw i18n.ERROR.PAST_DATE;
+                    }
                     user_input.travel_time = (arrival_date.getTime() - Date.now()) / 60 / 1000;
                 }
                 return user_input;
@@ -537,7 +603,7 @@
 
             const preprocess = function (troops_info, user_input) {
                 troops_info.villages = troops_info.villages.filter(village => village.deff >= user_input.minimal_deff_count);
-
+                troops_info.villages = troops_info.villages.filter(village => village.distance > 0);
                 switch (user_input.strategy) {
                     case 'DIST_ASC': troops_info.villages.sort(sort_by_distance_asc); break;
                     case 'DIST_DESC': troops_info.villages.sort(sort_by_distance_desc); break;
@@ -545,7 +611,6 @@
                     case 'TROOP_DESC': troops_info.villages.sort(user_input.deff_count ? sort_by_deff_desc : sort_by_spy_desc); break;
                     default: random_sort(troops_info.villages); break;
                 }
-
                 troops_info.villages = troops_info.villages.slice(0, user_input.village_count);
             }
 
@@ -558,7 +623,7 @@
                     for (const unit in Guard.default_settings.ratio) {
                         const selected_count = Math.min(Math.round(ratio * village.units[unit]), village.units[unit]);
                         troops_info.selected[unit] += selected_count;
-                        troops_info.selected['deff'] += selected_count * Number(Guard.settings.ratio[unit]);
+                        troops_info.selected.deff += selected_count * Number(Guard.settings.ratio[unit]);
                         village.units[unit] = selected_count;
                     }
                 }
@@ -627,11 +692,11 @@
 
         edit_settings: function () {
             let add_unit_fieldset = function (branch) {
-                let fieldset = `<fieldset><legend>${i18n.FIELDSET[branch].name}</legend><table>`;
+                let fieldset = `<fieldset><legend>${i18n.FIELDSET[branch]}</legend><table>`;
                 for (const unit_name in Guard.default_settings[branch]) {
                     const id = Helper.get_id(`${branch}.${unit_name}`);
                     const value = Guard.settings[branch][unit_name];
-                    const title = `${i18n.FIELDSET[branch].name} - ${i18n.UNITS[unit_name]}`
+                    const title = `${i18n.FIELDSET[branch]} - ${i18n.UNITS[unit_name]}`
                     fieldset += '<tr>';
                     fieldset += `<td><label for="${id}" title="${title}"><image src="${image_base}unit/unit_${unit_name}.png" alt="${unit_name}"></image></label></td>`;
                     fieldset += `<td><input id="${id}" value="${value}"/></td>`;
@@ -654,13 +719,13 @@
                 return html;
             };
 
-            let add_input_fieldset = function (branch) {
-                let fieldset = `<fieldset><legend>${i18n.FIELDSET[branch].name}</legend><table>`;
-                for (const key in Guard.default_settings[branch]) {
-                    const id = Helper.get_id(`${branch}.${key}`);
-                    const value = Guard.settings[branch][key];
+            let add_input_fieldset = function () {
+                let fieldset = `<fieldset><legend>${i18n.FIELDSET.input}</legend><table>`;
+                for (const key in Guard.default_settings.input) {
+                    const id = Helper.get_id(`input.${key}`);
+                    const value = Guard.settings.input[key];
                     fieldset += '<tr>';
-                    fieldset += `<td><label for="${id}">${i18n.FIELDSET[branch][key]}:</label></td>`;
+                    fieldset += `<td><label for="${id}">${i18n.LABELS[key]}:</label></td>`;
                     switch (key) {
                         case 'strategy': fieldset += add_settings_select(id, Guard.strategies); break;
                         case 'group': fieldset += add_settings_select(id, Guard.group_id2group_name); break;
@@ -683,7 +748,12 @@
                             if (['strategy', 'group'].includes(key)) {
                                 settings[branch][key] = user_value;
                             } else {
-                                Helper.assert_non_negative_number(user_input, i18n.FIELDSET[branch][key]);
+                                if (branch === 'initial') {
+                                    Helper.assert_non_negative_number(user_input, i18n.LABELS[key]);
+                                } else {
+                                    const field_name = `${i18n.FIELDSET[branch]} - ${i18n.UNITS[key]}`;
+                                    Helper.assert_non_negative_number(user_input, field_name);
+                                }
                                 settings[branch][key] = Number(user_value);
                             }
                         }
@@ -698,14 +768,14 @@
 
             let reset_settings = function () {
                 localStorage.removeItem(namespace);
-                UI.SuccessMessage(i18n.SETTINGS_RESET);
+                UI.SuccessMessage(i18n.SETTINGS_RESETED);
                 document.querySelector('.popup_box_close').click();
             };
 
             let gui = '<div>';
             gui += add_unit_fieldset('ratio');
             gui += add_unit_fieldset('safeguard');
-            gui += add_input_fieldset('initial');
+            gui += add_input_fieldset();
             const reset_settings_id = Helper.get_id('reset_settings');
             const save_settings_id = Helper.get_id('save_settings');
             gui += `<button id="${reset_settings_id}" class="btn">${i18n.LABELS.reset_settings}</button>`;
@@ -717,7 +787,7 @@
         },
         group_id2villages: new Map(),
         group_id2group_name: {
-            '-1': i18n.CURRENT_SELECTED_GROUP
+            '-1': i18n.CURRENTLY_SELECTED_GROUP
         },
         strategies: {
             'TROOP_DESC': i18n.STRATEGY.TROOP_DESC,
@@ -740,13 +810,14 @@
                 spy: 0,
                 heavy: 0
             },
-            initial: {
+            input: {
                 deff_count: 0,
                 spy_count: 0,
                 village_count: 12,
                 minimal_deff_count: 0,
                 strategy: 'TROOP_DESC',
-                group: '-1'
+                group: '-1',
+                tab_count: 4,
             },
         },
         deff_units: [],
@@ -767,7 +838,7 @@
             }
             Guard.init_settings();
             Guard.create_gui();
-            if (uneval && localStorage.hasOwnProperty('Hermitowski.MapFiles')) {
+            if (typeof (uneval) === 'function' && localStorage.hasOwnProperty('Hermitowski.MapFiles')) {
                 (1, eval)(localStorage.getItem('Hermitowski.MapFiles'));
                 try { await Guard.init_gui(); } catch (ex) { Helper.handle_error(ex); }
             } else {
