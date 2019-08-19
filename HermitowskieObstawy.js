@@ -13,8 +13,8 @@
     const start = Date.now();
     const namespace = 'Hermitowski.Guard';
     const i18n = {
-        SETTINGS_SAVED: 'Zapisano pomy\u{15B}lnie. Nowe ustawienia b\u{119}d\u{105} zastosowane przy nast\u{119}pnym uruchomieniu skryptu',
-        SETTINGS_RESETED: 'Przywr\u{F3}cono domy\u{15B}lne ustawienia. Nowe ustawienia b\u{119}d\u{105} zastosowane przy nast\u{119}pnym uruchomieniu skryptu',
+        SETTINGS_SAVED: 'Zapisano pomy\u{15B}lnie',
+        SETTINGS_RESETED: 'Przywr\u{F3}cono domy\u{15B}lne ustawienia',
         CURRENTLY_SELECTED_GROUP: 'Obecnie wybrana grupa',
         ERROR_MESSAGE: 'Komunikat o b\u{142}\u{119}dzie: ',
         FORUM_THREAD: 'Link do w\u{105}tku na forum',
@@ -527,7 +527,7 @@
                 const numeric_fields = ['deff_count', 'spy_count', 'village_count', 'minimal_deff_count'];
                 for (const numeric_field of numeric_fields) {
                     const input = Helper.get_control(numeric_field);
-                    Helper.assert_non_negative_number(input, i18n.FIELDSET.input[numeric_field]);
+                    Helper.assert_non_negative_number(input, i18n.LABELS[numeric_field]);
                     user_input[numeric_field] = Number(input.value);
                 }
 
@@ -652,11 +652,13 @@
                     const village = troops_info.villages[i - 1];
                     const threshold = (user_input.deff_count - troops_info.selected.deff) / i;
                     const ratio = threshold < village.deff ? threshold / village.deff : 1.0;
-                    for (const unit in Guard.default_settings.ratio) {
-                        const selected_count = Math.min(Math.round(ratio * village.units[unit]), village.units[unit]);
-                        troops_info.selected[unit] += selected_count;
-                        troops_info.selected.deff += selected_count * Number(Guard.settings.ratio[unit]);
-                        village.units[unit] = selected_count;
+                    for (const unit_name in Guard.default_settings.ratio) {
+                        if (Guard.deff_units.includes(unit_name)) {
+                            const selected_count = Math.min(Math.round(ratio * village.units[unit_name]), village.units[unit_name]);
+                            troops_info.selected[unit_name] += selected_count;
+                            troops_info.selected.deff += selected_count * Number(Guard.settings.ratio[unit_name]);
+                            village.units[unit_name] = selected_count;
+                        }
                     }
                 }
                 troops_info.villages.sort(sort_by_spy_desc);
@@ -684,11 +686,10 @@
             const troops_info = get_troops_info(villages, user_input);
             preprocess(troops_info, user_input);
             select_troops(troops_info, user_input);
-            const speed_groups = [['spear', 'archer'], ['sword'], ['sppy', 'heavy']];
             for (const village of troops_info.villages) {
                 if (user_input.split_units) {
                     const snapshot = Object.assign({}, village.units);
-                    for (const speed_group of speed_groups) {
+                    for (const speed_group of Guard.speed_groups) {
                         for (const unit_name of Guard.deff_units) {
                             village.units[unit_name] = speed_group.includes(unit_name)
                                 ? snapshot[unit_name]
@@ -739,13 +740,15 @@
             let add_unit_fieldset = function (branch) {
                 let fieldset = `<fieldset><legend>${i18n.FIELDSET[branch]}</legend><table>`;
                 for (const unit_name in Guard.default_settings[branch]) {
-                    const id = Helper.get_id(`${branch}.${unit_name}`);
-                    const value = Guard.settings[branch][unit_name];
-                    const title = `${i18n.FIELDSET[branch]} - ${i18n.UNITS[unit_name]}`
-                    fieldset += '<tr>';
-                    fieldset += `<td><label for='${id}' title='${title}'><image src='${image_base}unit/unit_${unit_name}.png' alt='${unit_name}'></image></label></td>`;
-                    fieldset += `<td><input id='${id}' value='${value}'/></td>`;
-                    fieldset += '</tr>';
+                    if (Guard.deff_units.includes(unit_name)) {
+                        const id = Helper.get_id(`${branch}.${unit_name}`);
+                        const value = Guard.settings[branch][unit_name];
+                        const title = `${i18n.FIELDSET[branch]} - ${i18n.UNITS[unit_name]}`
+                        fieldset += '<tr>';
+                        fieldset += `<td><label for='${id}' title='${title}'><image src='${image_base}unit/unit_${unit_name}.png' alt='${unit_name}'></image></label></td>`;
+                        fieldset += `<td><input id='${id}' value='${value}'/></td>`;
+                        fieldset += '</tr>';
+                    }
                 }
                 fieldset += '</table></fieldset>';
                 return fieldset;
@@ -800,11 +803,12 @@
                             } else if (key === 'split_units') {
                                 settings[branch][key] = user_input.checked;
                             } else {
-                                if (branch === 'initial') {
-                                    Helper.assert_non_negative_number(user_input, i18n.LABELS[key]);
-                                } else {
-                                    const field_name = `${i18n.FIELDSET[branch]} - ${i18n.UNITS[key]}`;
-                                    Helper.assert_non_negative_number(user_input, field_name);
+                                Helper.assert_non_negative_number(user_input, branch === 'input'
+                                    ? i18n.LABELS[key]
+                                    : `${i18n.FIELDSET[branch]} - ${i18n.UNITS[key]}`
+                                );
+                                if (branch !== 'input') {
+                                    Guard.settings[branch][key] = Number(user_value);
                                 }
                                 settings[branch][key] = Number(user_value);
                             }
@@ -876,10 +880,11 @@
                 strategy: 'TROOP_DESC',
                 group: '-1',
                 tab_count: 4,
-                split_units: true,
+                split_units: false,
             },
         },
         deff_units: [],
+        speed_groups: [['spear', 'archer'], ['sword'], ['spy', 'heavy']],
         settings: {},
         init_settings: function () {
             let stored_settings = localStorage.getItem(namespace);
