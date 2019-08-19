@@ -316,6 +316,7 @@
             const panel = document.createElement('div');
             const table = document.createElement('table');
             panel.classList.add('vis', 'vis_item');
+            panel.style.margin = '5px';
             panel.append(table);
             table.style.width = '100%';
             table.append(option_labels_row);
@@ -374,7 +375,7 @@
             panel.classList.add('vis', 'vis_item');
             panel.style.overflowY = 'auto';
             panel.style.height = '200px';
-            panel.style.marginBottom = '5px';
+            panel.style.margin = '5px';
             panel.append(table);
             return panel;
         },
@@ -413,6 +414,7 @@
         create_bottom_panel: function () {
             const panel = document.createElement('div');
             panel.classList.add('vis_item');
+            panel.style.margin = '5px';
             const panel_table = document.createElement('table');
             panel_table.style.width = '100%';
             const panel_tr = document.createElement('tr');
@@ -427,7 +429,7 @@
         create_gui: function () {
             const div = document.createElement('div');
             div.style.padding = '0px';
-            div.style.margin = '5px 0px';
+            div.style.margin = '0px 0px 5px 0px';
             div.setAttribute('id', namespace);
             div.classList.add('vis', 'vis_item');
             div.append(Guard.create_main_panel());
