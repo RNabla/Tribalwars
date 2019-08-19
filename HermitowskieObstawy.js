@@ -6,6 +6,7 @@
  * Modified on: 27/10/2018 - version 2.2 - added time range filter
  * Modified on: 12/08/2019 - version 2.2 - refactor + integration with new map files api
  * Modified on: 18/08/2019 - version 2.3 - added open commands in new tabs
+ * Modified on: 19/08/2019 - version 2.4 - split units option
  */
 
 (async function (TribalWars) {
@@ -30,7 +31,8 @@
             NAN: 'Pole <strong>__1__</strong> nie reprezentuje liczby',
             NEGATIVE_NUMBER: 'Pole <strong>__1__</strong> jest ujemne',
             BAD_FORMAT: 'Pole <strong>__1__</strong> ma z\u{142}y format',
-            PAST_DATE: 'Podany punkt w czasie nale\u{17C}y do przesz\u{142}o\u{15B}ci'
+            PAST_DATE: 'Podany punkt w czasie nale\u{17C}y do przesz\u{142}o\u{15B}ci',
+            MOBILE: 'Wersja mobilna nie jest wspierana'
         },
         UNITS: {
             spear: 'Pikinier',
@@ -53,6 +55,7 @@
             minimal_deff_count: 'Ilo\u{15B}\u{107} minimalna',
             strategy: 'Strategia wybierania',
             arrival_date: 'Data dotarcia',
+            split_units: 'Rozdziel jednostki',
             generate: 'Generuj',
             command: 'Rozkaz',
             execute: 'Wykonaj',
@@ -154,16 +157,15 @@
         }
     };
     const Guard = {
-        add_command: function (village, target, group_id) {
+        add_command: function (village, user_input) {
             const url_params = {
-                x: target[0],
-                y: target[1],
+                x: user_input.target[0],
+                y: user_input.target[1],
                 from: 'simulator',
                 village: village.id
             };
 
-            const non_empty_units = Object.keys(Guard.default_settings.safeguard)
-                .filter(unit_name => village.units[unit_name] !== 0);
+            const non_empty_units = Guard.deff_units.filter(unit_name => village.units[unit_name] !== 0);
 
             if (non_empty_units.length === 0) {
                 return;
@@ -196,7 +198,7 @@
             place_anchor.setAttribute('href', TribalWars.buildURL('GET', 'place', url_params));
             place_anchor.textContent = i18n.LABELS.execute;
             place_anchor.addEventListener('click', (e) => {
-                Guard.group_id2villages.delete(group_id);
+                Guard.group_id2villages.delete(user_input.group_id);
                 row.remove();
                 return true;
             });
@@ -238,14 +240,15 @@
         },
         create_main_panel: function () {
             const options = [
-                { name: 'target', controls: [{ type: 'input', attributes: { id: 'target', size: 12 } }] },
+                { name: 'target', controls: [{ type: 'input', attributes: { id: 'target', size: 10 } }] },
                 { name: 'group', controls: [{ type: 'select', attributes: { id: 'group' } }] },
-                { name: 'deff_count', controls: [{ type: 'input', attributes: { id: 'deff_count', size: 12 } }] },
-                { name: 'spy_count', controls: [{ type: 'input', attributes: { id: 'spy_count', size: 12 } }] },
-                { name: 'village_count', controls: [{ type: 'input', attributes: { id: 'village_count', size: 12 } }] },
-                { name: 'minimal_deff_count', controls: [{ type: 'input', attributes: { id: 'minimal_deff_count', size: 12 } }] },
+                { name: 'deff_count', controls: [{ type: 'input', attributes: { id: 'deff_count', size: 10 } }] },
+                { name: 'spy_count', controls: [{ type: 'input', attributes: { id: 'spy_count', size: 10 } }] },
+                { name: 'village_count', controls: [{ type: 'input', attributes: { id: 'village_count', size: 10 } }] },
+                { name: 'minimal_deff_count', controls: [{ type: 'input', attributes: { id: 'minimal_deff_count', size: 10 } }] },
                 { name: 'strategy', controls: [{ type: 'select', attributes: { id: 'strategy' } }] },
                 { name: 'arrival_date', controls: [{ type: 'input', attributes: { id: 'is_arrival_date_enabled', type: 'checkbox' } }, { type: 'input', attributes: { id: 'arrival_date', size: 12 } }] },
+                { name: 'split_units', controls: [{ type: 'input', attributes: { id: 'split_units', type: 'checkbox' } }] },
             ];
 
             const create_option_label = function (option) {
@@ -345,10 +348,8 @@
             deff_cell.prepend(deff_image);
             header.append(deff_cell);
 
-            for (const unit_name in Guard.default_settings.safeguard) {
-                if (game_data.units.includes(unit_name)) {
-                    header.append(create_unit_counter_cell(unit_name));
-                }
+            for (const unit_name of Guard.deff_units) {
+                header.append(create_unit_counter_cell(unit_name));
             }
 
             const command_cell = document.createElement('th');
@@ -371,13 +372,18 @@
             panel.append(table);
             return panel;
         },
-        create_open_tabs_panel: function () {
-            const panel = document.createElement('div');
-            panel.classList.add('vis_item');
-            const open_tabs_table = document.createElement('table');
-            open_tabs_table.style.width = '100%';
-            const open_tabs_tr = document.createElement('tr');
-            const open_tabs_td = document.createElement('td');
+        create_signature_span: function () {
+            const span = document.createElement('span');
+            span.style.display = 'flex';
+            span.style.float = 'left';
+            span.style.marginTop = '10px';
+            const a = document.createElement('a');
+            a.setAttribute('href', i18n.FORUM_THREAD_HREF);
+            a.textContent = i18n.FORUM_THREAD;
+            span.append(a);
+            return span;
+        },
+        create_open_tabs_span: function () {
             const open_tabs_span = document.createElement('span');
             open_tabs_span.style.display = 'flex';
             open_tabs_span.style.float = 'right';
@@ -396,21 +402,29 @@
             open_tabs_span.append(open_tabs_label);
             open_tabs_span.append(open_tabs_input);
             open_tabs_span.append(open_tabs_button);
-            open_tabs_table.append(open_tabs_tr);
-            open_tabs_tr.append(open_tabs_td);
-            open_tabs_td.append(open_tabs_span);
-            panel.append(open_tabs_table)
+            return open_tabs_span;
+        },
+        create_bottom_panel: function () {
+            const panel = document.createElement('div');
+            panel.classList.add('vis_item');
+            const panel_table = document.createElement('table');
+            panel_table.style.width = '100%';
+            const panel_tr = document.createElement('tr');
+            const panel_td = document.createElement('td');
+            panel_table.append(panel_tr);
+            panel_tr.append(panel_td);
+            panel_td.append(Guard.create_signature_span());
+            panel_td.append(Guard.create_open_tabs_span());
+            panel.append(panel_table)
             return panel;
         },
         create_gui: function () {
             const div = document.createElement('div');
             div.setAttribute('id', namespace);
             div.classList.add('vis', 'vis_item');
-            const main_panel = Guard.create_main_panel();
-            const output_panel = Guard.create_output_panel();
-            div.append(main_panel);
-            div.append(output_panel);
-            div.append(Guard.create_open_tabs_panel());
+            div.append(Guard.create_main_panel());
+            div.append(Guard.create_output_panel());
+            div.append(Guard.create_bottom_panel());
             document.querySelector('#contentContainer').prepend(div);
         },
         init_gui: async function () {
@@ -436,6 +450,10 @@
                 control.disabled = false;
             }
 
+            const split_units = Helper.get_control('split_units');
+            split_units.checked = Guard.settings.input.split_units;
+            split_units.disabled = false;
+
             const groups_info = await Guard.get_groups_info();
             const group = Helper.get_control('group');
             for (const group_info of groups_info.result) {
@@ -459,6 +477,7 @@
                 }
                 default_date.setHours(end_hour);
             }
+
 
             Helper.get_control('arrival_date').value = `${default_date.getDate()}.${default_date.getMonth() + 1} ${default_date.getHours()}:00:00`;
             Helper.get_control('generate').addEventListener('click', async () => {
@@ -512,6 +531,8 @@
                 }
                 user_input.target = target.value.trim().split('|').map(x => Number(x));
                 user_input.strategy = Helper.get_control('strategy').value;
+                user_input.group_id = Helper.get_control('group').value;
+                user_input.split_units = Helper.get_control('split_units').checked;
                 user_input.travel_time = NaN;
                 if (Helper.get_control('is_arrival_date_enabled').checked) {
                     let arrival_date = Helper.parse_date(Helper.get_control('arrival_date').value, i18n.LABELS.arrival_date);
@@ -577,6 +598,10 @@
                         units: {}
                     };
 
+                    if (village_troop_info.distance === 0) {
+                        continue;
+                    }
+
                     for (const unit_name of Guard.deff_units) {
                         const ratio = Guard.settings.ratio[unit_name] === undefined
                             ? 0
@@ -603,7 +628,6 @@
 
             const preprocess = function (troops_info, user_input) {
                 troops_info.villages = troops_info.villages.filter(village => village.deff >= user_input.minimal_deff_count);
-                troops_info.villages = troops_info.villages.filter(village => village.distance > 0);
                 switch (user_input.strategy) {
                     case 'DIST_ASC': troops_info.villages.sort(sort_by_distance_asc); break;
                     case 'DIST_DESC': troops_info.villages.sort(sort_by_distance_desc); break;
@@ -644,16 +668,29 @@
             const user_input = get_user_input();
             const generate_button = Helper.get_control('generate');
             generate_button.disabled = true;
-            for (const child of Helper.get_control('output').children) {
-                child.remove();
+            const current_commands = [...Helper.get_control('output').children];
+            for (let i = current_commands.length - 1; i >= 0; i--) {
+                current_commands[i].remove();
             }
-            const group_id = Helper.get_control('group').value;
-            const villages = await Guard.get_villages(group_id);
+            const villages = await Guard.get_villages(user_input.group_id);
             const troops_info = get_troops_info(villages, user_input);
             preprocess(troops_info, user_input);
             select_troops(troops_info, user_input);
+            const speed_groups = [['spear', 'archer'], ['sword'], ['sppy', 'heavy']];
             for (const village of troops_info.villages) {
-                Guard.add_command(village, user_input.target, group_id);
+                if (user_input.split_units) {
+                    const snapshot = Object.assign({}, village.units);
+                    for (const speed_group of speed_groups) {
+                        for (const unit_name of Guard.deff_units) {
+                            village.units[unit_name] = speed_group.includes(unit_name)
+                                ? snapshot[unit_name]
+                                : 0;
+                        }
+                        Guard.add_command(village, user_input);
+                    }
+                } else {
+                    Guard.add_command(village, user_input);
+                }
             }
             generate_button.disabled = false;
         },
@@ -719,6 +756,10 @@
                 return html;
             };
 
+            let add_settings_checkbox = function (id, checked) {
+                return `<td><input id="${id}" type="checkbox" ${checked ? "checked" : ""} style="margin-left:0px;"/></td>`;
+            };
+
             let add_input_fieldset = function () {
                 let fieldset = `<fieldset><legend>${i18n.FIELDSET.input}</legend><table>`;
                 for (const key in Guard.default_settings.input) {
@@ -729,6 +770,7 @@
                     switch (key) {
                         case 'strategy': fieldset += add_settings_select(id, Guard.strategies); break;
                         case 'group': fieldset += add_settings_select(id, Guard.group_id2group_name); break;
+                        case 'split_units': fieldset += add_settings_checkbox(id, value); break;
                         default: fieldset += add_setttings_input(id, value); break;
                     }
                     fieldset += '</tr>';
@@ -747,6 +789,8 @@
                             const user_value = user_input.value;
                             if (['strategy', 'group'].includes(key)) {
                                 settings[branch][key] = user_value;
+                            } else if (key === 'split_units') {
+                                settings[branch][key] = user_input.checked;
                             } else {
                                 if (branch === 'initial') {
                                     Helper.assert_non_negative_number(user_input, i18n.LABELS[key]);
@@ -778,11 +822,17 @@
             gui += add_input_fieldset();
             const reset_settings_id = Helper.get_id('reset_settings');
             const save_settings_id = Helper.get_id('save_settings');
-            gui += `<button id="${reset_settings_id}" class="btn">${i18n.LABELS.reset_settings}</button>`;
-            gui += `<button id="${save_settings_id}" class="btn right">${i18n.LABELS.save_settings}</button><div>`;
-            Dialog.show('GuardOptionEditor', gui);
-            Helper.get_control('reset_settings').addEventListener('click', reset_settings);
-            Helper.get_control('save_settings').addEventListener('click', save_settings);
+            gui += `<button disabled id="${reset_settings_id}" class="btn">${i18n.LABELS.reset_settings}</button>`;
+            gui += `<button disabled id="${save_settings_id}" class="btn right">${i18n.LABELS.save_settings}</button><div>`;
+            Dialog.show(Helper.get_id('settings_editor'), gui);
+            setTimeout(() => {
+                const reset_settings_button = Helper.get_control('reset_settings');
+                const save_settings_button = Helper.get_control('save_settings');
+                reset_settings_button.addEventListener('click', reset_settings);
+                reset_settings_button.disabled = false;
+                save_settings_button.addEventListener('click', save_settings);
+                save_settings_button.disabled = false;
+            });
 
         },
         group_id2villages: new Map(),
@@ -818,6 +868,7 @@
                 strategy: 'TROOP_DESC',
                 group: '-1',
                 tab_count: 4,
+                split_units: true,
             },
         },
         deff_units: [],
@@ -831,6 +882,9 @@
                 .filter(unit_name => game_data.units.includes(unit_name));
         },
         main: async function () {
+            if (mobile) {
+                throw i18n.ERROR.MOBILE;
+            }
             let instance = Helper.get_control();
             if (instance) {
                 instance.remove();
@@ -851,7 +905,7 @@
             }
         }
     };
-    await Guard.main();
+    try { await Guard.main(); } catch (ex) { Helper.handle_error(ex); }
     console.log(`${namespace} | Elapsed time: ${Date.now() - start} [ms]`);
 })(TribalWars);
 
