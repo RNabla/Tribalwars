@@ -52,9 +52,9 @@
             deff_count: 'Ilo\u{15B}\u{107} deffa',
             spy_count: 'Ilo\u{15B}\u{107} zwiadu',
             village_count: 'Ilo\u{15B}\u{107} wiosek',
-            minimal_deff_count: 'Ilo\u{15B}\u{107} minimalna',
+            minimal_deff_count: 'Minimalna ilo\u{15B}\u{107} deffa',
             strategy: 'Strategia wybierania',
-            arrival_date: 'Data dotarcia',
+            arrival_date: 'Data dotarcia przed',
             split_units: 'Rozdziel jednostki',
             generate: 'Generuj',
             command: 'Rozkaz',
@@ -151,7 +151,7 @@
                 `<h2>WTF - What a Terrible Failure</h2>
                  <p><strong>${i18n.ERROR_MESSAGE}</strong><br/>
                     <textarea rows='5' cols='42'>${error}\n\n${error.stack}</textarea><br/>
-                    <a href="${i18n.FORUM_THREAD_HREF}">${i18n.FORUM_THREAD}</a>
+                    <a href='${i18n.FORUM_THREAD_HREF}'>${i18n.FORUM_THREAD}</a>
                  </p>`;
             Dialog.show(namespace, gui);
         }
@@ -247,7 +247,7 @@
                 { name: 'village_count', controls: [{ type: 'input', attributes: { id: 'village_count', size: 10 } }] },
                 { name: 'minimal_deff_count', controls: [{ type: 'input', attributes: { id: 'minimal_deff_count', size: 10 } }] },
                 { name: 'strategy', controls: [{ type: 'select', attributes: { id: 'strategy' } }] },
-                { name: 'arrival_date', controls: [{ type: 'input', attributes: { id: 'is_arrival_date_enabled', type: 'checkbox' } }, { type: 'input', attributes: { id: 'arrival_date', size: 12 } }] },
+                { name: 'arrival_date', for: 'is_arrival_date_enabled', controls: [{ type: 'input', attributes: { id: 'is_arrival_date_enabled', type: 'checkbox' } }, { type: 'input', attributes: { id: 'arrival_date', size: 12 } }] },
                 { name: 'split_units', controls: [{ type: 'input', attributes: { id: 'split_units', type: 'checkbox' } }] },
             ];
 
@@ -255,7 +255,7 @@
                 const option_cell = document.createElement('th');
                 const option_label = document.createElement('label');
                 option_label.classList.add('center');
-                option_label.setAttribute('for', Helper.get_id(option.name));
+                option_label.setAttribute('for', Helper.get_id(option.hasOwnProperty('for') ? option.for : option.name));
                 option_label.textContent = i18n.LABELS[option.name];
                 option_cell.append(option_label)
                 return option_cell;
@@ -273,6 +273,10 @@
                             ? Helper.get_id(attributes.id)
                             : attributes[attribute_name];
                         option_control.setAttribute(attribute_name, attribute_value);
+                    }
+                    if (attributes.type === 'checkbox') {
+                        option_control.style.display = 'block';
+                        option_control.style.margin = 'auto';
                     }
                     option_control.disabled = true;
                     option_span.append(option_control);
@@ -294,7 +298,8 @@
             settings_image.setAttribute('id', Helper.get_id('settings'));
             settings_image.setAttribute('src', `${image_base}icons/settings.png`);
             settings_image.setAttribute('alt', 'settings');
-            settings_image.style.cssFloat = 'right';
+            settings_image.style.margin = 'auto';
+            settings_image.style.display = 'block';
             settings_cell.append(settings_image);
             option_labels_row.append(settings_cell);
 
@@ -302,6 +307,7 @@
             const generate_button = document.createElement('button');
             generate_button.setAttribute('id', Helper.get_id('generate'));
             generate_button.textContent = i18n.LABELS.generate;
+            generate_button.style.marginTop = '2px';
             generate_button.classList.add('btn');
             generate_button.disabled = true;
             generate_cell.append(generate_button);
@@ -420,6 +426,8 @@
         },
         create_gui: function () {
             const div = document.createElement('div');
+            div.style.padding = '0px';
+            div.style.margin = '5px 0px';
             div.setAttribute('id', namespace);
             div.classList.add('vis', 'vis_item');
             div.append(Guard.create_main_panel());
@@ -699,7 +707,7 @@
                 return Guard.group_id2villages.get(group_id);
             }
             let url = TribalWars.buildURL('GET', 'overview_villages', { mode: 'units', type: 'own_home', group: group_id, page: -1, });
-            const request = await fetch(url, { credentials: "same-origin" });
+            const request = await fetch(url, { credentials: 'same-origin' });
             const response = await request.text();
             const requested_body = document.createElement('body');
             requested_body.innerHTML = response;
@@ -735,8 +743,8 @@
                     const value = Guard.settings[branch][unit_name];
                     const title = `${i18n.FIELDSET[branch]} - ${i18n.UNITS[unit_name]}`
                     fieldset += '<tr>';
-                    fieldset += `<td><label for="${id}" title="${title}"><image src="${image_base}unit/unit_${unit_name}.png" alt="${unit_name}"></image></label></td>`;
-                    fieldset += `<td><input id="${id}" value="${value}"/></td>`;
+                    fieldset += `<td><label for='${id}' title='${title}'><image src='${image_base}unit/unit_${unit_name}.png' alt='${unit_name}'></image></label></td>`;
+                    fieldset += `<td><input id='${id}' value='${value}'/></td>`;
                     fieldset += '</tr>';
                 }
                 fieldset += '</table></fieldset>';
@@ -744,20 +752,20 @@
             };
 
             let add_setttings_input = function (id, value) {
-                return `<td><input id="${id}" value="${value}"/></td>`;
+                return `<td><input id='${id}' value='${value}'/></td>`;
             };
 
             let add_settings_select = function (id, options) {
-                let html = `<td><select id="${id}">`;
+                let html = `<td><select id='${id}'>`;
                 for (let key in options) {
-                    html += `<option value="${key}">${options[key]}</option>`
+                    html += `<option value='${key}'>${options[key]}</option>`
                 }
                 html += '</select></td>';
                 return html;
             };
 
             let add_settings_checkbox = function (id, checked) {
-                return `<td><input id="${id}" type="checkbox" ${checked ? "checked" : ""} style="margin-left:0px;"/></td>`;
+                return `<td><input id='${id}' type='checkbox' ${checked ? 'checked' : ''} style='margin-left:0px;'/></td>`;
             };
 
             let add_input_fieldset = function () {
@@ -766,7 +774,7 @@
                     const id = Helper.get_id(`input.${key}`);
                     const value = Guard.settings.input[key];
                     fieldset += '<tr>';
-                    fieldset += `<td><label for="${id}">${i18n.LABELS[key]}:</label></td>`;
+                    fieldset += `<td><label for='${id}'>${i18n.LABELS[key]}:</label></td>`;
                     switch (key) {
                         case 'strategy': fieldset += add_settings_select(id, Guard.strategies); break;
                         case 'group': fieldset += add_settings_select(id, Guard.group_id2group_name); break;
@@ -822,8 +830,8 @@
             gui += add_input_fieldset();
             const reset_settings_id = Helper.get_id('reset_settings');
             const save_settings_id = Helper.get_id('save_settings');
-            gui += `<button disabled id="${reset_settings_id}" class="btn">${i18n.LABELS.reset_settings}</button>`;
-            gui += `<button disabled id="${save_settings_id}" class="btn right">${i18n.LABELS.save_settings}</button><div>`;
+            gui += `<button disabled id='${reset_settings_id}' class='btn'>${i18n.LABELS.reset_settings}</button>`;
+            gui += `<button disabled id='${save_settings_id}' class='btn right'>${i18n.LABELS.save_settings}</button><div>`;
             Dialog.show(Helper.get_id('settings_editor'), gui);
             setTimeout(() => {
                 const reset_settings_button = Helper.get_control('reset_settings');
