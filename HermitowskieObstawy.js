@@ -627,6 +627,10 @@
                             }
                         }
 
+                        if (ratio === 0) {
+                            village_troop_info.units[unit_name] = 0;
+                        }
+
                         village_troop_info.deff += Number(village_troop_info.units[unit_name]) * ratio;
                         troops_info.all[unit_name] += village_troop_info.units[unit_name];
                     }
