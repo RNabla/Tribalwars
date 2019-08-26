@@ -7,6 +7,7 @@
  * Modified on: 12/08/2019 - version 2.2 - refactor + integration with new map files api
  * Modified on: 18/08/2019 - version 2.3 - added open commands in new tabs
  * Modified on: 19/08/2019 - version 2.4 - split units option
+ * Modified on: 26/08/2019 - version 2.5 - more date formats, ratio of value 0 handling
  */
 
 (async function (TribalWars) {
@@ -86,35 +87,48 @@
             return `${number.toFixed(0)}T`;
         },
         parse_date: function (date_string, replacement) {
-            date_string = date_string.replace(/\s\s+/g, ' ').trim();
+            let time_offset = 0;
             const date_matches = date_string.match(/jutro|dzisiaj|\d+\.\d+(?:\.\d+)?/g);
-            const time_matches = date_string.match(/\d+:\d+(?::\d+)?/g);
-            if (!date_matches || !time_matches || date_matches.length > 1 || time_matches.length > 1) {
+            if (date_matches) {
+                time_offset = date_string.indexOf(date_matches[0]) + date_matches[0].length;
+            }
+            const time_matches = date_string.slice(time_offset).match(/\d+(?::\d+)*/g);
+            if (!time_matches || time_matches.length > 1 || (date_matches && date_matches.length > 1)) {
                 throw i18n.ERROR.BAD_FORMAT.replace('__1__', replacement);
             }
-            const date = new Date();
-            const date_match = date_matches[0];
-            const time_match = time_matches[0];
-            if (date_match === 'jutro') {
-                date.setDate(date.getDate() + 1);
-            } else if (date_match === 'dzisiaj') {
-                // default
-            } else {
-                const date_parts = date_match.split('.').map(x => Number(x));
-                if (date_parts.length === 3) {
-                    if (date_parts[2] < 100) {
-                        date_parts[2] += 2000;
-                    }
-                    date.setFullYear(date_parts[2])
+            const today = new Date();
+            const time_parts = time_matches[0].split(':').map(x => Number(x));
+            const parts = {
+                year: today.getFullYear(),
+                month: today.getMonth(),
+                date: today.getDate(),
+                hours: time_parts[0],
+                minutes: time_parts[1] || 0,
+                seconds: time_parts[2] || 0,
+            };
+            if (date_matches) {
+                const date_match = date_matches[0];
+                switch (date_match) {
+                    case "jutro": parts.date = today.getDate() + 1; break;
+                    case "dzisiaj": break;
+                    default:
+                        const date_parts = date_match.split('.').map(x => Number(x));
+                        if (date_parts.length === 3) {
+                            if (date_parts[2] < 100) {
+                                date_parts[2] += 2000;
+                            }
+                            parts.year = date_parts[2];
+                        }
+                        parts.month = date_parts[1] - 1;
+                        parts.date = date_parts[0];
+                        break;
                 }
-                date.setMonth(date_parts[1] - 1);
-                date.setDate(date_parts[0]);
             }
-            const time_parts = time_match.split(':').map(x => Number(x));
-            date.setHours(time_parts[0]);
-            date.setMinutes(time_parts[1]);
-            date.setSeconds(time_parts[2] || 0);
-            return date;
+            const user_date = new Date(parts.year, parts.month, parts.date, parts.hours, parts.minutes, parts.seconds);
+            if (!date_matches && user_date.getTime() < Date.now()) {
+                user_date.setDate(user_date.getDate() + 1);
+            }
+            return user_date;
         },
         assert_non_negative_number: function (input, replacement) {
             const empty_regex = new RegExp(/^\s*$/);
