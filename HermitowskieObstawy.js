@@ -452,10 +452,11 @@
             document.querySelector('#contentContainer').prepend(div);
         },
         init_gui: async function () {
+            const url_params = new URLSearchParams(location.search);
             const target = Helper.get_control('target');
-            target.value = game_data.screen === 'info_village'
+            target.value = url_params.get('target') || (game_data.screen === 'info_village'
                 ? `${TWMap.pos[0]}|${TWMap.pos[1]}`
-                : `${game_data.village.x}|${game_data.village.y}`;
+                : `${game_data.village.x}|${game_data.village.y}`);
             target.disabled = false;
 
             const strategy = Helper.get_control('strategy');
@@ -470,7 +471,7 @@
 
             for (const option_name of ['deff_count', 'spy_count', 'minimal_deff_count', 'village_count']) {
                 const control = Helper.get_control(option_name);
-                control.value = Guard.settings.input[option_name];
+                control.value = url_params.get(option_name) || Guard.settings.input[option_name];
                 control.disabled = false;
             }
 
@@ -502,8 +503,7 @@
                 default_date.setHours(end_hour);
             }
 
-
-            Helper.get_control('arrival_date').value = `${default_date.getDate()}.${default_date.getMonth() + 1} ${default_date.getHours()}:00:00`;
+            Helper.get_control('arrival_date').value = url_params.get('arrival_date') || `${default_date.getDate()}.${default_date.getMonth() + 1} ${default_date.getHours()}:00:00`;
             Helper.get_control('generate').addEventListener('click', async () => {
                 try { await Guard.generate_commands(); } catch (ex) { Helper.handle_error(ex); }
             });
