@@ -231,25 +231,19 @@
             }
             const last_row = rows[rows.length - 1];
             const tabs_per_second = 5;
-            const no_delay_rows = rows.slice(0, tabs_per_second);
-            const throttled_rows = rows.slice(tabs_per_second, tab_count);
-            const open_tab = function (row) {
-                window.open([...row.children].pop().children[0].href, '_blank');
-                row.remove();
-                if (row === last_row) {
-                    open_tabs_button.disabled = false;
-                }
-            }
 
             open_tabs_button.disabled = true;
-            for (const row of no_delay_rows) {
-                open_tab(row);
-            }
 
-            for (let i = 0; i < throttled_rows.length; i++) {
-                setTimeout(row => {
-                    open_tab(row);
-                }, (1000 / tabs_per_second) * i, throttled_rows[i]);
+            for (let i = 0; i < rows.length; i += tabs_per_second) {
+                setTimeout(rows => {
+                    for (const row of rows) {
+                        window.open([...row.children].pop().children[0].href, '_blank');
+                        row.remove();
+                        if (row === last_row) {
+                            open_tabs_button.disabled = false;
+                        }
+                    }
+                }, 1000 * (i / tabs_per_second), rows.slice(i, i + tabs_per_second));
             }
         },
         create_main_panel: function () {
@@ -925,17 +919,13 @@
             }
             Guard.init_settings();
             Guard.create_gui();
-            if (typeof (uneval) === 'function' && localStorage.hasOwnProperty('Hermitowski.MapFiles')) {
-                (1, eval)(localStorage.getItem('Hermitowski.MapFiles'));
-                try { await Guard.init_gui(); } catch (ex) { Helper.handle_error(ex); }
-            } else {
-                $.ajax({
-                    url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/HermitowskiePlikiMapy.js',
-                    dataType: 'script',
-                }).then(() => {
-                    Guard.init_gui().catch(Helper.handle_error);
-                });
-            }
+            $.ajax({
+                url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/HermitowskiePlikiMapy.js',
+                dataType: 'script',
+                cache: true
+            }).then(() => {
+                Guard.init_gui().catch(Helper.handle_error);
+            });
         }
     };
     try { await Guard.main(); } catch (ex) { Helper.handle_error(ex); }
