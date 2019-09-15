@@ -51,7 +51,7 @@ async function get_world_info(settings) {
             name: { idx: 1, sts_mapper: _decode },
             x: { idx: 2, sts_mapper: Number },
             y: { idx: 3, sts_mapper: Number },
-            player_id: { idx: 4, sts_mapper: Number, sto_mapper: String},
+            player_id: { idx: 4, sts_mapper: Number, sto_mapper: String },
             points: { idx: 5, sts_mapper: Number },
             bonus: { idx: 6, sts_mapper: Number, sto_mapper: _bonus }
         }
@@ -239,8 +239,3 @@ async function get_world_info(settings) {
     console.log(`${namespace} | Elapsed time: ${Date.now() - start} [ms]`);
     return Object.fromEntries(results);
 };
-
-if (uneval) {
-    const storage_code = uneval(get_world_info);
-    localStorage.setItem('Hermitowski.MapFiles', storage_code);
-}
