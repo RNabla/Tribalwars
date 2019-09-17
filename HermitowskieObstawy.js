@@ -635,7 +635,7 @@
                             }
                         }
 
-                        if (ratio === 0) {
+                        if (unit_name !== 'spy' && ratio === 0) {
                             village_troop_info.units[unit_name] = 0;
                         }
 
