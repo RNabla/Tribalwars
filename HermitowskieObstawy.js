@@ -751,12 +751,14 @@
         },
 
         edit_settings: function () {
+            const default_settings = Guard.get_default_settings();
+
             let add_unit_fieldset = function (branch) {
                 let fieldset = `<fieldset><legend>${i18n.FIELDSET[branch]}</legend><table>`;
-                for (const unit_name in Guard.default_settings[branch]) {
+                for (const unit_name in default_settings[branch]) {
                     if (Guard.deff_units.includes(unit_name)) {
                         const id = Helper.get_id(`${branch}.${unit_name}`);
-                        const value = Guard.settings[branch][unit_name];
+                        const value = default_settings[branch][unit_name];
                         const title = `${i18n.FIELDSET[branch]} - ${i18n.UNITS[unit_name]}`
                         fieldset += '<tr>';
                         fieldset += `<td><label for='${id}' title='${title}'><image src='${image_base}unit/unit_${unit_name}.png' alt='${unit_name}'></image></label></td>`;
@@ -787,9 +789,9 @@
 
             let add_input_fieldset = function () {
                 let fieldset = `<fieldset><legend>${i18n.FIELDSET.input}</legend><table>`;
-                for (const key in Guard.default_settings.input) {
+                for (const key in default_settings.input) {
                     const id = Helper.get_id(`input.${key}`);
-                    const value = Guard.settings.input[key];
+                    const value = default_settings.input[key];
                     fieldset += '<tr>';
                     fieldset += `<td><label for='${id}'>${i18n.LABELS[key]}:</label></td>`;
                     switch (key) {
@@ -805,27 +807,27 @@
             };
 
             let save_settings = function () {
-                const settings = {};
+                const settings = { ratio: {}, safeguard: {}, input: {} };
                 try {
-                    for (const branch in Guard.default_settings) {
-                        settings[branch] = {};
-                        for (const key in Guard.default_settings[branch]) {
-                            const user_input = Helper.get_control(`${branch}.${key}`);
-                            const user_value = user_input.value;
-                            if (['strategy', 'group'].includes(key)) {
-                                settings[branch][key] = user_value;
-                            } else if (key === 'split_units') {
-                                settings[branch][key] = user_input.checked;
-                            } else {
-                                Helper.assert_non_negative_number(user_input, branch === 'input'
-                                    ? i18n.LABELS[key]
-                                    : `${i18n.FIELDSET[branch]} - ${i18n.UNITS[key]}`
-                                );
-                                if (branch !== 'input') {
-                                    Guard.settings[branch][key] = Number(user_value);
-                                }
-                                settings[branch][key] = Number(user_value);
+                    for (const branch of ['ratio', 'safeguard']) {
+                        for (const unit_name in default_settings[branch]) {
+                            if (Guard.deff_units.includes(unit_name)) {
+                                const user_input = Helper.get_control(`${branch}.${unit_name}`);
+                                Helper.assert_non_negative_number(user_input, `${i18n.FIELDSET[branch]} - ${i18n.UNITS[unit_name]}`);
+                                settings[branch][unit_name] = Number(user_input.value);
+                                Guard.settings[branch][unit_name] = Number(user_input.value);
                             }
+                        }
+                    }
+                    for (const key in default_settings.input) {
+                        const user_input = Helper.get_control(`input.${key}`);
+                        if (['strategy', 'group'].includes(key)) {
+                            settings.input[key] = user_input.value;
+                        } else if (key === 'split_units') {
+                            settings.input[key] = user_input.checked;
+                        } else {
+                            Helper.assert_non_negative_number(user_input, i18n.LABELS[key]);
+                            settings.input[key] = Number(user_input.value);
                         }
                     }
                     localStorage.setItem(namespace, JSON.stringify(settings));
@@ -852,10 +854,12 @@
             gui += `<button disabled id='${save_settings_id}' class='btn right'>${i18n.LABELS.save_settings}</button><div>`;
             Dialog.show(Helper.get_id('settings_editor'), gui);
             setTimeout(() => {
+                Helper.get_control('input.group').value = default_settings.input.group;
+                Helper.get_control('input.strategy').value = default_settings.input.strategy;
                 const reset_settings_button = Helper.get_control('reset_settings');
-                const save_settings_button = Helper.get_control('save_settings');
                 reset_settings_button.addEventListener('click', reset_settings);
                 reset_settings_button.disabled = false;
+                const save_settings_button = Helper.get_control('save_settings');
                 save_settings_button.addEventListener('click', save_settings);
                 save_settings_button.disabled = false;
             });
@@ -900,11 +904,14 @@
         deff_units: [],
         speed_groups: [['spear', 'archer'], ['sword'], ['spy', 'heavy']],
         settings: {},
-        init_settings: function () {
+        get_default_settings: function () {
             let stored_settings = localStorage.getItem(namespace);
-            Guard.settings = stored_settings
+            return stored_settings
                 ? JSON.parse(stored_settings)
                 : JSON.parse(JSON.stringify(Guard.default_settings));
+        },
+        init_settings: function () {
+            Guard.settings = Guard.get_default_settings();
             Guard.deff_units = Object.keys(Guard.default_settings.safeguard)
                 .filter(unit_name => game_data.units.includes(unit_name));
         },
