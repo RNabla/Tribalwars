@@ -927,7 +927,7 @@
             Guard.init_settings();
             Guard.create_gui();
             $.ajax({
-                url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/HermitowskiePlikiMapy.js',
+                url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/HermitowskiePlikiMapy.js?_=' + ~~(Date.now() / 9e6),
                 dataType: 'script',
                 cache: true
             }).then(() => {
