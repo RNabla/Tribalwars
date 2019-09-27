@@ -40,7 +40,7 @@
             sword: 'Miecznik',
             archer: '\u{141}ucznik',
             spy: 'Zwiadowca',
-            heavy: 'FCi\u{119}\u{17C}ka kawaleria',
+            heavy: 'Ci\u{119}\u{17C}ka kawaleria',
         },
         FIELDSET: {
             input: 'Domy\u{15B}lne warto\u{15B}ci',
