@@ -839,6 +839,7 @@
             };
 
             let reset_settings = function () {
+                Guard.settings = JSON.parse(JSON.stringify(Guard.default_settings));
                 localStorage.removeItem(namespace);
                 UI.SuccessMessage(i18n.SETTINGS_RESETED);
                 document.querySelector('.popup_box_close').click();
