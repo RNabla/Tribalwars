@@ -33,7 +33,8 @@
             NEGATIVE_NUMBER: 'Pole <strong>__1__</strong> jest ujemne',
             BAD_FORMAT: 'Pole <strong>__1__</strong> ma z\u{142}y format',
             PAST_DATE: 'Podany punkt w czasie nale\u{17C}y do przesz\u{142}o\u{15B}ci',
-            MOBILE: 'Wersja mobilna nie jest wspierana'
+            MOBILE: 'Wersja mobilna nie jest wspierana',
+            NEW_WINDOW_BLOCKED: 'Wygl\u0105da na to, \u017Ce preferencje u\u017Cytkownika w przegl\u0105darce nie pozwalaj\u0105 otworzy\u0107 wi\u0119kszej ilo\u015Bci kart'
         },
         UNITS: {
             spear: 'Pikinier',
@@ -233,12 +234,20 @@
             const tabs_per_second = 5;
 
             open_tabs_button.disabled = true;
+            let new_window_failed = false;
 
             for (let i = 0; i < rows.length; i += tabs_per_second) {
                 setTimeout(rows => {
                     for (const row of rows) {
-                        window.open([...row.children].pop().children[0].href, '_blank');
-                        row.remove();
+                        if (!new_window_failed) {
+                            const new_window = window.open([...row.children].pop().children[0].href, '_blank');
+                            if (!new_window) {
+                                new_window_failed = true;
+                                UI.ErrorMessage(i18n.ERROR.NEW_WINDOW_BLOCKED, 15e3);
+                            } else {
+                                row.remove();
+                            }
+                        }
                         if (row === last_row) {
                             open_tabs_button.disabled = false;
                         }
