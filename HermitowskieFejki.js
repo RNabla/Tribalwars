@@ -275,7 +275,7 @@ function Faking() {
             },
             _selectCoordinates: function (poll) {
                 let target = poll[Math.floor(Math.random() * poll.length)];
-                this._save(target);
+                // this._save(target);
                 return target;
             },
             _clearPlace: function () {
