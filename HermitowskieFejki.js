@@ -16,7 +16,9 @@
  * --- VERSION 3.0 ---
  * Modified on: 29/08/2018 - version 3.0a - major cleanup
  * Modified on: 03/05/2019 - blocking the selection of more than one village of the same player in local context
+ * Modified on: 11/10/2019 - using new map files script
  */
+
 
 function Faking() {
     const i18n = {
@@ -35,7 +37,7 @@ function Faking() {
         COORDS_EMPTY_TIME: 'Pula wiosek jest pusta z powodu wybranych ram czasowych',
         COORDS_EMPTY_CONTEXTS: 'W puli wiosek zosta\u{142}y tylko wioski, kt\u{F3}re zosta\u{142}y wybrane chwil\u{119} temu',
         NO_MORE_UNIQUE_PLAYERS: 'W puli wiosek zosta\u{142}y tylko wioski, kt\u{F3}re nale\u{17C}\u{105} do ostatnio wybranych graczy',
-        ATTACK_TIME: 'Atak dojdzie __DAY__.__MONTH__ na __HOURS__:__MINUTES__',
+        ATTACK_TIME: 'Wojsko dojdzie __DAY__.__MONTH__ na __HOURS__:__MINUTES__',
         UNKNOWN_UNIT: 'Podana jednostka nie istnieje: __UNIT_NAME__',
         UNKNOWN_OPTION: 'Nieznana opcja: __PROPERTY__',
         NONEXISTENT_UNIT: 'Podana jednostka nie wyst\u{119}puje na tym \u{15B}wiecie: __UNIT_NAME__',
@@ -46,70 +48,24 @@ function Faking() {
         INVALID_SETTINGS_BOUNDING_BOXES: 'Ustawienia > boundingBoxes > __VALUE__',
     };
 
-    function SetupScriptCache() {
-        if (localStorage.getItem('Faking') === null) {
-            localStorage.setItem('Faking', `(${Faking.toString()})()`);
-            localStorage.setItem('FakingTimestamp', JSON.stringify(Date.now() + 24 * 3600 * 1000));
-        }
-        if (Number(localStorage.getItem('FakingTimestamp')) < Date.now()) {
-            localStorage.removeItem('Faking');
-            localStorage.removeItem('FakingTimestamp');
-        }
-    }
-
-    SetupScriptCache();
-    let getWorldInfo = localStorage['GetWorldInfo'];
-    if (getWorldInfo !== undefined) {
-        eval(getWorldInfo);
+    UI.SuccessMessage(i18n.DOWNLOADING_SCRIPT);
+    $.ajax({
+        url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/HermitowskiePlikiMapy.js?_=' + ~~(Date.now() / 9e6),
+        dataType: 'script',
+        cache: true
+    }).then(() => {
         ExecuteScript();
-    }
-    else {
-        UI.SuccessMessage(i18n.DOWNLOADING_SCRIPT);
-        $.ajax({
-            url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/MapFiles.js',
-            dataType: 'script',
-        }).then(ExecuteScript);
-    }
+    });
 
     return true;
 
     function ExecuteScript() {
-        let config = {
-            unit_info: {
-                caching: 'Mandatory'
-            },
-            config: {
-                caching: 'Mandatory'
-            }
-        };
-        let misc = {};
-        if (typeof HermitowskieFejki !== 'undefined') {
-            let requirePlayerFiles = HermitowskieFejki.players !== undefined && HermitowskieFejki.players.trim() !== '';
-            let requireVillageFiles = requirePlayerFiles || HermitowskieFejki.targetUniquePlayers === true;
-            let isCacheMandatory = true;
-            if (HermitowskieFejki.hasOwnProperty('mandatoryCaching') && !HermitowskieFejki['mandatoryCaching']) {
-                isCacheMandatory = false;
-                delete HermitowskieFejki['mandatoryCaching'];
-            }
-            if (requirePlayerFiles) {
-                config['player'] = {
-                    caching: isCacheMandatory ? 'Mandatory' : 'Preferred'
-                };
-            }
-            if (requireVillageFiles) {
-                config['village'] = {
-                    caching: isCacheMandatory ? 'Mandatory' : 'Preferred'
-                };
-            }
-            misc['purgeCache'] = HermitowskieFejki.hasOwnProperty('purgeCache') && HermitowskieFejki.purgeCache;
-        }
-        GetWorldInfo(config, misc).then(worldInfo => {
+        get_world_info({ configs: ['unit_info', 'config'] }).then(worldInfo => {
             if (worldInfo.error !== undefined) {
                 // some failure getting worldInfo data, e.g. QUOTA
                 throw worldInfo.error;
             }
             CreateFaker(worldInfo).init();
-
         }).catch(HandleError);
     }
 
@@ -131,7 +87,7 @@ function Faking() {
             _defaultSettings: {
                 omitNightBonus: 'true',
                 coords: '',
-                players: '',
+                // players: '',
                 days: '1-31',
                 intervals: '0:00-23:59',
                 templates: [
@@ -144,11 +100,10 @@ function Faking() {
                 fillExact: 'false',
                 skipVillages: 'true',
                 safeguard: {},
-                localContext: '0',
-                customContexts: '',
-                boundingBoxes: [],
-                purgeCache: false,
-                targetUniquePlayers: false
+                // localContext: '0',
+                // customContexts: '',
+                // boundingBoxes: [],
+                // targetUniquePlayers: false
             },
             _localContextKey: `HermitowskieFejki_${game_data.village.id}`,
             _cache_control_key: `HermitowskieFejki_CacheControl`,
@@ -172,11 +127,10 @@ function Faking() {
             },
             invalidateCache() {
                 let cacheControl = this._getCacheControl();
-                let purgeCache = this._toBoolean(this._settings.purgeCache);
                 for (const key in cacheControl) {
                     if (cacheControl.hasOwnProperty(key)) {
-                        if (cacheControl[key] < this._now || purgeCache) {
-                            let timestamp = this._invalidateItem(key, purgeCache);
+                        if (cacheControl[key] < this._now) {
+                            let timestamp = this._invalidateItem(key);
                             if (timestamp === 0) {
                                 delete cacheControl[key];
                             }
@@ -231,10 +185,10 @@ function Faking() {
             selectTarget: function (troops) {
                 let slowest = this._slowestUnit(troops);
                 let poll = this._sanitizeCoordinates(this._settings.coords);
-                poll = this._targeting(poll);
+                // poll = this._targeting(poll);
                 poll = this._removeUnreachableVillages(poll, troops, slowest);
-                poll = this._applyLocalContext(poll);
-                poll = this._applyCustomContexts(poll);
+                // poll = this._applyLocalContext(poll);
+                //poll = this._applyCustomContexts(poll);
                 poll = this._targetUniquePlayers(poll);
                 return this._selectCoordinates(poll);
             },
@@ -276,11 +230,7 @@ function Faking() {
 
                 return poll;
             },
-            _invalidateItem: function (key, purge) {
-                if (purge) {
-                    localStorage.removeItem(key);
-                    return 0;
-                }
+            _invalidateItem: function (key) {
                 let items = localStorage.getItem(key);
                 items = JSON.parse(items);
                 items = items.filter(item => item[1] > this._now);
@@ -558,6 +508,7 @@ function Faking() {
                     .map(name => name.toLowerCase());
             },
             _targeting: function (poll) {
+                return poll;
                 let players = this._omitEmptyAndToLower(this._settings.players.split(','));
 
                 if (players.length === 0) {
@@ -582,10 +533,10 @@ function Faking() {
             },
             _save: function (coords) {
                 this._saveEntry(coords, this._localContextKey, Number(this._settings.localContext));
-                let customContexts = this._getCustomContexts();
-                for (let customContext of customContexts) {
-                    this._saveEntry(coords, customContext.key, customContext.liveTime);
-                }
+                // let customContexts = this._getCustomContexts();
+                // for (let customContext of customContexts) {
+                //     this._saveEntry(coords, customContext.key, customContext.liveTime);
+                // }
             },
             _saveEntry: function (coords, key, liveTime) {
                 if (isNaN(liveTime)) {
