@@ -1,4 +1,9 @@
-!function (TribalWars) {
+/**
+ * Adding note to the village info from report and scrapping some usefull informations
+ * Created by: Hermitowski
+ */
+
+(async function (TribalWars) {
     let TechnologyEnum = {
         TEN_LEVELS: '0',
         THREE_LEVELS: '1',
@@ -162,6 +167,19 @@
             }
             return troops;
         },
+        handle_error: function (error) {
+            if (typeof (error) === 'string') {
+                UI.ErrorMessage(error);
+                return;
+            }
+            const gui =
+                `<h2>WTF - What a Terrible Failure</h2>
+                 <p><strong>Komunikat o b\u{142}\u{119}dzie: </strong><br/>
+                    <textarea rows='5' cols='42'>${error}\n\n${error.stack}</textarea><br/>
+                    <a href='https://forum.plemiona.pl/index.php?threads/hermitowskie-notatki.126752/'>Link do w\u{105}tku na forum</a>
+                 </p>`;
+            Dialog.show(namespace, gui);
+        }
     };
     let NotesScript = {
         context: {},
@@ -716,42 +734,24 @@
                 old_village_info.player_id = player_id_match.match(/\](\d+)/)[1];
             }
             return old_village_info;
-        }
-
-    }
-    let ExecuteScript = function () {
-        GetWorldInfo({
-            config: { caching: 'Mandatory' },
-            unit_info: { caching: 'Mandatory' }
-        }).then(worldInfo => {
+        },
+        main: async function () {
             try {
-                Settings.init(worldInfo);
+                const world_info = await get_world_info({ configs: ['config', 'unit_info'] });
+                Settings.init(world_info);
                 NotesScript.init();
             } catch (error) {
-                HandleError(error);
+                Helper.handle_error(error);
             }
-        }).catch(HandleError);
+        }
     }
+    
+    $.ajax({
+        url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/HermitowskiePlikiMapy.js?_=' + ~~(Date.now() / 9e6),
+        dataType: 'script',
+        cache: true
+    }).then(() => {
+        NotesScript.main().catch(Helper.handle_error);
+    });
 
-    function HandleError(error) {
-        const gui =
-            `<h2>WTF - What a Terrible Failure</h2>
-             <p><strong>Komunikat o b\u{142}\u{119}dzie:</strong><br/>
-                <textarea rows='5' cols='42'>${error}\n\n${error.stack}</textarea><br/>
-                <a href='https://forum.plemiona.pl/index.php?threads/hermitowskie-notatki.126752/'>Link do w\u{105}tku na forum</a>
-             </p>`;
-        Dialog.show('scriptError', gui);
-    }
-
-    if (localStorage.getItem('GetWorldInfo') !== null) {
-        eval(localStorage.getItem('GetWorldInfo'));
-        ExecuteScript();
-    }
-    else {
-        $.ajax({
-            url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/MapFiles.js',
-            dataType: 'script',
-        }).then(ExecuteScript);
-    }
-
-}(TribalWars);
+})(TribalWars);
