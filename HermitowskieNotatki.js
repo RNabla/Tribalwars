@@ -248,10 +248,19 @@
         get_context: function () {
             let att = $('#attack_info_att');
             let def = $('#attack_info_def');
-            let att_player_name = att[0].rows[0].cells[1].innerText.trim();
-            let def_player_name = def[0].rows[0].cells[1].innerText.trim();
-            let att_player_id = att[0].rows[0].cells[1].children[0].href.match(/id=(\d+)/)[1];
-            let def_player_id = def[0].rows[0].cells[1].children[0].href.match(/id=(\d+)/)[1];
+            const get_player_name = function (element) {
+                return element[0].rows[0].cells[1].innerText.trim();
+            }
+            const get_player_id = function (element) {
+                const nodes = element[0].rows[0].cells[1].children;
+                return nodes.length
+                    ? nodes[0].href.match(/id=(\d+)/)[1]
+                    : '0';
+            }
+            let att_player_name = get_player_name(att);
+            let def_player_name = get_player_name(def);;
+            let att_player_id = get_player_id(att);
+            let def_player_id = get_player_id(def);
             let att_village_id = att.find('.contexted').attr('data-id');
             let def_village_id = def.find('.contexted').attr('data-id');
 
@@ -381,7 +390,7 @@
         get_battle_time: function () {
             let rows = $('.content-border').find('table.vis')[3].rows;
             for (let i = 0; i < rows.length; i++) {
-                if (rows[i].cells[0].innerText === 'Czas bitwy') {
+                if (rows[i].cells[0].innerText.trim() === 'Czas bitwy') {
                     NotesScript.attack_info.battle_time = Helper.parse_datetime_string(rows[i].cells[1].innerText);
                     return;
                 }
