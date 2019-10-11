@@ -1,8 +1,9 @@
 /**
- * Generting mail templates for nearby players that can help
+ * Generating mail template for nearby players that can help
  * Created by: Hermitowski
  * Modified on: 11/10/2019 - version 2.0
  */
+
 (async function (TribalWars) {
     const start = Date.now();
     const namespace = 'Hermitowski.Mailing';
@@ -11,7 +12,7 @@
         SETTINGS_RESETED: 'Przywr\u{F3}cono domy\u{15B}lne ustawienia',
         ERROR_MESSAGE: 'Komunikat o b\u{142}\u{119}dzie: ',
         FORUM_THREAD: 'Link do w\u{105}tku na forum',
-        FORUM_THREAD_HREF: 'https:\/\/forum.plemiona.pl\/index.php?threads\/HermitowskieKoperty.125615\/',
+        FORUM_THREAD_HREF: 'https://forum.plemiona.pl/index.php?threads/HermitowskieKoperty.125615/',
         TROOPS_TIME_PER_FIELD: '(__1__ na pole)',
         NO_TROOPS: 'Brak wojska',
         SIGIL_OF_DISTRESS: 'Amulet strapionych',
