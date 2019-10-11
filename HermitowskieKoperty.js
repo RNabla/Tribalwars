@@ -1,7 +1,7 @@
 /**
  * Generting mail templates for nearby players that can help
  * Created by: Hermitowski
- * Modified on: 11/10/2018 - version 2.0
+ * Modified on: 11/10/2019 - version 2.0
  */
 (async function (TribalWars) {
     const start = Date.now();
