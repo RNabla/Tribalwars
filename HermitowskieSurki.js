@@ -1,7 +1,7 @@
 /**
  * Helper for calling resources from Market
  * Created by: Hermitowski
- * Modified on: 23/10/2018 - version 2.0 - initial release
+ * Modified on: 23/10/2019 - version 2.0 - initial release
  */
 
 (function () {
