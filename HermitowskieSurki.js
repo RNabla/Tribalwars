@@ -9,8 +9,8 @@
     const namespace = 'Hermitowski.ResourceCaller';
     const i18n = {
         NOTHING_NEEDED: 'Wygl\u{105}da na to, \u{17C}e niczego nie potrzeba',
-        NOT_ON_MARKET: 'Nie jesteś na rynku.',
-        DELIVERY_TIME: 'Surowce będą dostępne __DAY__.__MONTH__ o __HOURS__:__MINUTES__',
+        NOT_ON_MARKET: 'Nie jeste\u{15B} na rynku.',
+        DELIVERY_TIME: 'Surowce b\u{119}d\u{105} dost\u{119}pne __DAY__.__MONTH__ o __HOURS__:__MINUTES__',
     };
     const Helper = {
         two_digit: function (value) {
