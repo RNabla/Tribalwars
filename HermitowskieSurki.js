@@ -1,244 +1,277 @@
+/**
+ * Helper for calling resources from Market
+ * Created by: Hermitowski
+ * Modified on: 23/10/2018 - version 2.0 - initial release
+ */
+
 (function () {
-    const HermitowskieSurkiCore = {
-        i18n: {
-            NOTHING_NEEDED: 'Wygl\u{105}da na to, \u{17C}e niczego nie potrzeba'
+    const start = Date.now();
+    const namespace = 'Hermitowski.ResourceCaller';
+    const i18n = {
+        NOTHING_NEEDED: 'Wygl\u{105}da na to, \u{17C}e niczego nie potrzeba',
+        NOT_ON_MARKET: 'Nie jesteś na rynku.',
+        DELIVERY_TIME: 'Surowce będą dostępne __DAY__.__MONTH__ o __HOURS__:__MINUTES__',
+    };
+    const Helper = {
+        two_digit: function (value) {
+            return value > 9
+                ? `${value}`
+                : `0${value}`;
         },
-        res: ['wood', 'stone', 'iron'],
-        total: [0, 0, 0],
-        calculatedNeeds: [0, 0, 0],
-        needs: [28, 30, 25].map(x => x * 1000),
-        delta: [0, 0, 0],
-        clipToMaxStorage: true,
-        storagePercentageLimit: [42, 42, 42],
-        storageLimit: [15, 15, 15].map(x => x * 1000),
-        idleTime: 15,
-        resourcesSafeguard: [28, 30, 25].map(x => x * 1000),
-        tradersSafeguard: 0,
-        perfectTiming: false,
-        clipToTraderCapacity: false,
-        traderCapacityClippingValue: 0,
-        enableAllByDefault: false,
-        init: function (config) {
-            this.getUserInput(config);
-            this.processNeeds();
-            this.misc();
-            this.process();
+        handle_error: function (error) {
+            if (typeof (error) === 'string') {
+                UI.ErrorMessage(error);
+                return;
+            }
+            const gui =
+                `<h2>WTF - What a Terrible Failure</h2>
+                 <p><strong>${i18n.ERROR_MESSAGE}</strong><br/>
+                    <textarea rows='5' cols='42'>${error}\n\n${error.stack}</textarea><br/>
+                    <a href='${i18n.FORUM_THREAD_HREF}'>${i18n.FORUM_THREAD}</a>
+                 </p>`;
+            Dialog.show(namespace, gui);
         },
-        getUserInput: function (config) {
-            if (!config) { return; }
-            let settings = ['needs', 'delta', 'clipToMaxStorage', 'storagePercentageLimit',
-                'storageLimit', 'idleTime', 'resourcesSafeguard', 'tradersSafeguard',
-                'perfectTiming', 'clipToTraderCapacity', 'traderCapacityClippingValue', 'enableAllByDefault'];
-            for (const setting of settings) {
-                if (config[setting]) {
-                    this[setting] = config[setting];
+        sum_resources: function (resources_obj) {
+            return Object.values(resources_obj).reduce((cv, pv) => cv + pv);
+        },
+        normalize_resource: function (resources_obj) {
+            const sum = Helper.sum_resources(resources_obj);
+            const result = {};
+            for (const resource in resources_obj) {
+                result[resource] = resources_obj[resource] / sum;
+            }
+            return result;
+        },
+        scale_resources: function (resources_obj, scale) {
+            const sum = Helper.sum_resources(resources_obj);
+            const result = {};
+            for (const resource in resources_obj) {
+                result[resource] = resources_obj[resource] / sum * scale;
+            }
+            return Helper.round_resources(result, scale);
+        },
+        round_resources: function (resources_obj, target_sum) {
+            const whole_parts = {};
+            const fractions = {};
+            for (const resource in resources_obj) {
+                whole_parts[resource] = Math.floor(resources_obj[resource]);
+                fractions[resource] = resources_obj[resource] - whole_parts[resource];
+            }
+            let buffer = target_sum - Helper.sum_resources(whole_parts);
+            while (buffer > 0) {
+                const max_resource = Object.keys(fractions).reduce((a, b) => fractions[a] > fractions[b] ? a : b);
+                whole_parts[max_resource] += 1;
+                fractions[max_resource] -= 1;
+                buffer -= 1;
+            }
+            return whole_parts;
+        },
+    };
+    const ResourceCaller = {
+        resources: ['wood', 'stone', 'iron'],
+        settings: {
+            target_resources: {
+                'wood': 28000,
+                'stone': 30000,
+                'iron': 25000
+            },
+            storage_percentage_limit: {
+                'wood': 95,
+                'stone': 95,
+                'iron': 95
+            },
+            resources_safeguard: {
+                'wood': 28000,
+                'stone': 30000,
+                'iron': 25000
+            },
+            delta: {
+                'wood': 0,
+                'stone': 0,
+                'iron': 0
+            },
+            trim_to_storage_capacity: true,
+            traders_safeguard: 0,
+            idle_time: 5,
+            trader_capacity_threshold: 0
+        },
+        main: function () {
+            this.check_screen();
+            this.get_user_input();
+            const needs = this.calculate_needs();
+            if (Helper.sum_resources(needs) == 0) {
+                UI.SuccessMessage(i18n.NOTHING_NEEDED);
+                return;
+            }
+            const suppliers = this.get_suppliers();
+            this.calculate_delivery(needs, suppliers);
+        },
+        check_screen: function () {
+            if (!document.querySelector('#village_list')) {
+                location.href = TribalWars.buildURL('GET', 'market', { mode: 'call' });
+                throw i18n.NOT_ON_MARKET;
+            }
+        },
+        get_user_input: function () {
+            if (typeof (HermitowskieSurki) !== "undefined") {
+                for (const key in this.settings) {
+                    if (HermitowskieSurki.hasOwnProperty(key)) {
+                        this.settings[key] = HermitowskieSurki[key];
+                    }
                 }
             }
         },
-        processNeeds: function () {
-            let params = new URLSearchParams(location.href);
-            let queryResNames = this.res.map(x => `h${x}`);
-            for (let i = 0; i < 3; i++) {
-                if (params.has(queryResNames[i])) {
-                    let need = parseInt(params.get(queryResNames[i]));
-                    this.needs[i] = need;
-                    this.needs[i] += this.delta[i];
+        calculate_needs: function () {
+            const url_params = new URLSearchParams(location.href);
+            const needs = {}
+            for (const resource of this.resources) {
+                needs[resource] = this.settings.target_resources[resource];
+                if (url_params.has(resource)) {
+                    needs[resource] = Number(url_params.get(resource));
+                    needs[resource] += this.settings.delta[resource];
                 }
-                if (this.clipToMaxStorage) {
-                    let maxStorageLimit = Math.min(
-                        parseInt(game_data.village.storage_max * this.storagePercentageLimit[i] / 100),
-                        parseInt(game_data.village.storage_max - this.idleTime * 60 * game_data.village[`${this.res[i]}_prod`]),
-                        this.storageLimit[i]
+                if (this.settings.trim_to_storage_capacity) {
+                    let storage_capacity = Math.min(
+                        parseInt(game_data.village.storage_max * this.settings.storage_percentage_limit[resource] / 100),
+                        parseInt(game_data.village.storage_max - this.settings.idle_time * game_data.village[`${resource}_prod`]),
                     );
-                    if (this.needs[i] > maxStorageLimit) { this.needs[i] = maxStorageLimit; }
+                    if (needs[resource] > storage_capacity) {
+                        needs[resource] = storage_capacity;
+                    }
                 }
-                this.needs[i] -= parseInt(document.querySelector(`#total_${this.res[i]}`).innerText.replace('.', ''));
-                this.needs[i] -= game_data.village[this.res[i]];
-                if (this.needs[i] < 0) { this.needs[i] = 0; }
-                this.calculatedNeeds[i] = this.needs[i];
-            }
-
-        },
-        getDurations: function () {
-            let humanFormatToDuration = function (humanFormat) {
-                let parts = humanFormat.split(':').map(x => parseInt(x));
-                return (parts[0] * 60 + parts[1]) * 60 + parts[2];
-            }
-            return Array.from(document.querySelectorAll(".supply_location"))
-                .map(x => humanFormatToDuration(x.children[1].innerText));
-        },
-        getAvailableResources: function (supplier) {
-            let available = [];
-            for (let i = 0; i < 3; i++) {
-                available.push(Number(supplier.cells[2 + i].children[0].innerText.replace('.', '')));
-                available[i] -= this.resourcesSafeguard[i];
-                if (available[i] < 0) { available[i] = 0; }
-                if (this.needs[i] <= 0) { available[i] = 0; }
-            }
-            return available;
-        },
-        getAvailableTraders: function (supplier) {
-            return parseInt(supplier.cells[6].innerText.split('/')[0]) - this.tradersSafeguard;
-        },
-        selectResources: function (supplier, selected) {
-            for (let i = 0; i < 3; i++) {
-                this.needs[i] -= selected[i];
-                this.total[i] += selected[i];
-                supplier.cells[2 + i].children[1].value = selected[i];
-            }
-        },
-        updateSelfProduction: function (durations, step) {
-            let timePassed = step === 0
-                ? durations[0]
-                : durations[step] - durations[step - 1];
-
-            for (let i = 0; i < 3; i++) {
-                let production = Math.floor(game_data.village[`${this.res[i]}_prod`] * timePassed);
-                this.needs[i] -= production;
-                if (this.needs[i] < 0) { this.needs[i] = 0; }
-            }
-        },
-        isSupplierSelected: function (supplier) {
-            return supplier.cells[7].children[0].checked;
-        },
-        misc: function () {
-            if (this.enableAllByDefault) {
-                let checkbox = document.querySelector('[name=select-all]');
-                if (!checkbox.checked) {
-                    checkbox.click();
+                needs[resource] -= parseInt(document.querySelector(`#total_${resource}`).innerText.replace('.', ''));
+                needs[resource] -= game_data.village[resource];
+                if (needs[resource] < 0) {
+                    needs[resource] = 0;
                 }
             }
+            return needs;
         },
-        process: function () {
-            let suppliers = document.querySelectorAll(".supply_location");
-            let durations = this.getDurations();
-            for (let k = 0; k < suppliers.length; k++) {
-                let supplier = suppliers[k];
-                if (this.perfectTiming) { this.updateSelfProduction(durations, k); }
-                if (!this.isSupplierSelected(supplier)) { continue; }
-                let availableResources = this.getAvailableResources(supplier);
-                let availableResourcesSum = this.sum(availableResources);
-                let availableTradersCapacity = this.getAvailableTraders(supplier) * 1000;
-
-                let capacity = Math.min(
-                    availableTradersCapacity,
-                    availableResourcesSum,
-                    this.sum(this.needs)
-                );
-
-                if (this.clipToTraderCapacity && capacity < this.traderCapacityClippingValue) {
-                    capacity = 0;
+        get_suppliers: function () {
+            const supply_locations = [...document.querySelector('#village_list').querySelectorAll('.supply_location')];
+            if (!supply_locations.filter(x => x.cells[7].children[0].checked).length) {
+                supply_locations.forEach(x => {
+                    x.cells[7].children[0].click();
+                });
+            }
+            return supply_locations.filter(x => x.cells[7].children[0].checked).map(x => {
+                const available_traders = Number(x.cells[6].innerText.split('/')[0]) - this.settings.traders_safeguard;
+                const available_resources = {};
+                const selected_resources = {};
+                const parts = x.cells[1].innerText.split(':').map(x => Number(x));
+                const delivery_time = (parts[0] * 60 + parts[1]) * 60 + parts[2];
+                const anchors = {};
+                for (const resource of this.resources) {
+                    const village_resources = Number(x.querySelector(`span.${resource}`).innerText.replace('.', ''))
+                    available_resources[resource] = Math.max(village_resources - this.settings.resources_safeguard[resource], 0);
+                    anchors[resource] = x.querySelector(`td.${resource}`).children[1];
                 }
+                return { available_traders, available_resources, selected_resources, anchors, delivery_time }
+            });
+        },
+        calculate_delivery: function (needs, suppliers) {
+            const url_params = new URLSearchParams(location.href);
+            let max_delivery_time = Math.round(Math.max(...this.resources.map(resource => needs[resource] / game_data.village[`${resource}_prod`])));
+            let min_delivery_time = url_params.has('delivery_at')
+                ? (Number(url_params.get('delivery_at')) - Date.now()) / 1000
+                : 0;
 
-                let selected = [0, 0, 0];
-                let i = 0;
+            console.log('min', min_delivery_time);
 
-                while (capacity != 0) {
-                    let normalized = this.normalize(availableResources, availableResourcesSum)
-                        .map(x => x * capacity);
+            while (max_delivery_time - min_delivery_time > 1) {
+                console.log(min_delivery_time, max_delivery_time)
+                let delivery_time = min_delivery_time + (max_delivery_time - min_delivery_time) / 2;
+                if (this.try_select_resources(needs, suppliers, delivery_time)) {
+                    max_delivery_time = delivery_time;
+                } else {
+                    min_delivery_time = delivery_time;
+                }
+            }
 
-                    let taken = this.clip(normalized, capacity)
+            this.try_select_resources(needs, suppliers, max_delivery_time);
+            this.fill_input_fields(suppliers);
+            this.display_info(max_delivery_time);
+        },
+        calculate_demand: function (needs, delivery_time) {
+            const demand = {};
+            for (const resource of this.resources) {
+                demand[resource] = needs[resource];
+                demand[resource] -= Math.round(game_data.village[`${resource}_prod`] * delivery_time);
+                if (demand[resource] < 0) {
+                    demand[resource] = 0;
+                }
+            }
+            return demand;
+        },
+        try_select_resources: function (needs, suppliers, delivery_time) {
+            const demand = this.calculate_demand(needs, delivery_time);
+            for (const supplier of suppliers) {
+                for (const resource of this.resources) {
+                    supplier.selected_resources[resource] = 0;
+                }
+            }
+            return this.select_resources(demand, suppliers.filter(x => x.delivery_time <= delivery_time));
+        },
+        select_resources: function (demand, suppliers) {
+            for (const supplier of suppliers) {
+                const available_resources = Object.assign({}, supplier.available_resources);
+                let available_traders_capacity = supplier.available_traders * Market.Data.Trader.carry;
 
-                    for (let i = 0; i < 3; i++) {
-                        if (selected[i] + taken[i] > this.needs[i]) {
-                            taken[i] = this.needs[i] - selected[i];
+                let supplier_capacity = Math.min(Helper.sum_resources(available_resources), available_traders_capacity);
+
+                while (supplier_capacity > 0) {
+                    const scaled_resources = Helper.scale_resources(available_resources, supplier_capacity);
+
+                    for (const resource of this.resources) {
+                        if (scaled_resources[resource] + supplier.selected_resources[resource] > demand[resource]) {
+                            scaled_resources[resource] = demand[resource] - supplier.selected_resources[resource];
                         }
-                        selected[i] += taken[i];
-                        availableResources[i] -= taken[i];
-                        availableTradersCapacity -= taken[i];
-                        capacity -= taken[i];
-
-                        if (selected[i] + taken[i] >= this.needs[i]) {
-                            availableResources[i] = 0;
+                        supplier.selected_resources[resource] += scaled_resources[resource];
+                        available_resources[resource] -= scaled_resources[resource];
+                        if (demand[resource] == supplier.selected_resources[resource]) {
+                            available_resources[resource] = 0;
                         }
-
+                        available_traders_capacity -= scaled_resources[resource];
                     }
 
-                    availableResourcesSum = this.sum(availableResources);
-
-                    capacity = Math.min(
-                        availableTradersCapacity,
-                        availableResourcesSum,
-                        this.sum(this.needs)
-                    );
-
-                    if (i++ == 42) { throw new Error('Capacity does not converge'); }
+                    supplier_capacity = Math.min(Helper.sum_resources(available_resources), available_traders_capacity);
                 }
 
-                if (this.clipToTraderCapacity) {
-                    selected = this.clipTransport(selected);
+                const selected_sum = Helper.sum_resources(supplier.selected_resources);
+
+                if (selected_sum > 0 && selected_sum % Market.Data.Trader.carry < this.settings.trader_capacity_threshold) {
+                    const target_transport = Math.floor(selected_sum / Market.Data.Trader.carry) * Market.Data.Trader.carry;
+                    supplier.selected_resources = Helper.scale_resources(supplier.selected_resources, target_transport);
                 }
-
-                this.selectResources(supplier, selected);
+                for (const resource of this.resources) {
+                    demand[resource] -= supplier.selected_resources[resource];
+                }
             }
 
-            CallResources.checkOverflow();
-            this.displayMetrics();
+            for (const resource of this.resources) {
+                if (demand[resource] > this.settings.trader_capacity_threshold) {
+                    return false;
+                }
+            }
+            return true;
+        },
+        fill_input_fields: function (suppliers) {
+            for (const supplier of suppliers) {
+                for (const resource of this.resources) {
+                    supplier.anchors[resource].value = supplier.selected_resources[resource];
+                }
+            }
+        },
+        display_info: function (delivery_time) {
+            const delivery_date = new Date(Date.now() + delivery_time * 1000);
+            UI.SuccessMessage(i18n.DELIVERY_TIME
+                .replace('__DAY__', Helper.two_digit(delivery_date.getDate()))
+                .replace('__MONTH__', Helper.two_digit(delivery_date.getMonth() + 1))
+                .replace('__HOURS__', Helper.two_digit(delivery_date.getHours()))
+                .replace('__MINUTES__', Helper.two_digit(delivery_date.getMinutes())));
+        }
+    };
 
-        },
-        displayMetrics: function () {
-            if (this.sum(this.calculatedNeeds) === 0) {
-                UI.SuccessMessage(this.i18n.NOTHING_NEEDED);
-            }
-            console.log('Needs    ', this.calculatedNeeds);
-            console.log('Summoned ', this.total);
-            console.log('Available in', this.calculateTime(), '[s]');
-        },
-        calculateTime: function () {
-            let time = 0;
-            for (let i = 0; i < 3; i++) {
-                let diff = this.calculatedNeeds[i] - this.total[i];
-                let res_time = diff / game_data.village[`${this.res[i]}_prod`];
-                time = Math.max(time, res_time);
-            }
-            return Math.ceil(time);
-        },
-        clipTransport: function (transport) {
-            let capacity = this.sum(transport);
-            if (capacity % 1000 < this.traderCapacityClippingValue) {
-                let threshold = parseInt(capacity / 1000) * 1000;
-                return this.clip(this.normalize(transport, capacity).map(x => x * threshold), threshold);
-            }
-            return transport;
-        },
-        sum: function (array) {
-            return array.reduce((pv, cv) => pv + cv);
-        },
-        normalize: function (array, threshold) {
-            return threshold === 0
-                ? array
-                : array.map(x => x / threshold);
-        },
-        clip: function (array, threshold) {
-            let wholeParts = array.map(x => parseInt(x));
-            let fractions = [];
-            let buffer = threshold - this.sum(wholeParts);
-            for (let i = 0; i < 3; i++) {
-                let fraction = array[i] - wholeParts[i];
-                fractions.push(fraction);
-                let taken = Math.min(buffer, Math.round(fraction));
-                wholeParts[i] += taken;
-                buffer -= taken;
-            }
-            if (buffer) {
-                wholeParts[this.argmax(fractions)] += buffer;
-            }
-            return wholeParts;
-        },
-        argmax: function (array) {
-            let max = Math.max(...array);
-            return array.indexOf(max);
-        }
-    }
-    try {
-        if (typeof (HermitowskieSurki) === "undefined") {
-            HermitowskieSurkiCore.init({});
-        }
-        else {
-            HermitowskieSurkiCore.init(HermitowskieSurki);
-        }
-    }
-    catch (e) {
-        UI.ErrorMessage([e, '', e.stack].join('<br>'));
-    }
+    try { ResourceCaller.main(); } catch (ex) { Helper.handle_error(ex); }
+    console.log(`${namespace} | Elapsed time: ${Date.now() - start} [ms]`);
 })();
