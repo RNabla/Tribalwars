@@ -176,10 +176,7 @@
                 ? (Number(url_params.get('delivery_at')) - Date.now()) / 1000
                 : 0;
 
-            console.log('min', min_delivery_time);
-
             while (max_delivery_time - min_delivery_time > 1) {
-                console.log(min_delivery_time, max_delivery_time)
                 let delivery_time = min_delivery_time + (max_delivery_time - min_delivery_time) / 2;
                 if (this.try_select_resources(needs, suppliers, delivery_time)) {
                     max_delivery_time = delivery_time;
