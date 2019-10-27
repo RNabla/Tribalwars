@@ -96,7 +96,7 @@
                 data['tribe'] = root.children[3].innerText.trim().toLowerCase();
             }
             for (let i = 0; i < game_data.units.length - 1; i++) {
-                let count = Number(row.cells[i + 1].innerText);
+                let count = Number(row.cells[i + 2].innerText);
                 if (count > 0) {
                     data['units'][game_data.units[i]] = count
                 }
