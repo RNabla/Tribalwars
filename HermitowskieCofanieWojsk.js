@@ -27,7 +27,8 @@
             }
         },
         checkScreen: function () {
-            if (game_data.mode !== 'units' || game_data.screen !== 'overview_villages' || new URLSearchParams(location.href).get('type') !== 'away_detail') {
+            const url_params = new URLSearchParams(location.href);
+            if (url_params.get('mode') !== 'units' || url_params.get('screen') !== 'overview_villages' || url_params.get('type') !== 'away_detail') {
                 location.href = TribalWars.buildURL('GET', 'overview_villages', { mode: 'units', type: 'away_detail' });
                 return false;
             }
