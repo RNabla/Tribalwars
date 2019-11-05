@@ -169,11 +169,11 @@
                 const html = create_html();
                 Dialog.show(HermitowskiLicznikWojsk.namespace, html);
                 setTimeout(() => {
-                    Helper.add_options(`${HermitowskiLicznikWojsk.namespace}_group`, groups.map(x => x.group_id), groups.map(x => x.group.name), groups.group_id);
+                    Helper.add_options(`${HermitowskiLicznikWojsk.namespace}_group`, groups.map(x => x.group_id), groups.map(x => x.group.name), 0);
                     Helper.add_options(`${HermitowskiLicznikWojsk.namespace}_type`, Object.keys(HermitowskiLicznikWojsk.types), Object.values(HermitowskiLicznikWojsk.types));
                     add_on_change_handler(`${HermitowskiLicznikWojsk.namespace}_group`, HermitowskiLicznikWojsk.on_change);
                     add_on_change_handler(`${HermitowskiLicznikWojsk.namespace}_type`, HermitowskiLicznikWojsk.on_change);
-                    HermitowskiLicznikWojsk.switch(groups.group_id, Object.keys(HermitowskiLicznikWojsk.types)[0]);
+                    document.querySelector(`#${HermitowskiLicznikWojsk.namespace}_group`).dispatchEvent(new Event('change'));
                 });
             })
         },
