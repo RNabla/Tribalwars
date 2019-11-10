@@ -506,7 +506,8 @@
                 default_date.setHours(end_hour);
             }
 
-            Helper.get_control('arrival_date').value = url_params.get('arrival_date') || `${default_date.getDate()}.${default_date.getMonth() + 1} ${default_date.getHours()}:00:00`;
+            const arrival_date = Helper.get_control('arrival_date');
+            arrival_date.value = url_params.get('arrival_date') || `${default_date.getDate()}.${default_date.getMonth() + 1} ${default_date.getHours()}:00:00`;
             Helper.get_control('generate').addEventListener('click', async () => {
                 try { await Guard.generate_commands(); } catch (ex) { Helper.handle_error(ex); }
             });
@@ -525,6 +526,10 @@
             });
             open_tabs.disabled = false;
             Helper.get_control('generate').disabled = false;
+            if (url_params.has('arrival_date')){
+                enable_arrival_date.checked = true;
+                arrival_date.disabled = false;
+            }
         },
         get_groups_info: async function () {
             let url = TribalWars.buildURL('GET', 'groups', { mode: 'overview', ajax: 'load_group_menu' });
