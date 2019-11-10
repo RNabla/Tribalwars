@@ -34,7 +34,8 @@
             BAD_FORMAT: 'Pole <strong>__1__</strong> ma z\u{142}y format',
             PAST_DATE: 'Podany punkt w czasie nale\u{17C}y do przesz\u{142}o\u{15B}ci',
             MOBILE: 'Wersja mobilna nie jest wspierana',
-            NEW_WINDOW_BLOCKED: 'Wygl\u0105da na to, \u017Ce preferencje u\u017Cytkownika w przegl\u0105darce nie pozwalaj\u0105 otworzy\u0107 wi\u0119kszej ilo\u015Bci kart'
+            NEW_WINDOW_BLOCKED: 'Wygl\u0105da na to, \u017Ce preferencje u\u017Cytkownika w przegl\u0105darce nie pozwalaj\u0105 otworzy\u0107 wi\u0119kszej ilo\u015Bci kart',
+            EMPTY_DEFF_SELECTION: 'Nie uda\u{142}o si\u0119 wybra\u0107 jednostek defensywnych'
         },
         UNITS: {
             spear: 'Pikinier',
@@ -526,7 +527,7 @@
             });
             open_tabs.disabled = false;
             Helper.get_control('generate').disabled = false;
-            if (url_params.has('arrival_date')){
+            if (url_params.has('arrival_date')) {
                 enable_arrival_date.checked = true;
                 arrival_date.disabled = false;
             }
@@ -714,6 +715,9 @@
             const troops_info = get_troops_info(villages, user_input);
             preprocess(troops_info, user_input);
             select_troops(troops_info, user_input);
+            if (user_input.deff_count && !user_input.spy_count && !troops_info.selected.deff) {
+                UI.ErrorMessage(i18n.ERROR.EMPTY_DEFF_SELECTION);
+            }
             for (const village of troops_info.villages) {
                 if (user_input.split_units) {
                     const snapshot = Object.assign({}, village.units);
