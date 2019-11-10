@@ -351,11 +351,25 @@
                 Helper.get_control('show_village_info').disabled = false;
                 Helper.get_control('show_incoming_commands').checked = Mailing.settings.user_input.show_incoming_commands;
                 Helper.get_control('show_incoming_commands').disabled = false;
+
                 Mailing.incoming_commands = Mailing.get_incoming_commands();
-                const noble_incoming_command = Mailing.incoming_commands.find(c => c.unit_type === 'snob');
-                if (noble_incoming_command) {
-                    Helper.get_control('arrival_date').value = Helper.get_date_string(noble_incoming_command.arrival_date, false);
+
+                const incoming_attacks = Mailing.incoming_commands.filter(x => x.command_type === 'attack');
+                if (incoming_attacks) {
+                    const noble_incoming_command = incoming_attacks.find(x => x.unit_type === 'snob');
+                    if (noble_incoming_command) {
+                        Helper.get_control('arrival_date').value = Helper.get_date_string(noble_incoming_command.arrival_date, false);
+                    } else {
+                        const first_lethal = incoming_attacks.find(x => x.unit_type !== 'spy');
+                        if (first_lethal) {
+                            Helper.get_control('arrival_date').value = Helper.get_date_string(first_lethal.arrival_date, false);
+                        } else {
+                            Helper.get_control('arrival_date').value = Helper.get_date_string(incoming_attacks[0].arrival_date, false);
+                            Helper.get_control('help_speed').value = 'spy';
+                        }
+                    }
                 }
+
                 Helper.get_control('arrival_date.right').addEventListener('click', () => {
                     try { Mailing.set_arrival_date('before'); } catch (ex) { Helper.handle_error(ex); }
                 });
