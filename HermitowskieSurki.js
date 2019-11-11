@@ -4,7 +4,12 @@
  * Modified on: 23/10/2019 - version 2.0 - initial release
  */
 
-(function () {
+var HermitowskieSurki = {
+    idle_time: 0,
+    storage_percentage_limit: { 'wood': 100, 'stone': 100, 'iron': 100 },
+    resources_safeguard: { 'wood': 0, 'stone': 0, 'iron': 0 }
+};
+(async function () {
     const start = Date.now();
     const namespace = 'Hermitowski.ResourceCaller';
     const i18n = {
@@ -95,22 +100,24 @@
             idle_time: 5,
             trader_capacity_threshold: 0
         },
-        main: function () {
+        main: async function () {
             this.check_screen();
             this.get_user_input();
-            const needs = this.calculate_needs();
-            if (Helper.sum_resources(needs) == 0) {
-                UI.SuccessMessage(i18n.NOTHING_NEEDED);
-                return;
-            }
-            const suppliers = this.get_suppliers();
-            this.calculate_delivery(needs, suppliers);
+            this.suppliers = this.get_suppliers();
+            this.resources_schedule = await this.get_resources_schedule();
+            this.calculate_delivery();
         },
         check_screen: function () {
             if (!document.querySelector('#village_list')) {
                 location.href = TribalWars.buildURL('GET', 'market', { mode: 'call' });
                 throw i18n.NOT_ON_MARKET;
             }
+        },
+        get_resources_schedule: async function () {
+            const url = TribalWars.buildURL('GET', 'api', { ajax: 'resources_schedule', id: game_data.village.id });
+            const response = await fetch(url);
+            const content = response.json();
+            return content;
         },
         get_user_input: function () {
             if (typeof (HermitowskieSurki) !== "undefined") {
@@ -121,8 +128,30 @@
                 }
             }
         },
-        calculate_needs: function () {
+        get_production_rate: function (resource, delivery_timestamp) {
+            const rates_schedule = this.resources_schedule.rates.schedules[resource];
+            let production_rate = game_data.village[`${resource}_prod`];
+            for (const timestamp in rates_schedule) {
+                if (Number(timestamp) < delivery_timestamp) {
+                    production_rate = Number(rates_schedule[timestamp]);
+                }
+            }
+            return production_rate;
+        },
+        get_village_resources: function (resource, delivery_timestamp) {
+            const amounts_schedule = this.resources_schedule.amounts.schedules[resource];
+            const production_rate = this.get_production_rate(resource, delivery_timestamp);
+            let resource_amount = game_data.village[`${resource}_prod`];
+            for (const timestamp in amounts_schedule) {
+                if (Number(timestamp) < delivery_timestamp) {
+                    resource_amount = Number(amounts_schedule[timestamp]) + production_rate * (delivery_timestamp - Number(timestamp));
+                }
+            }
+            return resource_amount;
+        },
+        calculate_needs: function (delivery_time) {
             const url_params = new URLSearchParams(location.href);
+            const delivery_timestamp = Date.now() / 1000 + delivery_time;
             const needs = {}
             for (const resource of this.resources) {
                 needs[resource] = this.settings.target_resources[resource];
@@ -133,14 +162,13 @@
                 if (this.settings.trim_to_storage_capacity) {
                     let storage_capacity = Math.min(
                         parseInt(game_data.village.storage_max * this.settings.storage_percentage_limit[resource] / 100),
-                        parseInt(game_data.village.storage_max - this.settings.idle_time * game_data.village[`${resource}_prod`]),
+                        parseInt(game_data.village.storage_max - this.settings.idle_time * this.get_production_rate(resource, delivery_timestamp)),
                     );
                     if (needs[resource] > storage_capacity) {
                         needs[resource] = storage_capacity;
                     }
                 }
-                needs[resource] -= parseInt(document.querySelector(`#total_${resource}`).innerText.replace('.', ''));
-                needs[resource] -= game_data.village[resource];
+                needs[resource] -= Math.round(this.get_village_resources(resource, delivery_timestamp));
                 if (needs[resource] < 0) {
                     needs[resource] = 0;
                 }
@@ -169,47 +197,35 @@
                 return { available_traders, available_resources, selected_resources, anchors, delivery_time }
             });
         },
-        calculate_delivery: function (needs, suppliers) {
+        calculate_delivery: function () {
+            const needs_at_0 = this.calculate_needs(0);
             const url_params = new URLSearchParams(location.href);
-            let max_delivery_time = Math.round(Math.max(...this.resources.map(resource => needs[resource] / game_data.village[`${resource}_prod`])));
+            let max_delivery_time = Math.round(Math.max(...this.resources.map(resource => needs_at_0[resource] / game_data.village[`${resource}_prod`])));
             let min_delivery_time = url_params.has('delivery_at')
                 ? (Number(url_params.get('delivery_at')) - Date.now()) / 1000
                 : 0;
 
             while (max_delivery_time - min_delivery_time > 1) {
-                let delivery_time = min_delivery_time + (max_delivery_time - min_delivery_time) / 2;
-                if (this.try_select_resources(needs, suppliers, delivery_time)) {
+                const delivery_time = min_delivery_time + (max_delivery_time - min_delivery_time) / 2;
+                if (this.select_resources(delivery_time)) {
                     max_delivery_time = delivery_time;
                 } else {
                     min_delivery_time = delivery_time;
                 }
             }
 
-            this.try_select_resources(needs, suppliers, max_delivery_time);
-            this.fill_input_fields(suppliers);
+            this.select_resources(max_delivery_time);
+            this.fill_input_fields();
             this.display_info(max_delivery_time);
         },
-        calculate_demand: function (needs, delivery_time) {
-            const demand = {};
-            for (const resource of this.resources) {
-                demand[resource] = needs[resource];
-                demand[resource] -= Math.round(game_data.village[`${resource}_prod`] * delivery_time);
-                if (demand[resource] < 0) {
-                    demand[resource] = 0;
-                }
-            }
-            return demand;
-        },
-        try_select_resources: function (needs, suppliers, delivery_time) {
-            const demand = this.calculate_demand(needs, delivery_time);
-            for (const supplier of suppliers) {
+        select_resources: function (delivery_time) {
+            for (const supplier of this.suppliers) {
                 for (const resource of this.resources) {
                     supplier.selected_resources[resource] = 0;
                 }
             }
-            return this.select_resources(demand, suppliers.filter(x => x.delivery_time <= delivery_time));
-        },
-        select_resources: function (demand, suppliers) {
+            const needs = this.calculate_needs(delivery_time);
+            const suppliers = this.suppliers.filter(x => x.delivery_time <= delivery_time);
             for (const supplier of suppliers) {
                 const available_resources = Object.assign({}, supplier.available_resources);
                 let available_traders_capacity = supplier.available_traders * Market.Data.Trader.carry;
@@ -220,12 +236,12 @@
                     const scaled_resources = Helper.scale_resources(available_resources, supplier_capacity);
 
                     for (const resource of this.resources) {
-                        if (scaled_resources[resource] + supplier.selected_resources[resource] > demand[resource]) {
-                            scaled_resources[resource] = demand[resource] - supplier.selected_resources[resource];
+                        if (scaled_resources[resource] + supplier.selected_resources[resource] > needs[resource]) {
+                            scaled_resources[resource] = needs[resource] - supplier.selected_resources[resource];
                         }
                         supplier.selected_resources[resource] += scaled_resources[resource];
                         available_resources[resource] -= scaled_resources[resource];
-                        if (demand[resource] == supplier.selected_resources[resource]) {
+                        if (needs[resource] == supplier.selected_resources[resource]) {
                             available_resources[resource] = 0;
                         }
                         available_traders_capacity -= scaled_resources[resource];
@@ -241,19 +257,19 @@
                     supplier.selected_resources = Helper.scale_resources(supplier.selected_resources, target_transport);
                 }
                 for (const resource of this.resources) {
-                    demand[resource] -= supplier.selected_resources[resource];
+                    needs[resource] -= supplier.selected_resources[resource];
                 }
             }
 
             for (const resource of this.resources) {
-                if (demand[resource] > this.settings.trader_capacity_threshold) {
+                if (needs[resource] > this.settings.trader_capacity_threshold) {
                     return false;
                 }
             }
             return true;
         },
-        fill_input_fields: function (suppliers) {
-            for (const supplier of suppliers) {
+        fill_input_fields: function () {
+            for (const supplier of this.suppliers) {
                 for (const resource of this.resources) {
                     supplier.anchors[resource].value = supplier.selected_resources[resource];
                 }
@@ -269,6 +285,6 @@
         }
     };
 
-    try { ResourceCaller.main(); } catch (ex) { Helper.handle_error(ex); }
+    try { await ResourceCaller.main(); } catch (ex) { Helper.handle_error(ex); }
     console.log(`${namespace} | Elapsed time: ${Date.now() - start} [ms]`);
 })();
