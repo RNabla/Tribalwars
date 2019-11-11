@@ -4,17 +4,11 @@
  * Modified on: 23/10/2019 - version 2.0 - initial release
  */
 
-var HermitowskieSurki = {
-    idle_time: 0,
-    storage_percentage_limit: { 'wood': 100, 'stone': 100, 'iron': 100 },
-    resources_safeguard: { 'wood': 0, 'stone': 0, 'iron': 0 }
-};
 (async function () {
     const start = Date.now();
     const now = start;
     const namespace = 'Hermitowski.ResourceCaller';
     const i18n = {
-        NOTHING_NEEDED: 'Wygl\u{105}da na to, \u{17C}e niczego nie potrzeba',
         NOT_ON_MARKET: 'Nie jeste\u{15B} na rynku.',
         DELIVERY_TIME: 'Surowce b\u{119}d\u{105} dost\u{119}pne __DAY__.__MONTH__ o __HOURS__:__MINUTES__',
     };
@@ -131,10 +125,11 @@ var HermitowskieSurki = {
         },
         get_production_rate: function (resource, delivery_timestamp) {
             const rates_schedule = this.resources_schedule.rates.schedules[resource];
-            let production_rate = Number(Object.values(rates_schedule)[0]);
-            for (const timestamp in rates_schedule) {
-                if (Number(timestamp) < delivery_timestamp) {
-                    production_rate = Number(rates_schedule[timestamp]);
+            let production_rate = game_data.village[`${resource}_prod`];
+            for (const timestamp_str in rates_schedule) {
+                const timestamp = Number(timestamp_str);
+                if (now / 1000 < timestamp && timestamp < delivery_timestamp) {
+                    production_rate = Number(rates_schedule[timestamp_str]);
                 }
             }
             return production_rate;
@@ -142,10 +137,11 @@ var HermitowskieSurki = {
         get_village_resources: function (resource, delivery_timestamp) {
             const amounts_schedule = this.resources_schedule.amounts.schedules[resource];
             const production_rate = this.get_production_rate(resource, delivery_timestamp);
-            let resource_amount = Number(Object.values(amounts_schedule)[0]);
-            for (const timestamp in amounts_schedule) {
-                if (Number(timestamp) < delivery_timestamp) {
-                    resource_amount = Number(amounts_schedule[timestamp]) + production_rate * (delivery_timestamp - Number(timestamp));
+            let resource_amount = game_data.village[`${resource}_float`] + (now / 1000 - delivery_timestamp) * production_rate;
+            for (const timestamp_str in amounts_schedule) {
+                const timestamp = Number(timestamp_str);
+                if (timestamp < delivery_timestamp) {
+                    resource_amount = Number(amounts_schedule[timestamp_str]) + production_rate * (delivery_timestamp - timestamp);
                 }
             }
             return resource_amount;
@@ -276,7 +272,7 @@ var HermitowskieSurki = {
         },
         select_resources_from_supplier: function (supplier, needs) {
             const available_resources = Object.assign({}, supplier.available_resources);
-            const selected_resources = {};
+            let selected_resources = {};
             for (const resource of this.resources) {
                 available_resources[resource] -= supplier.selected_resources[resource];
                 selected_resources[resource] = 0;
