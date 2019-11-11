@@ -11,6 +11,7 @@ var HermitowskieSurki = {
 };
 (async function () {
     const start = Date.now();
+    const now = start;
     const namespace = 'Hermitowski.ResourceCaller';
     const i18n = {
         NOTHING_NEEDED: 'Wygl\u{105}da na to, \u{17C}e niczego nie potrzeba',
@@ -130,7 +131,7 @@ var HermitowskieSurki = {
         },
         get_production_rate: function (resource, delivery_timestamp) {
             const rates_schedule = this.resources_schedule.rates.schedules[resource];
-            let production_rate = game_data.village[`${resource}_prod`];
+            let production_rate = Number(Object.values(rates_schedule)[0]);
             for (const timestamp in rates_schedule) {
                 if (Number(timestamp) < delivery_timestamp) {
                     production_rate = Number(rates_schedule[timestamp]);
@@ -141,7 +142,7 @@ var HermitowskieSurki = {
         get_village_resources: function (resource, delivery_timestamp) {
             const amounts_schedule = this.resources_schedule.amounts.schedules[resource];
             const production_rate = this.get_production_rate(resource, delivery_timestamp);
-            let resource_amount = game_data.village[`${resource}_prod`];
+            let resource_amount = Number(Object.values(amounts_schedule)[0]);
             for (const timestamp in amounts_schedule) {
                 if (Number(timestamp) < delivery_timestamp) {
                     resource_amount = Number(amounts_schedule[timestamp]) + production_rate * (delivery_timestamp - Number(timestamp));
@@ -149,9 +150,31 @@ var HermitowskieSurki = {
             }
             return resource_amount;
         },
+        get_suppliers: function () {
+            const supply_locations = [...document.querySelector('#village_list').querySelectorAll('.supply_location')];
+            if (!supply_locations.filter(x => x.cells[7].children[0].checked).length) {
+                supply_locations.forEach(x => {
+                    x.cells[7].children[0].click();
+                });
+            }
+            return supply_locations.filter(x => x.cells[7].children[0].checked).map(x => {
+                const available_capacity = (Number(x.cells[6].innerText.split('/')[0]) - this.settings.traders_safeguard) * Market.Data.Trader.carry;
+                const available_resources = {};
+                const selected_resources = {};
+                const parts = x.cells[1].innerText.split(':').map(x => Number(x));
+                const delivery_time = (parts[0] * 60 + parts[1]) * 60 + parts[2];
+                const anchors = {};
+                for (const resource of this.resources) {
+                    const village_resources = Number(x.querySelector(`span.${resource}`).innerText.replace('.', ''))
+                    available_resources[resource] = Math.max(village_resources - this.settings.resources_safeguard[resource], 0);
+                    anchors[resource] = x.querySelector(`td.${resource}`).children[1];
+                }
+                return { available_capacity, available_resources, selected_resources, anchors, delivery_time }
+            });
+        },
         calculate_needs: function (delivery_time) {
             const url_params = new URLSearchParams(location.href);
-            const delivery_timestamp = Date.now() / 1000 + delivery_time;
+            const delivery_timestamp = now / 1000 + delivery_time;
             const needs = {}
             for (const resource of this.resources) {
                 needs[resource] = this.settings.target_resources[resource];
@@ -175,34 +198,12 @@ var HermitowskieSurki = {
             }
             return needs;
         },
-        get_suppliers: function () {
-            const supply_locations = [...document.querySelector('#village_list').querySelectorAll('.supply_location')];
-            if (!supply_locations.filter(x => x.cells[7].children[0].checked).length) {
-                supply_locations.forEach(x => {
-                    x.cells[7].children[0].click();
-                });
-            }
-            return supply_locations.filter(x => x.cells[7].children[0].checked).map(x => {
-                const available_traders = Number(x.cells[6].innerText.split('/')[0]) - this.settings.traders_safeguard;
-                const available_resources = {};
-                const selected_resources = {};
-                const parts = x.cells[1].innerText.split(':').map(x => Number(x));
-                const delivery_time = (parts[0] * 60 + parts[1]) * 60 + parts[2];
-                const anchors = {};
-                for (const resource of this.resources) {
-                    const village_resources = Number(x.querySelector(`span.${resource}`).innerText.replace('.', ''))
-                    available_resources[resource] = Math.max(village_resources - this.settings.resources_safeguard[resource], 0);
-                    anchors[resource] = x.querySelector(`td.${resource}`).children[1];
-                }
-                return { available_traders, available_resources, selected_resources, anchors, delivery_time }
-            });
-        },
         calculate_delivery: function () {
-            const needs_at_0 = this.calculate_needs(0);
             const url_params = new URLSearchParams(location.href);
-            let max_delivery_time = Math.round(Math.max(...this.resources.map(resource => needs_at_0[resource] / game_data.village[`${resource}_prod`])));
+            const base_needs = this.calculate_needs(0);
+            let max_delivery_time = Math.round(Math.max(...this.resources.map(resource => base_needs[resource] / game_data.village[`${resource}_prod`])));
             let min_delivery_time = url_params.has('delivery_at')
-                ? (Number(url_params.get('delivery_at')) - Date.now()) / 1000
+                ? (Number(url_params.get('delivery_at')) - now) / 1000
                 : 0;
 
             while (max_delivery_time - min_delivery_time > 1) {
@@ -222,43 +223,27 @@ var HermitowskieSurki = {
             for (const supplier of this.suppliers) {
                 for (const resource of this.resources) {
                     supplier.selected_resources[resource] = 0;
+                    supplier.selected_capacity = 0;
                 }
             }
             const needs = this.calculate_needs(delivery_time);
-            const suppliers = this.suppliers.filter(x => x.delivery_time <= delivery_time);
-            for (const supplier of suppliers) {
-                const available_resources = Object.assign({}, supplier.available_resources);
-                let available_traders_capacity = supplier.available_traders * Market.Data.Trader.carry;
+            const delivery_timestamp = now / 1000 + delivery_time;
+            const production_rates = {};
+            for (const resource of this.resources) {
+                production_rates[resource] = this.get_production_rate(resource, delivery_timestamp);
+            }
+            let suppliers = this.suppliers.filter(x => x.delivery_time <= delivery_time);
 
-                let supplier_capacity = Math.min(Helper.sum_resources(available_resources), available_traders_capacity);
-
-                while (supplier_capacity > 0) {
-                    const scaled_resources = Helper.scale_resources(available_resources, supplier_capacity);
-
-                    for (const resource of this.resources) {
-                        if (scaled_resources[resource] + supplier.selected_resources[resource] > needs[resource]) {
-                            scaled_resources[resource] = needs[resource] - supplier.selected_resources[resource];
-                        }
-                        supplier.selected_resources[resource] += scaled_resources[resource];
-                        available_resources[resource] -= scaled_resources[resource];
-                        if (needs[resource] == supplier.selected_resources[resource]) {
-                            available_resources[resource] = 0;
-                        }
-                        available_traders_capacity -= scaled_resources[resource];
-                    }
-
-                    supplier_capacity = Math.min(Helper.sum_resources(available_resources), available_traders_capacity);
+            while (Helper.sum_resources(needs)) {
+                const supplier = this.select_supplier(suppliers, needs, production_rates);
+                if (!supplier) {
+                    break;
                 }
-
-                const selected_sum = Helper.sum_resources(supplier.selected_resources);
-
-                if (selected_sum > 0 && selected_sum % Market.Data.Trader.carry < this.settings.trader_capacity_threshold) {
-                    const target_transport = Math.floor(selected_sum / Market.Data.Trader.carry) * Market.Data.Trader.carry;
-                    supplier.selected_resources = Helper.scale_resources(supplier.selected_resources, target_transport);
-                }
-                for (const resource of this.resources) {
-                    needs[resource] -= supplier.selected_resources[resource];
-                }
+                this.select_resources_from_supplier(supplier, needs);
+                const needed_resources = this.resources.filter(resource => needs[resource] > 0);
+                suppliers = suppliers.filter(x => x.selected_capacity < x.available_capacity && needed_resources.some(resource =>
+                    x.selected_resources[resource] < x.available_resources[resource]
+                ));
             }
 
             for (const resource of this.resources) {
@@ -268,6 +253,69 @@ var HermitowskieSurki = {
             }
             return true;
         },
+        select_supplier: function (suppliers, needs, production_rates) {
+            let wait_time = -1;
+            let most_valuable_resource = null;
+            for (const resource of this.resources) {
+                const resource_wait_time = needs[resource] / production_rates[resource];
+                if (resource_wait_time > wait_time) {
+                    wait_time = resource_wait_time;
+                    most_valuable_resource = resource;
+                }
+            }
+            let most_available_resources = -1;
+            let best_supplier = null;
+            for (const supplier of suppliers) {
+                const supplier_available_resources = supplier.available_resources[most_valuable_resource] - supplier.selected_resources[most_valuable_resource];
+                if (supplier_available_resources > most_available_resources) {
+                    most_available_resources = supplier_available_resources;
+                    best_supplier = supplier;
+                }
+            }
+            return best_supplier;
+        },
+        select_resources_from_supplier: function (supplier, needs) {
+            const available_resources = Object.assign({}, supplier.available_resources);
+            const selected_resources = {};
+            for (const resource of this.resources) {
+                available_resources[resource] -= supplier.selected_resources[resource];
+                selected_resources[resource] = 0;
+            }
+
+            let available_traders_capacity = Math.min(supplier.available_capacity - supplier.selected_capacity, Market.Data.Trader.carry);
+
+            let supplier_capacity = Math.min(Helper.sum_resources(available_resources), available_traders_capacity);
+
+            while (supplier_capacity > 0) {
+                const scaled_resources = Helper.scale_resources(available_resources, supplier_capacity);
+
+                for (const resource of this.resources) {
+                    if (scaled_resources[resource] + selected_resources[resource] > needs[resource]) {
+                        scaled_resources[resource] = needs[resource] - selected_resources[resource];
+                    }
+                    selected_resources[resource] += scaled_resources[resource];
+                    available_resources[resource] -= scaled_resources[resource];
+                    if (needs[resource] == selected_resources[resource]) {
+                        available_resources[resource] = 0;
+                    }
+                    supplier.selected_capacity += scaled_resources[resource];
+                    available_traders_capacity -= scaled_resources[resource];
+                }
+
+                supplier_capacity = Math.min(Helper.sum_resources(available_resources), available_traders_capacity);
+            }
+
+            const selected_sum = Helper.sum_resources(selected_resources);
+
+            if (selected_sum > 0 && selected_sum % Market.Data.Trader.carry < this.settings.trader_capacity_threshold) {
+                const target_transport = Math.floor(selected_sum / Market.Data.Trader.carry) * Market.Data.Trader.carry;
+                selected_resources = Helper.scale_resources(selected_resources, target_transport);
+            }
+            for (const resource of this.resources) {
+                needs[resource] -= selected_resources[resource];
+                supplier.selected_resources[resource] += selected_resources[resource];
+            }
+        },
         fill_input_fields: function () {
             for (const supplier of this.suppliers) {
                 for (const resource of this.resources) {
@@ -276,7 +324,7 @@ var HermitowskieSurki = {
             }
         },
         display_info: function (delivery_time) {
-            const delivery_date = new Date(Date.now() + delivery_time * 1000);
+            const delivery_date = new Date(now + delivery_time * 1000);
             UI.SuccessMessage(i18n.DELIVERY_TIME
                 .replace('__DAY__', Helper.two_digit(delivery_date.getDate()))
                 .replace('__MONTH__', Helper.two_digit(delivery_date.getMonth() + 1))
