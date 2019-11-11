@@ -137,10 +137,10 @@
         get_village_resources: function (resource, delivery_timestamp) {
             const amounts_schedule = this.resources_schedule.amounts.schedules[resource];
             const production_rate = this.get_production_rate(resource, delivery_timestamp);
-            let resource_amount = game_data.village[`${resource}_float`] + (now / 1000 - delivery_timestamp) * production_rate;
+            let resource_amount = game_data.village[`${resource}_float`] + (delivery_timestamp - now / 1000) * production_rate;
             for (const timestamp_str in amounts_schedule) {
                 const timestamp = Number(timestamp_str);
-                if (timestamp < delivery_timestamp) {
+                if (now / 1000 < timestamp && timestamp < delivery_timestamp) {
                     resource_amount = Number(amounts_schedule[timestamp_str]) + production_rate * (delivery_timestamp - timestamp);
                 }
             }
