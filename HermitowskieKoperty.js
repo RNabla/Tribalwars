@@ -355,7 +355,7 @@
                 Mailing.incoming_commands = Mailing.get_incoming_commands();
 
                 const incoming_attacks = Mailing.incoming_commands.filter(x => x.command_type === 'attack');
-                if (incoming_attacks) {
+                if (incoming_attacks.length > 0) {
                     const noble_incoming_command = incoming_attacks.find(x => x.unit_type === 'snob');
                     if (noble_incoming_command) {
                         Helper.get_control('arrival_date').value = Helper.get_date_string(noble_incoming_command.arrival_date, false);
