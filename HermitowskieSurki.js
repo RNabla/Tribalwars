@@ -100,6 +100,7 @@
             this.get_user_input();
             this.suppliers = this.get_suppliers();
             this.resources_schedule = await this.get_resources_schedule();
+            this.fix_discrepancy();
             this.calculate_delivery();
         },
         check_screen: function () {
@@ -113,6 +114,41 @@
             const response = await fetch(url);
             const content = response.json();
             return content;
+        },
+        fix_discrepancy: function () {
+            // scheduled resources does not take into account spent resources on recruitment
+            // so if we got following timeline for amount
+            // ----------X------N------Y------Z------->
+            // N - now timestamp
+            // X - timestamp for latest amount calculation before 'now'
+            // Y, Z - other calculated scheduled amounts
+            // so if in time X schedule says village has 10 000 resource
+            // so forecasting resource in N timepoint village should have X + (N - X) * production_rate(X, N)
+            // production_rate gives production_rate for given time interval
+            // but if in fact in N timepoint village has 8 000 resource it means users spent some resources on recruitment
+            // the amount of spent resource is forecasted - current
+
+            for (const resource of this.resources) {
+                const rates_schedule = this.resources_schedule.rates.schedules[resource];
+                let production_rate = NaN;
+                for (const timestamp_str in rates_schedule) {
+                    if (Number(timestamp_str) < now / 1000) {
+                        production_rate = Number(rates_schedule[timestamp_str]);
+                    }
+                }
+                const amounts = this.resources_schedule.amounts.schedules[resource];
+                let amount = NaN;
+                for (const timestamp_str in amounts) {
+                    const timestamp = Number(timestamp_str);
+                    if (timestamp < now / 1000) {
+                        amount = Number(amounts[timestamp_str]) + (now / 1000 - timestamp) * production_rate;
+                    }
+                }
+                const discrepancy = amount - game_data.village[`${resource}_float`];
+                for (const key in this.resources_schedule.rates.schedules[resource]) {
+                    this.resources_schedule.rates.schedules[resource][key] -= discrepancy;
+                }
+            }
         },
         get_user_input: function () {
             if (typeof (HermitowskieSurki) !== "undefined") {
