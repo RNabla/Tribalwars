@@ -3,7 +3,11 @@
  * Created by: Hermitowski
  * Modified on: 23/10/2019 - version 2.0 - initial release
  */
-
+var HermitowskieSurki = {
+    idle_time: 0,
+    storage_percentage_limit: { 'wood': 100, 'stone': 100, 'iron': 100 },
+    resources_safeguard: { 'wood': 0, 'stone': 0, 'iron': 0 }
+};
 (async function () {
     const start = Date.now();
     const now = start;
@@ -100,6 +104,17 @@
             this.get_user_input();
             this.suppliers = this.get_suppliers();
             this.resources_schedule = await this.get_resources_schedule();
+            
+            console.dir(ResourcesForecaster.Factory.createResourcesInVillageSchedule(this.resources_schedule.amounts));
+            console.dir(this.resources_schedule.amounts);
+            console.log('date - now', Date.now() / 1000);
+            for (const resource of this.resources) {
+                console.dir(this.resources_schedule.amounts.schedules[resource])
+                for (const timestmap_str in this.resources_schedule.amounts.schedules[resource]) {
+                    console.log(this.resources_schedule.amounts.schedules[resource][timestmap_str], 'in', Number(timestmap_str) - (Date.now() / 1000))
+                }
+                console.log(resource, this.get_village_resources(resource, Date.now() / 1000));
+            }
             this.calculate_delivery();
         },
         check_screen: function () {
@@ -138,6 +153,7 @@
             const amounts_schedule = this.resources_schedule.amounts.schedules[resource];
             const production_rate = this.get_production_rate(resource, delivery_timestamp);
             let resource_amount = game_data.village[`${resource}_float`] + (delivery_timestamp - now / 1000) * production_rate;
+            console.log('dt', delivery_timestamp - now / 1000)
             for (const timestamp_str in amounts_schedule) {
                 const timestamp = Number(timestamp_str);
                 if (now / 1000 < timestamp && timestamp < delivery_timestamp) {
