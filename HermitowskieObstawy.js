@@ -8,6 +8,7 @@
  * Modified on: 18/08/2019 - version 2.3 - added open commands in new tabs
  * Modified on: 19/08/2019 - version 2.4 - split units option
  * Modified on: 26/08/2019 - version 2.5 - more date formats, ratio of value 0 handling
+ * Modified on: 28/11/2019 - version 2.6 - notification of violation no_other_support constraint
  */
 
 (async function (TribalWars) {
@@ -35,7 +36,9 @@
             PAST_DATE: 'Podany punkt w czasie nale\u{17C}y do przesz\u{142}o\u{15B}ci',
             MOBILE: 'Wersja mobilna nie jest wspierana',
             NEW_WINDOW_BLOCKED: 'Wygl\u0105da na to, \u017Ce preferencje u\u017Cytkownika w przegl\u0105darce nie pozwalaj\u0105 otworzy\u0107 wi\u0119kszej ilo\u015Bci kart',
-            EMPTY_DEFF_SELECTION: 'Nie uda\u{142}o si\u0119 wybra\u0107 jednostek defensywnych'
+            EMPTY_DEFF_SELECTION: 'Nie uda\u{142}o si\u0119 wybra\u0107 jednostek defensywnych',
+            INVALID_VILLAGE_INFO: 'Wydaje si\u0119, \u017Ce wioska docelowa nie istnieje',
+            NO_OTHER_SUPPORT_CONFLICT: 'Ustawienia \u{15B}wiata nie pozwalaj\u0105 na wysy\u{142}anie wspar\u{107} do graczy innych plemion'
         },
         UNITS: {
             spear: 'Pikinier',
@@ -546,6 +549,22 @@
         get_world_info: async function () {
             Guard.world_info = await get_world_info({ configs: ['config', 'unit_info'] });
         },
+        check_target_ally: async function (coords) {
+            const x_chunk = coords[0] - coords[0] % 20;
+            const y_chunk = coords[1] - coords[1] % 20;
+            const url_params = new URLSearchParams({ locale: game_data.locale, v: 2, [`${x_chunk}_${y_chunk}`]: 1 });
+            const response = await fetch(`map.php?${url_params}`);
+            const map_info = await response.json();
+            const village_info = (map_info[0].data.villages[coords[0] - x_chunk] || [])[coords[1] - y_chunk];
+            if (!village_info) {
+                return UI.ErrorMessage(i18n.ERROR.INVALID_VILLAGE_INFO);
+            }
+            if (village_info[4] != game_data.player.id) {
+                if (!game_data.player.ally_id || game_data.player.ally_id != village_info[11]) {
+                    return UI.ErrorMessage(i18n.ERROR.NO_OTHER_SUPPORT_CONFLICT);
+                }
+            }
+        },
         generate_commands: async function () {
             let get_user_input = function () {
                 const user_input = {};
@@ -705,6 +724,13 @@
                 }
             };
             const user_input = get_user_input();
+
+            if (Guard.world_info.config.ally.no_other_support) {
+                setTimeout((coords) => {
+                    Guard.check_target_ally(coords);
+                }, 0, user_input.target)
+            }
+
             const generate_button = Helper.get_control('generate');
             generate_button.disabled = true;
             const current_commands = [...Helper.get_control('output').children];
