@@ -549,20 +549,36 @@
         get_world_info: async function () {
             Guard.world_info = await get_world_info({ configs: ['config', 'unit_info'] });
         },
+        fetch_map_chunk: async function (x_chunk, y_chunk) {
+            const map_key = `${x_chunk}_${y_chunk}`;
+            if (!Guard.coords2map_chunk.has(map_key)) {
+                const url_params = new URLSearchParams({ locale: game_data.locale, v: 2, [map_key]: 1 });
+                const response = await fetch(`map.php?${url_params}`);
+                const map_info = await response.json();
+                Guard.coords2map_chunk.set(map_key, map_info);
+            }
+            return Guard.coords2map_chunk.get(map_key);
+        },
+        fetch_target_ally: async function (coords) {
+            const map_key = coords.join("|");
+            if (!Guard.coords2ally_id.has(map_key)) {
+                const x_chunk = coords[0] - coords[0] % 20;
+                const y_chunk = coords[1] - coords[1] % 20;
+                const map_info = await Guard.fetch_map_chunk(x_chunk, y_chunk);
+                const village_info = (map_info[0].data.villages[coords[0] - x_chunk] || [])[coords[1] - y_chunk];
+                Guard.coords2ally_id.set(map_key, village_info
+                    ? village_info[11]
+                    : '-1');
+            }
+            return Guard.coords2ally_id.get(map_key);
+        },
         check_target_ally: async function (coords) {
-            const x_chunk = coords[0] - coords[0] % 20;
-            const y_chunk = coords[1] - coords[1] % 20;
-            const url_params = new URLSearchParams({ locale: game_data.locale, v: 2, [`${x_chunk}_${y_chunk}`]: 1 });
-            const response = await fetch(`map.php?${url_params}`);
-            const map_info = await response.json();
-            const village_info = (map_info[0].data.villages[coords[0] - x_chunk] || [])[coords[1] - y_chunk];
-            if (!village_info) {
+            const target_ally_id = await Guard.fetch_target_ally(coords);
+            if (target_ally_id === '-1') {
                 return UI.ErrorMessage(i18n.ERROR.INVALID_VILLAGE_INFO);
             }
-            if (village_info[4] != game_data.player.id) {
-                if (!game_data.player.ally_id || game_data.player.ally_id != village_info[11]) {
-                    return UI.ErrorMessage(i18n.ERROR.NO_OTHER_SUPPORT_CONFLICT);
-                }
+            if (target_ally_id !== game_data.player.ally) {
+                return UI.ErrorMessage(i18n.ERROR.NO_OTHER_SUPPORT_CONFLICT);
             }
         },
         generate_commands: async function () {
@@ -726,9 +742,7 @@
             const user_input = get_user_input();
 
             if (Guard.world_info.config.ally.no_other_support) {
-                setTimeout((coords) => {
-                    Guard.check_target_ally(coords);
-                }, 0, user_input.target)
+                await Guard.check_target_ally(user_input.target);
             }
 
             const generate_button = Helper.get_control('generate');
@@ -793,7 +807,6 @@
             Guard.group_id2villages.set(group_id, villages);
             return villages;
         },
-
         edit_settings: function () {
             const default_settings = Guard.get_default_settings();
 
@@ -910,6 +923,8 @@
             });
 
         },
+        coords2ally_id: new Map(),
+        coords2map_chunk: new Map(),
         group_id2villages: new Map(),
         group_id2group_name: {
             '-1': i18n.CURRENTLY_SELECTED_GROUP
