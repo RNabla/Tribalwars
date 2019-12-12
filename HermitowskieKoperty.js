@@ -397,10 +397,14 @@
         get_troops_speeds: function () {
             const troops_speeds = {};
             for (const unit_name of ['spy', 'light', 'heavy', 'spear', 'sword', 'ram', 'snob']) {
-                const speed = parseFloat(Mailing.world_info.unit_info[unit_name].speed);
-                const hour = ~~speed;
-                const minutes = Math.round((speed - hour) * 60);
-                const speed_human_format = `${hour}:${minutes}`;
+                const unit_speed = Number(Mailing.world_info.unit_info[unit_name].speed);
+                let all_seconds = Math.round(unit_speed * 60);
+                let seconds = all_seconds % 60;
+                let minutes = (all_seconds - seconds) / 60;
+                if (seconds < 10) {
+                    seconds = `0${seconds}`;
+                }
+                const speed_human_format = `${minutes}:${seconds}`;
                 const text = `${i18n.UNITS[unit_name]} ${i18n.TROOPS_TIME_PER_FIELD.replace('__1__', speed_human_format)}`;
                 troops_speeds[unit_name] = text;
             }
