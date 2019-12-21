@@ -38,7 +38,8 @@
             NEW_WINDOW_BLOCKED: 'Wygl\u0105da na to, \u017Ce preferencje u\u017Cytkownika w przegl\u0105darce nie pozwalaj\u0105 otworzy\u0107 wi\u0119kszej ilo\u015Bci kart',
             EMPTY_DEFF_SELECTION: 'Nie uda\u{142}o si\u0119 wybra\u0107 jednostek defensywnych',
             INVALID_VILLAGE_INFO: 'Wydaje si\u0119, \u017Ce wioska docelowa nie istnieje',
-            NO_OTHER_SUPPORT_CONFLICT: 'Ustawienia \u{15B}wiata nie pozwalaj\u0105 na wysy\u{142}anie wspar\u{107} do graczy innych plemion'
+            NO_OTHER_SUPPORT_CONFLICT: 'Ustawienia \u{15B}wiata nie pozwalaj\u0105 na wysy\u{142}anie wspar\u{107} do graczy innych plemion',
+            EMPTY_GROUP: 'Wybrana grupa nie posiada wiosek'
         },
         UNITS: {
             spear: 'Pikinier',
@@ -745,13 +746,16 @@
                 await Guard.check_target_ally(user_input.target);
             }
 
-            const generate_button = Helper.get_control('generate');
-            generate_button.disabled = true;
             const current_commands = [...Helper.get_control('output').children];
             for (let i = current_commands.length - 1; i >= 0; i--) {
                 current_commands[i].remove();
             }
             const villages = await Guard.get_villages(user_input.group_id);
+            if (villages == null) {
+                throw i18n.ERROR.EMPTY_GROUP;
+            }
+            const generate_button = Helper.get_control('generate');
+            generate_button.disabled = true;
             const troops_info = get_troops_info(villages, user_input);
             preprocess(troops_info, user_input);
             select_troops(troops_info, user_input);
@@ -785,6 +789,9 @@
             const requested_body = document.createElement('body');
             requested_body.innerHTML = response;
             const units_table = requested_body.querySelector('#units_table');
+            if (!units_table) {
+                return null;
+            }
             const villages = [];
             for (let i = 1; i < units_table.rows.length; i++) {
                 let row = units_table.rows[i];
