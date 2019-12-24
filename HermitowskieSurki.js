@@ -92,7 +92,7 @@
             },
             trim_to_storage_capacity: true,
             traders_safeguard: 0,
-            idle_time: 5,
+            idle_time: 5, /* minutes */
             trader_capacity_threshold: 0
         },
         main: async function () {
@@ -208,7 +208,7 @@
                 if (this.settings.trim_to_storage_capacity) {
                     let storage_capacity = Math.min(
                         parseInt(game_data.village.storage_max * this.settings.storage_percentage_limit[resource] / 100),
-                        parseInt(game_data.village.storage_max - this.settings.idle_time * this.get_production_rate(resource, delivery_timestamp)),
+                        parseInt(game_data.village.storage_max - this.settings.idle_time * 60 * this.get_production_rate(resource, delivery_timestamp)),
                     );
                     if (needs[resource] > storage_capacity) {
                         needs[resource] = storage_capacity;
