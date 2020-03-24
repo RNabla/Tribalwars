@@ -2,6 +2,7 @@
  * Generating mail template for nearby players that can help
  * Created by: Hermitowski
  * Modified on: 11/10/2019 - version 2.0
+ * Modified on: 25/03/2020 - version 2.1 - fixed dumping village troops
  */
 
 (async function (TribalWars) {
@@ -29,7 +30,8 @@
             VILLAGE: 'Wioska',
             ARRIVAL_DATE: 'Pomoc potrzebna na',
             LOYALTY: 'Poparcie',
-            TROOPS: 'Wojska',
+            TROOPS: 'Wojska (wszystkie)',
+            OWN_TROOPS: 'Wojska (w\u0142asne)',
             WALL: 'Mur',
             INCOMING_COMMANDS: 'Nadchodz\u0105ce wojska',
             MAILING_LIST: 'Lista mailingowa',
@@ -60,7 +62,8 @@
             import_diplomacy: 'Importuj graczy z dyplomacji plemienia',
             import_naps: 'Importuj z pakt\u00F3w o nieagresji',
             show_village_info: 'Poka\u017C informacje o wiosce',
-            show_troops: 'Poka\u017C wojska',
+            show_troops: 'Poka\u017C wszystkie wojska',
+            show_own_troops: 'Poka\u017C w\u0142asne wojska',
             show_loyalty: 'Poka\u017C poparcie',
             show_wall_level: 'Poka\u017C poziom muru',
             show_incoming_commands: 'Poka\u017C nadchodz\u0105ce wojska',
@@ -582,6 +585,12 @@
                     Mailing.world_info.village.some(v => v.player_id == p.id && is_in_range(v))
             }).map(p => p.name);
         },
+        dump_troops_info: function (units_overview) {
+            const unit_names = Object.keys(units_overview).filter(unit_name => typeof (units_overview[unit_name]) === 'object');
+            return unit_names.length
+                ? unit_names.map(unit_name => `[unit]${unit_name}[/unit]${units_overview[unit_name].count}`).join(' ')
+                : i18n.NO_TROOPS;
+        },
         generate_mail_template: function (user_input, recipients) {
             const arrival_date = Helper.get_date_string(user_input.arrival_date, false);
             let content = `[b]${i18n.TEMPLATE.VILLAGE}[/b]: ${user_input.target.join('|')}`;
@@ -599,11 +608,10 @@
                     content += `\n[b]${i18n.TEMPLATE.LOYALTY}[/b]: ${loyalty}`;
                 }
                 if (Mailing.settings.village_info.show_troops) {
-                    const unit_links = document.querySelector('#show_units').querySelectorAll('.unit_link');
-                    const troops = unit_links.length
-                        ? [...unit_links].map(x => `[unit]${x.getAttribute('data-unit')}[/unit]${x.parentNode.children[1].innerText}`).join(' ')
-                        : i18n.NO_TROOPS;
-                    content += `\n[b]${i18n.TEMPLATE.TROOPS}[/b]: ${troops}`;
+                    content += `\n[b]${i18n.TEMPLATE.TROOPS}[/b]: ${Mailing.dump_troops_info(VillageOverview.units[0])}`;
+                }
+                if (Mailing.settings.village_info.show_own_troops) {
+                    content += `\n[b]${i18n.TEMPLATE.OWN_TROOPS}[/b]: ${Mailing.dump_troops_info(VillageOverview.units[1])}`;
                 }
                 if (Mailing.settings.village_info.show_wall_level) {
                     content += `\n[b]${i18n.TEMPLATE.WALL}[/b]: ${game_data.village.buildings.wall}`;
@@ -760,6 +768,7 @@
             village_info: {
                 show_loyalty: true,
                 show_troops: true,
+                show_own_troops: true,
                 show_wall_level: true,
             },
             incoming_commands_info: {
