@@ -813,8 +813,22 @@
         get_default_settings: function () {
             let stored_settings = localStorage.getItem(namespace);
             return stored_settings
-                ? JSON.parse(stored_settings)
+                ? Mailing.merge_settings(Mailing.default_settings, JSON.parse(stored_settings))
                 : JSON.parse(JSON.stringify(Mailing.default_settings));
+        },
+        merge_settings: function (default_settings, stored_settings) {
+            const result = {};
+            for (const key in default_settings) {
+                if (typeof (default_settings[key]) === 'object') {
+                    result[key] = Mailing.merge_settings(default_settings[key], stored_settings[key]);
+                }
+                else {
+                    result[key] = typeof (stored_settings[key]) === 'undefined'
+                        ? default_settings[key]
+                        : stored_settings[key];
+                }
+            }
+            return result;
         },
         init_settings: function () {
             Mailing.settings = Mailing.get_default_settings();
