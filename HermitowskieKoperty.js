@@ -24,7 +24,8 @@
             NO_ALLY: 'Nie ma kto ci pom\u00F3c',
             EMPTY_SELECTION: '\u017Baden z graczy nie zd\u0105\u017Cy :(',
             NEW_WINDOW: 'Ups... Wygl\u0105da na to, \u017Ce obecne ustawienia przegl\u0105darki nie pozwalaj\u0105 otworzy\u0107 nowego okna',
-            NO_MORE_COMMANDS: 'Nie ma wi\u0119cej komend'
+            NO_MORE_COMMANDS: 'Nie ma wi\u0119cej komend',
+            ALLYTIME_SUPPORT_RESTRICTION: '<strong>__1__</strong><br/>Na tym \u{15B}wiecie nie mo\u{17C}na wysy\u0142a\u0107 wsparcia przez __2__ po do\u0142\u0105czeniu do plemienia.'
         },
         TEMPLATE: {
             VILLAGE: 'Wioska',
@@ -131,6 +132,12 @@
                 user_date.setDate(user_date.getDate() + 1);
             }
             return user_date;
+        },
+        get_days_duration_locale: function (days_duration) {
+            switch (days_duration) {
+                case 1: return '1 dzie\u0144';
+                default: return `${days_duration} dni`;
+            }
         },
         get_date_string: function (date_object, with_milliseconds) {
             const date = Helper.two_digit(date_object.getDate());
@@ -342,7 +349,15 @@
             support_bonus_speed.disabled = false;
 
             Helper.get_control('import_diplomacy').checked = Mailing.settings.user_input.import_diplomacy;
+            if (Mailing.settings.user_input.import_diplomacy) {
+                Mailing.show_allytime_support_warning();
+            }
             Helper.get_control('import_diplomacy').disabled = false;
+            Helper.get_control('import_diplomacy').addEventListener('change', function (event) {
+                if (event.target.checked) {
+                    Mailing.show_allytime_support_warning();
+                }
+            });
 
             if (game_data.screen === 'overview') {
                 const support_bonus_speed_modifier = Mailing.get_support_bonus_speed();
@@ -753,6 +768,17 @@
                 save_settings_button.disabled = false;
             });
 
+        },
+        show_allytime_support_warning: function () {
+            if ('allytime_support' in Mailing.world_info.config.ally) {
+                const number_of_restricted_days = Number(Mailing.world_info.config.ally.allytime_support);
+                if (number_of_restricted_days > 0) {
+                    UI.ErrorMessage(i18n.ERROR.ALLYTIME_SUPPORT_RESTRICTION
+                        .replace('__1__', i18n.LABELS.import_diplomacy)
+                        .replace('__2__', Helper.get_days_duration_locale(number_of_restricted_days))
+                    );
+                }
+            }
         },
         default_settings: {
             user_input: {
