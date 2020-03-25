@@ -92,7 +92,7 @@
             },
             trim_to_storage_capacity: true,
             traders_safeguard: 0,
-            idle_time: 5,
+            idle_time: 5, /* minutes */
             trader_capacity_threshold: 0
         },
         main: async function () {
@@ -112,22 +112,13 @@
         get_resources_schedule: async function () {
             const url = TribalWars.buildURL('GET', 'api', { ajax: 'resources_schedule', id: game_data.village.id });
             const response = await fetch(url);
-            const content = response.json();
-            return content;
+            return await response.json();
         },
         fix_discrepancy: function () {
-            // scheduled resources does not take into account spent resources on recruitment
-            // so if we got following timeline for amount
-            // ----------X------N------Y------Z------->
-            // N - now timestamp
-            // X - timestamp for latest amount calculation before 'now'
-            // Y, Z - other calculated scheduled amounts
-            // so if in time X schedule says village has 10 000 resource
-            // so forecasting resource in N timepoint village should have X + (N - X) * production_rate(X, N)
-            // production_rate gives production_rate for given time interval
-            // but if in fact in N timepoint village has 8 000 resource it means users spent some resources on recruitment
-            // the amount of spent resource is forecasted - current
-
+            // here be dragons
+            // complicated stuff
+            // resource scheduler is bugged so this sometimes works sometimes doesn't
+            
             for (const resource of this.resources) {
                 const rates_schedule = this.resources_schedule.rates.schedules[resource];
                 let production_rate = NaN;
@@ -145,8 +136,8 @@
                     }
                 }
                 const discrepancy = amount - game_data.village[`${resource}_float`];
-                for (const key in this.resources_schedule.rates.schedules[resource]) {
-                    this.resources_schedule.rates.schedules[resource][key] -= discrepancy;
+                for (const key in this.resources_schedule.amounts.schedules[resource]) {
+                    this.resources_schedule.amounts.schedules[resource][key] -= discrepancy;
                 }
             }
         },
@@ -217,7 +208,7 @@
                 if (this.settings.trim_to_storage_capacity) {
                     let storage_capacity = Math.min(
                         parseInt(game_data.village.storage_max * this.settings.storage_percentage_limit[resource] / 100),
-                        parseInt(game_data.village.storage_max - this.settings.idle_time * this.get_production_rate(resource, delivery_timestamp)),
+                        parseInt(game_data.village.storage_max - this.settings.idle_time * 60 * this.get_production_rate(resource, delivery_timestamp)),
                     );
                     if (needs[resource] > storage_capacity) {
                         needs[resource] = storage_capacity;

@@ -3,6 +3,7 @@
  * Created by: Hermitowski
  * Modified on: 11/10/2019 - version 2.0
  * Modified on: 25/03/2020 - version 2.1 - fixed dumping village troops
+ * Modified on: 25/03/2020 - version 2.2 - added allytime_support warning
  */
 
 (async function (TribalWars) {
