@@ -15,7 +15,7 @@
         ERROR_MESSAGE: 'Komunikat o b\u{142}\u{119}dzie: ',
         FORUM_THREAD: 'Link do w\u{105}tku na forum',
         FORUM_THREAD_HREF: 'https://forum.plemiona.pl/index.php?threads/HermitowskieKoperty.125615/',
-        TROOPS_TIME_PER_FIELD: '(__1__ na pole)',
+        TROOPS_TIME_PER_FIELD: '(__1__)',
         NO_TROOPS: 'Brak wojska',
         SIGIL_OF_DISTRESS: 'Amulet strapionych',
         ERROR: {
@@ -178,10 +178,10 @@
     const Mailing = {
         create_main_panel: function () {
             const options = [
-                { name: 'target', controls: [{ type: 'input', attributes: { id: 'target', size: 10 } }] },
+                { name: 'target', controls: [{ type: 'input', attributes: { id: 'target', size: 6 } }] },
                 { name: 'arrival_date', controls: [{ type: 'input', attributes: { id: 'arrival_date', size: 12 } }] },
                 { name: 'help_speed', controls: [{ type: 'select', attributes: { id: 'help_speed' } }] },
-                { name: 'support_bonus_speed', controls: [{ type: 'input', attributes: { id: 'support_bonus_speed' } }] },
+                { name: 'support_bonus_speed', controls: [{ type: 'input', attributes: { id: 'support_bonus_speed', size: 16 } }] },
                 { name: 'import_diplomacy', controls: [{ type: 'input', attributes: { id: 'import_diplomacy', type: 'checkbox' } }] },
                 { name: 'show_village_info', controls: [{ type: 'input', attributes: { id: 'show_village_info', type: 'checkbox' } }] },
                 { name: 'show_incoming_commands', controls: [{ type: 'input', attributes: { id: 'show_incoming_commands', type: 'checkbox' } }] },
