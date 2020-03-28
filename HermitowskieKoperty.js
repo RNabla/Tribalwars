@@ -349,10 +349,10 @@
             support_bonus_speed.value = Mailing.settings.user_input.support_bonus_speed;
             support_bonus_speed.disabled = false;
 
-            Helper.get_control('import_diplomacy').checked = Mailing.settings.user_input.import_diplomacy;
-            if (Mailing.settings.user_input.import_diplomacy) {
-                Mailing.show_allytime_support_warning();
-            }
+            Helper.get_control('import_diplomacy').checked = Mailing.get_allytime_support_number_of_restricted_days() == 0
+                ? Mailing.settings.user_input.import_diplomacy
+                : false;
+
             Helper.get_control('import_diplomacy').disabled = false;
             Helper.get_control('import_diplomacy').addEventListener('change', function (event) {
                 if (event.target.checked) {
@@ -771,15 +771,19 @@
 
         },
         show_allytime_support_warning: function () {
-            if ('allytime_support' in Mailing.world_info.config.ally) {
-                const number_of_restricted_days = Number(Mailing.world_info.config.ally.allytime_support);
-                if (number_of_restricted_days > 0) {
-                    UI.ErrorMessage(i18n.ERROR.ALLYTIME_SUPPORT_RESTRICTION
-                        .replace('__1__', i18n.LABELS.import_diplomacy)
-                        .replace('__2__', Helper.get_days_duration_locale(number_of_restricted_days))
-                    );
-                }
+            const number_of_restricted_days = Mailing.get_allytime_support_number_of_restricted_days();
+            if (number_of_restricted_days > 0) {
+                UI.ErrorMessage(i18n.ERROR.ALLYTIME_SUPPORT_RESTRICTION
+                    .replace('__1__', i18n.LABELS.import_diplomacy)
+                    .replace('__2__', Helper.get_days_duration_locale(number_of_restricted_days))
+                );
             }
+        },
+        get_allytime_support_number_of_restricted_days: function () {
+            if ('allytime_support' in Mailing.world_info.config.ally) {
+                return Number(Mailing.world_info.config.ally.allytime_support);
+            }
+            return 0;
         },
         default_settings: {
             user_input: {
