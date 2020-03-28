@@ -607,6 +607,23 @@
                 ? unit_names.map(unit_name => `[unit]${unit_name}[/unit]${units_overview[unit_name].count}`).join(' ')
                 : i18n.NO_TROOPS;
         },
+        peek_wall_in_build_queue: function (target_timestamp) {
+            const queue_rows = [...document.querySelectorAll('#overview_buildqueue > tbody > .queueRow')];
+            let current_timestamp = Date.now();
+            current_timestamp -= current_timestamp % 1000;
+            let wall_levels = 0;
+            for (const queue_row of queue_rows) {
+                const duration_parts = queue_row.children[1].children[1].innerText.split(':').map(Number);
+                const duration_ms = ((duration_parts[0] * 60 + duration_parts[1]) * 60 + duration_parts[2]) * 1000;
+                current_timestamp += duration_ms;
+                if (current_timestamp <= target_timestamp) {
+                    if (queue_row.children[0].children[0].src.includes('wall')) {
+                        wall_levels++;
+                    }
+                }
+            }
+            return wall_levels;
+        },
         generate_mail_template: function (user_input, recipients) {
             const arrival_date = Helper.get_date_string(user_input.arrival_date, false);
             let content = `[b]${i18n.TEMPLATE.VILLAGE}[/b]: ${user_input.target.join('|')}`;
@@ -631,6 +648,10 @@
                 }
                 if (Mailing.settings.village_info.show_wall_level) {
                     content += `\n[b]${i18n.TEMPLATE.WALL}[/b]: ${game_data.village.buildings.wall}`;
+                    const wall_levels_in_build_queue = Mailing.peek_wall_in_build_queue(user_input.arrival_date.getTime());
+                    if (wall_levels_in_build_queue > 0) {
+                        content += `(+${wall_levels_in_build_queue})`;
+                    }
                 }
             }
 
