@@ -440,15 +440,17 @@
             const partners_table = requested_body.querySelector('#partners');
             const partners = { allies: [], naps: [], enemies: [] };
             const tags = ['allies', 'naps', 'enemies'];
-            let tag_id = -1;
-            for (let i = 0; i < partners_table.rows.length; i++) {
-                if (partners_table.rows[i].getElementsByTagName('th').length) {
-                    tag_id++;
-                    continue;
-                }
-                if (partners_table.rows[i].cells[0].children.length) {
-                    const ally_id = partners_table.rows[i].cells[0].children[0].href.match(/=?id=(\d+)/).pop();
-                    partners[tags[tag_id]].push(ally_id);
+            if (partners_table) {
+                let tag_id = -1;
+                for (let i = 0; i < partners_table.rows.length; i++) {
+                    if (partners_table.rows[i].getElementsByTagName('th').length) {
+                        tag_id++;
+                        continue;
+                    }
+                    if (partners_table.rows[i].cells[0].children.length) {
+                        const ally_id = partners_table.rows[i].cells[0].children[0].href.match(/=?id=(\d+)/).pop();
+                        partners[tags[tag_id]].push(ally_id);
+                    }
                 }
             }
             Mailing.diplomacy = partners;
@@ -578,7 +580,10 @@
             return user_input;
         },
         get_recipients: async function (user_input) {
-            let ally_ids = new Set([game_data.player.ally]);
+            let ally_ids = new Set();
+            if (game_data.player.ally !== "0") {
+                ally_ids.add(game_data.player.ally);
+            }
             if (user_input.import_diplomacy) {
                 const diplomacy = await Mailing.get_diplomacy();
                 for (const ally_id of diplomacy.allies) {
