@@ -497,6 +497,7 @@
                             }
                         }
                         HermitowskiPlanerBudowy.save_settings();
+                        HermitowskiPlanerBudowy.calculate_trades();
                         event.preventDefault();
                     });
                 }
