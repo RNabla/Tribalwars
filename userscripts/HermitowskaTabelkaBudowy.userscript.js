@@ -410,6 +410,10 @@
                 return total_surplus >= total_needs && total_buy_capacity >= total_needs;
             };
 
+            if (is_time_doable(HermitowskiPlanerBudowy.build_queue_time)) {
+                return HermitowskiPlanerBudowy.build_queue_time;
+            }
+
             let low = build_target.is_building
                 ? HermitowskiPlanerBudowy.build_queue_time
                 : 0;
