@@ -648,16 +648,12 @@
         get_world_info: async function () {
             HermitowskiPlanerBudowy.world_info = await get_world_info({ configs: ['config'] });
         },
-        main: function () {
-            $.ajax({
+        main: async function () {
+            await $.ajax({
                 url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/HermitowskiePlikiMapy.js?_=' + ~~(Date.now() / 9e6),
                 dataType: 'script',
                 cache: true
-            }).then(() => {
-                HermitowskiPlanerBudowy.init().catch(Helper.handle_error);
             });
-        },
-        init: async function () {
             await Promise.all([HermitowskiPlanerBudowy.get_resources_schedule(), HermitowskiPlanerBudowy.get_world_info()]);
             HermitowskiPlanerBudowy.get_build_targets();
             HermitowskiPlanerBudowy.get_build_queue_time();
@@ -673,7 +669,7 @@
     };
 
     try {
-        HermitowskiPlanerBudowy.main();
+        await HermitowskiPlanerBudowy.main();
     } catch (error) {
         Helper.handle_error(error);
     }
