@@ -11,7 +11,7 @@
 /**
  * Overview of resources dependencies on buildings
  * Created by: Hermitowski
- * Modified on: 25/03/2020 - version 2.2 - added allytime_support warning
+ * Modified on: 25/03/2020 - version 2.0
  */
 !(async function () {
     const namespace = 'Hermitowski.Planer.Budowy';
@@ -325,8 +325,9 @@
             for (const build_target of HermitowskiPlanerBudowy.build_targets) {
                 const current_time = HermitowskiPlanerBudowy.calculate_trade_current_time(build_target, resource_options);
                 const optimal_time = HermitowskiPlanerBudowy.calculate_trade_optimal_time(build_target, resource_options, current_time);
-                Helper.get_control([build_target.id, 'current']).innerText = Helper.get_duration_text(current_time);
-                Helper.get_control([build_target.id, 'optimal']).innerText = Helper.get_duration_text(optimal_time);
+
+                HermitowskiPlanerBudowy.update_duration(build_target, 'current', current_time);
+                HermitowskiPlanerBudowy.update_duration(build_target, 'optimal', optimal_time);
 
                 HermitowskiPlanerBudowy.highlight_building(build_target);
 
@@ -338,6 +339,11 @@
                 }
             }
         },
+        update_duration: function (build_target, time_type, duration) {
+            const control = Helper.get_control([build_target.id, time_type]);
+            control.innerText = Helper.get_duration_text(duration);
+            control.title = new Date(now + duration * 1000).toLocaleString();
+        },
         highlight_building: function (build_target) {
             if (build_target.build_time) {
                 let production_sum = 0;
@@ -347,7 +353,12 @@
                     building_total_cost += build_target[resource];
                 }
 
-                Helper.get_control([build_target.id, 'name']).style.color = production_sum * build_target.build_time >= building_total_cost
+                const time_gained = build_target.build_time - (building_total_cost / production_sum);
+                const prefix = time_gained > 0 ? '+' : '-';
+
+                const control = Helper.get_control([build_target.id, 'name']);
+                control.title = `${prefix}${Helper.get_duration_text(Math.abs(time_gained))}`;
+                control.style.color = time_gained > 0
                     ? 'green'
                     : 'unset';
             }
@@ -493,7 +504,7 @@
                             let offset = HermitowskiPlanerBudowy.resources.indexOf(resource);
                             const length = Math.min(HermitowskiPlanerBudowy.resources.length, parts.length);
                             for (let i = 0; i + offset < length; i++) {
-                                Helper.get_control([HermitowskiPlanerBudowy.resources[i + offset], control_name]).value = parts[i];
+                                Helper.get_control([HermitowskiPlanerBudowy.resources[i + offset], control_name]).value = parts[i].replace(/\./g, '');
                             }
                         }
                         HermitowskiPlanerBudowy.save_settings();
