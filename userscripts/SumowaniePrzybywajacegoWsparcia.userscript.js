@@ -533,7 +533,6 @@
     }
 
     function convert_ajax_response(data) {
-        data = JSON.parse(data);
         var command = { timestamp: Number(data.time_arrival.date), units: {}, original_object: data };
 
         for (var unit in data.units) {
