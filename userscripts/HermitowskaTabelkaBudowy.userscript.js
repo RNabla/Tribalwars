@@ -16,15 +16,12 @@
 !(async function () {
     const namespace = 'Hermitowski.Planer.Budowy';
     const start = Date.now();
-    const now = start;
     const i18n = {
         ERROR_MESSAGE: 'Komunikat o b\u{142}\u{119}dzie: ',
         FORUM_THREAD: 'Link do w\u{105}tku na forum',
         FORUM_THREAD_HREF: 'https://forum.plemiona.pl/index.php?threads/Hermitowski.126840/',
         LABEL: {
             building: 'Budynek',
-            buy: 'Kupno',
-            sell: 'Sprzeda\u{17C}',
             wood: 'Drewno',
             stone: 'Glina',
             iron: '\u017Belazo',
@@ -32,15 +29,27 @@
             market: 'Rynek',
             call: 'Wezwij',
             export: 'Export',
-            additional: 'Dodatkowe',
-            max_trade: 'Max wymiana',
             building_level: 'Poziom __0__',
             snob: 'Szlachcic',
             coin: 'Z\u{142}ota moneta',
-            copied: 'Skopiowano do schowka'
+            copied: 'Skopiowano do schowka',
+            DESKTOP: {
+                buy: 'Kupno',
+                sell: 'Sprzeda\u{17C}',
+                additional_resources: '+ surowce',
+                additional_consumption: '- produkcja',
+                max_trade: 'Max wymiana',
+            },
+            MOBILE: {
+                buy: 'Buy',
+                sell: 'Sell',
+                additional_resources: 'res',
+                additional_consumption: 'prod',
+                max_trade: 'trade',
+            }
         },
-        ERROR: {
-            nothing_to_buy: 'Niczego nie potrzebujesz'
+        MESSAGE: {
+            consumption_greater_than_production: 'Wydajesz wi\u{119}cej ni\u{17C} wydobywasz'
         },
     };
 
@@ -51,11 +60,13 @@
                 : `0${value}`;
         },
         get_duration_text: function (duration /* in seconds */) {
+            if (!isFinite(duration)) { return duration; }
             duration = parseInt(duration);
             const seconds = duration % 60;
             duration = (duration - seconds) / 60;
             const minutes = duration % 60;
             duration = (duration - minutes) / 60;
+            if (duration > 100) { return '99:99:99+'; }
             return [duration, minutes, seconds].map(Helper.two_digit).join(":");
         },
         get_id: function (control_name) {
@@ -75,12 +86,13 @@
                 UI.ErrorMessage(error);
                 return;
             }
-            const gui =
-                `<h2>WTF - What a Terrible Failure</h2>
-                 <p><strong>${i18n.ERROR_MESSAGE}</strong><br/>
+            const gui = `
+                <h2>WTF - What a Terrible Failure</h2>
+                <p><strong>${i18n.ERROR_MESSAGE}</strong><br/>
                     <textarea rows='5' cols='42'>${error}\n\n${error.stack}</textarea><br/>
                     <a href='${i18n.FORUM_THREAD_HREF}'>${i18n.FORUM_THREAD}</a>
-                 </p>`;
+                </p>
+            q`;
             Dialog.show(namespace, gui);
         }
     };
@@ -96,7 +108,7 @@
             setTimeout(function () {
                 document.querySelector(`#popup_box_${Helper.get_id()}`.replace(/\./g, '\\.')).style.width = 'auto';
                 if (mobile) {
-                    document.querySelector(`#popup_box_${Helper.get_id()}`.replace(/\./g, '\\.')).style.maxWidth = '80vw';
+                    document.querySelector(`#popup_box_${Helper.get_id()}`.replace(/\./g, '\\.')).style.maxWidth = '90vw';
                 }
             });
         },
@@ -130,29 +142,33 @@
                     text_div.innerText = column.name;
                     text_div.style.textAlign = 'center';
                     thead_cell.append(text_div);
-                    const trade_directions = { buy: i18n.LABEL.buy, sell: i18n.LABEL.sell };
-                    for (const trade_direction in trade_directions) {
+                    for (const checkbox_name of HermitowskiPlanerBudowy.user_checkboxes) {
                         const span = document.createElement('span');
                         span.style.whiteSpace = 'nowrap';
                         const label = document.createElement('label');
-                        label.textContent = trade_directions[trade_direction];
-                        label.setAttribute('for', Helper.get_id([column.res, trade_direction]));
+                        label.textContent = mobile
+                            ? i18n.LABEL.MOBILE[checkbox_name]
+                            : i18n.LABEL.DESKTOP[checkbox_name];
+                        label.setAttribute('for', Helper.get_id([column.res, checkbox_name]));
                         const checkbox = document.createElement('input');
                         checkbox.type = 'checkbox';
-                        checkbox.id = Helper.get_id([column.res, trade_direction]);
+                        checkbox.id = Helper.get_id([column.res, checkbox_name]);
                         checkbox.checked = true;
                         span.append(checkbox);
                         span.append(label);
                         thead_cell.append(span);
                         thead_cell.append(document.createElement('br'));
                     }
-                    const input_fields = { 'additional': i18n.LABEL.additional, 'max_trade': i18n.LABEL.max_trade };
-                    for (const input_field_name in input_fields) {
+                    for (const input_name of HermitowskiPlanerBudowy.user_inputs) {
                         const input = document.createElement('input');
-                        input.id = Helper.get_id([column.res, input_field_name]);
-                        input.size = 10;
-                        input.placeholder = input_fields[input_field_name];
-                        input.title = input_field_name;
+                        input.id = Helper.get_id([column.res, input_name]);
+                        input.size = mobile
+                            ? 5
+                            : 10;
+                        input.placeholder = mobile
+                            ? i18n.LABEL.MOBILE[input_name]
+                            : i18n.LABEL.DESKTOP[input_name];;
+                        input.title = input_name;
                         input.style.textIndent = '0.5em';
                         thead_cell.append(input);
                         thead_cell.append(document.createElement('br'));
@@ -196,6 +212,7 @@
                 cell.innerText = options.text;
                 if (options.bold_name) {
                     cell.style.fontWeight = 'bold';
+                    cell.style.whiteSpace = 'nowrap';
                 }
             }
             if (options.id) {
@@ -205,15 +222,15 @@
         },
         create_planner_table_body_cell_resource: function (target_id, resource_name, time_type) {
             const cell = document.createElement('td');
-            const icon_span = document.createElement('span');
-            icon_span.classList.add('icon', 'header', resource_name);
-            icon_span.title = resource_name;
             const text_span = document.createElement('span');
             text_span.id = Helper.get_id([target_id, resource_name, time_type]);
             cell.append(text_span);
+            const icon_span = document.createElement('span');
+            icon_span.classList.add('icon', 'header', resource_name);
+            icon_span.title = resource_name;
+            icon_span.style.marginLeft = '0.5em';
             cell.append(icon_span);
             cell.style.textAlign = 'right';
-            icon_span.style.marginLeft = '0.5em';
             return cell;
         },
         create_planner_table_body_cell_market: function (build_target) {
@@ -223,7 +240,9 @@
             for (const resource of HermitowskiPlanerBudowy.resources) {
                 params[resource] = build_target[resource];
             }
-            params['delivery_at'] = now + HermitowskiPlanerBudowy.build_queue_time * 1000;
+            if (HermitowskiPlanerBudowy.build_queue_timestamp) {
+                params['delivery_at'] = HermitowskiPlanerBudowy.build_queue_timestamp;
+            }
             market_anchor.href = TribalWars.buildURL('GET', 'market', params);
             market_anchor.innerText = i18n.LABEL.call;
             market_cell.style.textAlign = 'center';
@@ -275,7 +294,7 @@
                 }
                 const building_info = BuildingMain.buildings[build_row.id.split('_').pop()];
                 build_target = {
-                    name: build_row.cells[0].children[1].innerText.replace(/\s/, '\xa0'),
+                    name: build_row.cells[0].children[1].innerText,
                     description: i18n.LABEL.building_level.replace('__0__', building_info.level_next),
                     id: build_row.id,
                     is_building: true,
@@ -310,21 +329,69 @@
             }
             return build_targets;
         },
-        calculate_trades: function () {
+        get_build_queue_timestamp: function () {
+            let build_queue_timestamp = mobile
+                ? HermitowskiPlanerBudowy.get_build_queue_timestamp_mobile()
+                : HermitowskiPlanerBudowy.get_build_queue_timestamp_desktop();
+            if (build_queue_timestamp) {
+                const matches = build_queue_timestamp.match(/(dzisiaj|jutro) o (.*)/);
+                const parts = matches[2].split(':').map(Number);
+                const now = new Date();
+                const finished_at = new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    now.getDate() + (matches[1] === "dzisiaj" ? 0 : 1),
+                    parts[0],
+                    parts[1],
+                    parts[2],
+                );
+                return finished_at.getTime();
+            }
+            return null;
+        },
+        get_build_queue_timestamp_desktop: function () {
+            const build_orders = document.querySelectorAll('[class*="buildorder"]');
+            if (build_orders.length > 0) {
+                const last_order = build_orders[build_orders.length - 1];
+                return last_order.cells[last_order.cells.length - 2].innerText;
+            }
+            return null;
+        },
+        get_build_queue_timestamp_mobile: function () {
+            const build_orders = document.querySelectorAll('#buildqueue_wrap .queueItem > div > div > div:nth-child(2)')
+            if (build_orders.length > 0) {
+                const last_order = build_orders[build_orders.length - 1];
+                return last_order.innerText.split('-')[1];
+            }
+            return null;
+        },
+        get_resource_options: function () {
             const resource_options = {};
             for (const resource of HermitowskiPlanerBudowy.resources) {
                 resource_options[resource] = {
                     buy: Helper.get_control([resource, 'buy']).checked,
                     sell: Helper.get_control([resource, 'sell']).checked,
-                    additional: Number(Helper.get_control([resource, 'additional']).value),
+                    additional_resources: Number(Helper.get_control([resource, 'additional_resources']).value),
+                    additional_consumption: Number(Helper.get_control([resource, 'additional_consumption']).value) / 3600,
                     max_trade: Helper.get_control([resource, 'max_trade']).value.length == 0
                         ? null
                         : Number(Helper.get_control([resource, 'max_trade']).value)
                 };
             }
+            return resource_options;
+        },
+        init_context: function () {
+            HermitowskiPlanerBudowy.calculation_timestamp = Date.now();
+            HermitowskiPlanerBudowy.build_queue_time = HermitowskiPlanerBudowy.build_queue_timestamp
+                ? (HermitowskiPlanerBudowy.build_queue_timestamp - HermitowskiPlanerBudowy.calculation_timestamp) / 1000
+                : 0;
+            HermitowskiPlanerBudowy.resource_options = HermitowskiPlanerBudowy.get_resource_options();
+        },
+        calculate_trades: function () {
+            HermitowskiPlanerBudowy.init_context();
             for (const build_target of HermitowskiPlanerBudowy.build_targets) {
-                const current_time = HermitowskiPlanerBudowy.calculate_trade_current_time(build_target, resource_options);
-                const optimal_time = HermitowskiPlanerBudowy.calculate_trade_optimal_time(build_target, resource_options, current_time);
+                const current_time = HermitowskiPlanerBudowy.calculate_trade_current_time(build_target);
+                const optimal_time = HermitowskiPlanerBudowy.calculate_trade_optimal_time(build_target, current_time);
 
                 HermitowskiPlanerBudowy.update_duration(build_target, 'current', current_time);
                 HermitowskiPlanerBudowy.update_duration(build_target, 'optimal', optimal_time);
@@ -333,47 +400,31 @@
 
                 for (const resource of HermitowskiPlanerBudowy.resources) {
                     Helper.get_control([build_target.id, resource, 'current']).innerText =
-                        Math.round(HermitowskiPlanerBudowy.get_village_resources(resource, current_time) - build_target[resource] + resource_options[resource].additional);
+                        Math.round(HermitowskiPlanerBudowy.get_village_resources(resource, current_time) - build_target[resource]);
                     Helper.get_control([build_target.id, resource, 'optimal']).innerText =
-                        Math.round(HermitowskiPlanerBudowy.get_village_resources(resource, optimal_time) - build_target[resource] + resource_options[resource].additional);
+                        Math.round(HermitowskiPlanerBudowy.get_village_resources(resource, optimal_time) - build_target[resource]);
                 }
             }
         },
-        update_duration: function (build_target, time_type, duration) {
-            const control = Helper.get_control([build_target.id, time_type]);
-            control.innerText = Helper.get_duration_text(duration);
-            control.title = new Date(now + duration * 1000).toLocaleString();
-        },
-        highlight_building: function (build_target) {
-            if (build_target.build_time) {
-                let production_sum = 0;
-                let building_total_cost = 0;
-                for (const resource of HermitowskiPlanerBudowy.resources) {
-                    production_sum += HermitowskiPlanerBudowy.get_production_rate(resource, HermitowskiPlanerBudowy.build_queue_time);
-                    building_total_cost += build_target[resource];
-                }
-
-                const time_gained = build_target.build_time - (building_total_cost / production_sum);
-                const prefix = time_gained > 0 ? '+' : '-';
-
-                const control = Helper.get_control([build_target.id, 'name']);
-                control.title = `${prefix}${Helper.get_duration_text(Math.abs(time_gained))}`;
-                control.style.color = time_gained > 0
-                    ? 'green'
-                    : 'unset';
-            }
-        },
-        calculate_trade_current_time: function (build_target, resource_options) {
+        calculate_trade_current_time: function (build_target) {
             const current_times = [];
             for (const resource of HermitowskiPlanerBudowy.resources) {
-                current_times.push((build_target[resource] - game_data.village[`${resource}_float`]) / game_data.village[`${resource}_prod`]);
+                const current_resource_amount = HermitowskiPlanerBudowy.get_village_resources(resource, 0);
+                const current_resource_production = HermitowskiPlanerBudowy.get_production_rate(resource, 0);
+                if (build_target[resource] > current_resource_amount && current_resource_production <= 0) {
+                    current_times.push(NaN);
+                } else {
+                    current_times.push((build_target[resource] - current_resource_amount) / current_resource_production);
+                }
             }
 
             let current_time = Math.ceil(Math.max(...current_times, 0));
 
+            if (!isFinite(current_time)) { return current_time; }
+
             const is_time_doable = function (time) {
                 return HermitowskiPlanerBudowy.resources.map(resource => {
-                    const village_resources = HermitowskiPlanerBudowy.get_village_resources(resource, time) + resource_options[resource].additional;
+                    const village_resources = HermitowskiPlanerBudowy.get_village_resources(resource, time);
                     return (village_resources - build_target[resource]) >= 0;
                 }).every(x => x);
             };
@@ -382,6 +433,7 @@
                 ? HermitowskiPlanerBudowy.build_queue_time
                 : 0;
             let high = current_time;
+
             while (high - low > 1) {
                 current_time = low + (high - low) / 2;
                 if (is_time_doable(current_time)) {
@@ -393,29 +445,29 @@
 
             return current_time;
         },
-        calculate_trade_optimal_time: function (build_target, resource_options, current_time) {
+        calculate_trade_optimal_time: function (build_target, current_time) {
             const is_time_doable = function (time) {
                 let total_needs = 0;
                 let total_surplus = 0;
                 let total_buy_capacity = 0;
 
                 for (const resource of HermitowskiPlanerBudowy.resources) {
-                    const village_resources = HermitowskiPlanerBudowy.get_village_resources(resource, time) + resource_options[resource].additional;
+                    const village_resources = HermitowskiPlanerBudowy.get_village_resources(resource, time);
                     const need = build_target[resource] - village_resources;
 
                     if (need > 0) {
                         total_needs += need;
-                        if (resource_options[resource].buy) {
-                            total_buy_capacity += resource_options[resource].max_trade === null
+                        if (HermitowskiPlanerBudowy.resource_options[resource].buy) {
+                            total_buy_capacity += HermitowskiPlanerBudowy.resource_options[resource].max_trade === null
                                 ? need
-                                : Math.min(need, resource_options[resource].max_trade);
+                                : Math.min(need, HermitowskiPlanerBudowy.resource_options[resource].max_trade);
                         }
                     }
 
-                    if (need < 0 && resource_options[resource].sell) {
-                        total_surplus += resource_options[resource].max_trade === null
+                    if (need < 0 && HermitowskiPlanerBudowy.resource_options[resource].sell) {
+                        total_surplus += HermitowskiPlanerBudowy.resource_options[resource].max_trade === null
                             ? -need
-                            : Math.min(-need, resource_options[resource].max_trade);
+                            : Math.min(-need, HermitowskiPlanerBudowy.resource_options[resource].max_trade);
                     }
                 }
                 return total_surplus >= total_needs && total_buy_capacity >= total_needs;
@@ -428,7 +480,20 @@
             let low = build_target.is_building
                 ? HermitowskiPlanerBudowy.build_queue_time
                 : 0;
-            let high = optimal_time = current_time;
+            let high = optimal_time = (isFinite(current_time)
+                ? current_time
+                : 100 * 3600
+            );
+
+            let production_sum = 0;
+            let resources_needed = 0;
+            for (const resource of HermitowskiPlanerBudowy.resources) {
+                production_sum += HermitowskiPlanerBudowy.get_production_rate(resource, 0);
+                resources_needed += build_target[resource] - HermitowskiPlanerBudowy.get_village_resources(resource, 0);
+            }
+
+            if (resources_needed > 0 && production_sum <= 0) { return NaN; }
+
             while (high - low > 1) {
                 optimal_time = low + (high - low) / 2;
                 if (is_time_doable(optimal_time)) {
@@ -440,46 +505,38 @@
 
             return optimal_time;
         },
-        get_build_queue_time: function () {
-            let build_queue_time = mobile
-                ? HermitowskiPlanerBudowy.get_build_queue_time_mobile()
-                : HermitowskiPlanerBudowy.get_build_queue_time_desktop();
-            if (build_queue_time) {
-                const matches = build_queue_time.match(/(dzisiaj|jutro) o (.*)/);
-                const parts = matches[2].split(':').map(Number);
-                const now = new Date();
-                const finished_at = new Date(
-                    now.getFullYear(),
-                    now.getMonth(),
-                    now.getDate() + (matches[1] === "dzisiaj" ? 0 : 1),
-                    parts[0],
-                    parts[1],
-                    parts[2],
-                );
-                build_queue_time = (finished_at.getTime() - now.getTime()) / 1000;
-            }
-            HermitowskiPlanerBudowy.build_queue_time = build_queue_time;
+        update_duration: function (build_target, time_type, duration) {
+            const control = Helper.get_control([build_target.id, time_type]);
+            control.innerText = Helper.get_duration_text(duration);
+            control.title = new Date(HermitowskiPlanerBudowy.calculation_timestamp + duration * 1000).toLocaleString();
         },
-        get_build_queue_time_desktop: function () {
-            const build_orders = document.querySelectorAll('[class*="buildorder"]');
-            let build_queue_time = 0;
-            if (build_orders.length) {
-                const last_order = build_orders[build_orders.length - 1];
-                return last_order.cells[2].innerText;
+        highlight_building: function (build_target) {
+            if (build_target.build_time) {
+                let production_sum = 0;
+                let building_total_cost = 0;
+                for (const resource of HermitowskiPlanerBudowy.resources) {
+                    production_sum += HermitowskiPlanerBudowy.get_production_rate(resource, HermitowskiPlanerBudowy.resource_options, HermitowskiPlanerBudowy.build_queue_time);
+                    building_total_cost += build_target[resource];
+                }
+
+                if (production_sum > 0) {
+                    const time_gained = build_target.build_time - (building_total_cost / production_sum);
+                    const prefix = time_gained > 0 ? '+' : '-';
+
+                    const control = Helper.get_control([build_target.id, 'name']);
+                    control.title = `${prefix}${Helper.get_duration_text(Math.abs(time_gained))}`;
+                    control.style.color = time_gained > 0
+                        ? 'green'
+                        : 'unset';
+                } else {
+                    const control = Helper.get_control([build_target.id, 'name']);
+                    control.title = i18n.MESSAGE.consumption_greater_than_production;
+                    control.style.color = 'unset';
+                }
             }
-            return build_queue_time;
-        },
-        get_build_queue_time_mobile: function () {
-            const build_orders = document.querySelectorAll('#buildqueue_wrap .queueItem > div > div > div:nth-child(2)')
-            let build_queue_time = 0;
-            if (build_orders.length) {
-                const last_order = build_orders[build_orders.length - 1];
-                return last_order.innerText.split('-')[1];
-            }
-            return build_queue_time;
         },
         add_handlers: function () {
-            const controls = ['buy', 'sell', 'additional', 'max_trade'];
+            const controls = ['buy', 'sell', 'additional_resources', 'additional_consumption', 'max_trade'];
             for (const resource of HermitowskiPlanerBudowy.resources) {
                 for (const control_name of controls) {
                     const control = Helper.get_control([resource, control_name]);
@@ -494,13 +551,13 @@
                 control.addEventListener('click', HermitowskiPlanerBudowy.export_text_info);
             }
             for (const resource of HermitowskiPlanerBudowy.resources) {
-                for (const control_name of ['additional', 'max_trade']) {
+                for (const control_name of ['additional_resources', 'additional_consumption', 'max_trade']) {
                     const control = Helper.get_control([resource, control_name]);
                     control.addEventListener('paste', function (event) {
-                        let data = event.clipboardData.getData('text');
-                        if (data && data.length) {
-                            data = data.trim();
-                            const parts = data.split(/\s+/);
+                        let text = event.clipboardData.getData('text');
+                        if (text && text.length) {
+                            text = text.trim();
+                            const parts = text.split(/\s+/);
                             let offset = HermitowskiPlanerBudowy.resources.indexOf(resource);
                             const length = Math.min(HermitowskiPlanerBudowy.resources.length, parts.length);
                             for (let i = 0; i + offset < length; i++) {
@@ -528,24 +585,28 @@
                 }
             }
 
-            if (Object.keys(to_buy).length) {
-                const resource_name = {
-                    wood: 'drewna',
-                    stone: 'gliny',
-                    iron: '\u{17C}elaza'
-                }
-                let export_text = '';
-                export_text += 'Potrzebuj\u0119: ';
-                export_text += Object.keys(to_buy).map(resource => `${to_buy[resource]} sztuk ${resource_name[resource]}`).join(", ");
-                export_text += '. Oferuj\u0119: ';
-                export_text += Object.keys(to_sell).map(resource => `${to_sell[resource]} sztuk ${resource_name[resource]}`).join(", ");
-
-                navigator.clipboard.writeText(export_text).then(function () {
-                    UI.SuccessMessage(i18n.LABEL.copied);
-                }, Helper.handle_error);
-            } else {
-                UI.ErrorMessage(i18n.ERROR.nothing_to_buy);
+            const resource_name = {
+                wood: 'drewna',
+                stone: 'gliny',
+                iron: '\u{17C}elaza'
             }
+            let export_parts = [];
+            if (Object.keys(to_buy).length) {
+                export_parts.push(
+                    'Potrzebuj\u0119: ' +
+                    Object.keys(to_buy).map(resource => `${to_buy[resource]} sztuk ${resource_name[resource]}`).join(", ")
+                );
+            }
+            if (Object.keys(to_sell).length) {
+                export_parts.push(
+                    'Oferuj\u0119: ' +
+                    Object.keys(to_sell).map(resource => `${to_sell[resource]} sztuk ${resource_name[resource]}`).join(", ")
+                );
+            }
+
+            navigator.clipboard.writeText(export_parts.join(". ")).then(function () {
+                UI.SuccessMessage(i18n.LABEL.copied);
+            }, Helper.handle_error);
         },
         get_resources_schedule: async function () {
             if (typeof (BuildingMain) !== "undefined") {
@@ -557,11 +618,12 @@
             }
         },
         fix_discrepancy: function () {
+            const now = Date.now() / 1000;
             for (const resource of HermitowskiPlanerBudowy.resources) {
                 const rates_schedule = HermitowskiPlanerBudowy.resources_schedule.rates.schedules[resource];
                 let production_rate = NaN;
                 for (const timestamp_str in rates_schedule) {
-                    if (Number(timestamp_str) < now / 1000) {
+                    if (Number(timestamp_str) < now) {
                         production_rate = Number(rates_schedule[timestamp_str]);
                     }
                 }
@@ -569,8 +631,8 @@
                 let amount = NaN;
                 for (const timestamp_str in amounts) {
                     const timestamp = Number(timestamp_str);
-                    if (timestamp < now / 1000) {
-                        amount = Number(amounts[timestamp_str]) + (now / 1000 - timestamp) * production_rate;
+                    if (timestamp < now) {
+                        amount = Number(amounts[timestamp_str]) + (now - timestamp) * production_rate;
                     }
                 }
                 const discrepancy = amount - game_data.village[`${resource}_float`];
@@ -580,40 +642,40 @@
             }
         },
         get_production_rate: function (resource, offset_s) {
-            const delivery_timestamp = now / 1000 + offset_s;
+            const calculation_timestamp_s = HermitowskiPlanerBudowy.calculation_timestamp / 1000;
+            const delivery_timestamp_s = calculation_timestamp_s + offset_s;
             const rates_schedule = HermitowskiPlanerBudowy.resources_schedule.rates.schedules[resource];
             let production_rate = game_data.village[`${resource}_prod`];
             for (const timestamp_str in rates_schedule) {
-                const timestamp = Number(timestamp_str);
-                if (now / 1000 < timestamp && timestamp < delivery_timestamp) {
+                const timestamp_s = Number(timestamp_str);
+                if (calculation_timestamp_s < timestamp_s && timestamp_s < delivery_timestamp_s) {
                     production_rate = Number(rates_schedule[timestamp_str]);
                 }
             }
-            return production_rate;
+            return production_rate - HermitowskiPlanerBudowy.resource_options[resource].additional_consumption;
         },
         get_village_resources: function (resource, offset_s) {
-            const delivery_timestamp = now / 1000 + offset_s;
+            const calculation_timestamp_s = HermitowskiPlanerBudowy.calculation_timestamp / 1000;
+            const delivery_timestamp_s = calculation_timestamp_s + offset_s;
             const amounts_schedule = HermitowskiPlanerBudowy.resources_schedule.amounts.schedules[resource];
-            const production_rate = HermitowskiPlanerBudowy.get_production_rate(resource, offset_s);
-            let resource_amount = game_data.village[`${resource}_float`] + (delivery_timestamp - now / 1000) * production_rate;
+            const production_rate = HermitowskiPlanerBudowy.get_production_rate(resource, HermitowskiPlanerBudowy.resource_options, offset_s);
+            let resource_amount = game_data.village[`${resource}_float`] + (delivery_timestamp_s - calculation_timestamp_s) * production_rate;
             for (const timestamp_str in amounts_schedule) {
-                const timestamp = Number(timestamp_str);
-                if (now / 1000 < timestamp && timestamp < delivery_timestamp) {
-                    resource_amount = Number(amounts_schedule[timestamp_str]) + production_rate * (delivery_timestamp - timestamp);
+                const timestamp_s = Number(timestamp_str);
+                if (calculation_timestamp_s < timestamp_s && timestamp_s < delivery_timestamp_s) {
+                    resource_amount = Number(amounts_schedule[timestamp_str]) + production_rate * (delivery_timestamp_s - timestamp_s);
                 }
             }
-            return resource_amount;
+            return resource_amount + HermitowskiPlanerBudowy.resource_options[resource].additional_resources;
         },
         save_settings: function () {
             const settings = {};
-            const inputs = ['additional', 'max_trade'];
-            const checkboxes = ['buy', 'sell'];
             for (const resource of HermitowskiPlanerBudowy.resources) {
                 settings[resource] = {};
-                for (const control_name of inputs) {
+                for (const control_name of HermitowskiPlanerBudowy.user_inputs) {
                     settings[resource][control_name] = Helper.get_control([resource, control_name]).value;
                 }
-                for (const control_name of checkboxes) {
+                for (const control_name of HermitowskiPlanerBudowy.user_checkboxes) {
                     settings[resource][control_name] = Helper.get_control([resource, control_name]).checked;
                 }
             }
@@ -626,37 +688,36 @@
                 settings = JSON.parse(item);
             } else {
                 for (const resource of HermitowskiPlanerBudowy.resources) {
-                    settings[resource] = {
-                        buy: true,
-                        sell: true,
-                        additional: null,
-                        max_trade: null
-                    };
+                    settings[resource] = {};
+                    for (const control_name of HermitowskiPlanerBudowy.user_checkboxes) {
+                        settings[resource][control_name] = true;
+                    }
+                    for (const control_name of HermitowskiPlanerBudowy.user_inputs) {
+                        settings[resource][control_name] = null;
+                    }
                 }
             }
-            const inputs = ['additional', 'max_trade'];
-            const checkboxes = ['buy', 'sell'];
             for (const resource of HermitowskiPlanerBudowy.resources) {
-                for (const control_name of inputs) {
+                for (const control_name of HermitowskiPlanerBudowy.user_inputs) {
                     Helper.get_control([resource, control_name]).value = settings[resource][control_name];
                 }
-                for (const control_name of checkboxes) {
+                for (const control_name of HermitowskiPlanerBudowy.user_checkboxes) {
                     Helper.get_control([resource, control_name]).checked = settings[resource][control_name];
                 }
             }
         },
         get_world_info: async function () {
-            HermitowskiPlanerBudowy.world_info = await get_world_info({ configs: ['config'] });
-        },
-        main: async function () {
             await $.ajax({
                 url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/HermitowskiePlikiMapy.js?_=' + ~~(Date.now() / 9e6),
                 dataType: 'script',
                 cache: true
             });
+            HermitowskiPlanerBudowy.world_info = await get_world_info({ configs: ['config'] });
+        },
+        main: async function () {
             await Promise.all([HermitowskiPlanerBudowy.get_resources_schedule(), HermitowskiPlanerBudowy.get_world_info()]);
+            HermitowskiPlanerBudowy.build_queue_timestamp = HermitowskiPlanerBudowy.get_build_queue_timestamp();
             HermitowskiPlanerBudowy.get_build_targets();
-            HermitowskiPlanerBudowy.get_build_queue_time();
             HermitowskiPlanerBudowy.fix_discrepancy();
             HermitowskiPlanerBudowy.create_gui();
             HermitowskiPlanerBudowy.create_planner_table();
@@ -665,7 +726,12 @@
             HermitowskiPlanerBudowy.add_handlers();
         },
         build_targets: [],
-        resources: ['wood', 'stone', 'iron']
+        resources: ['wood', 'stone', 'iron'],
+        user_inputs: ['additional_resources', 'additional_consumption', 'max_trade'],
+        user_checkboxes: ['buy', 'sell'],
+        build_queue_timestamp: null,
+        build_queue_time: null,
+        calculation_timestamp: null,
     };
 
     try {
