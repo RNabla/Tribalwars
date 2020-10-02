@@ -37,18 +37,18 @@
                 : player_id;
             if (url_params.get('screen') === 'info_player') {
                 if (url_params.get('id') == target_player_id) {
-                    const award_group = HermitowskieBlaszki.get_or_create_award_group_victory_achievements();
+                    const award_group = HermitowskieBlaszki.get_or_create_award_group_victory_achievements(true);
                     for (const award of awards) {
                         HermitowskieBlaszki.create_award_box(award_group, award);
                     }
                 }
                 else if (remove_awards_from_other_profiles) {
-                    const award_group = HermitowskieBlaszki.get_or_create_award_group_victory_achievements();
+                    const award_group = HermitowskieBlaszki.get_or_create_award_group_victory_achievements(false);
                     award_group.remove();
                 }
             }
         },
-        get_container: function () {
+        get_container: function (own_profile) {
             const award_group = document.querySelector('.award-group');
             if (award_group) {
                 return award_group.parentNode;
@@ -58,18 +58,20 @@
                     return document.querySelector('#content_value > table > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > table:nth-child(11) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2)');
                 case '/pregame.php':
                 case '/game.php':
-                    return document.querySelector('#content_value > table > tbody > tr:nth-child(1) > td:nth-child(2)');
+                    return own_profile
+                        ? document.querySelector('#content_value > table:nth-child(7) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2)')
+                        : document.querySelector('#content_value > table:nth-child(5) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2)')
             }
             return null;
         },
-        get_or_create_award_group_victory_achievements: function () {
+        get_or_create_award_group_victory_achievements: function (own_profile) {
             const award_groups_existing = document.querySelectorAll('.award-group');
 
             if (award_groups_existing.length && award_groups_existing[0].children[0].innerText === i18n.VICTORY_ACHIEVEMENTS) {
                 return award_groups_existing[0];
             }
 
-            const container = HermitowskieBlaszki.get_container();
+            const container = HermitowskieBlaszki.get_container(own_profile);
             const award_group_new = document.createElement('div');
             const award_group_template = `
             <div class="award-group-head">${i18n.VICTORY_ACHIEVEMENTS}</div>
