@@ -18,7 +18,8 @@
 
     // Dostosuj wpisy według własnego uznania
     const awards = [
-        { title: 'Zwycięskie plemię', description: 'Zwycięstwo na Świat 158 z plemieniem Hermitowski GuROM!', img: 'ally_victory' },
+        { title: 'Zwycięskie plemię', description: 'Zwycięstwo na Świat 158 z plemieniem NP!', img: 'ally_victory' },
+        { title: 'Zwycięskie plemię', description: 'Zwycięstwo na Świat XXX z plemieniem Hermitowski GuROM!', img: 'ally_victory' },
         { title: 'Mistrz walki', description: 'Pokonałeś najwięcej przeciwników na Świat 158.', img: 'top_player_kills_all' },
         { title: 'Bezlitosny', description: 'Jako agresor pokonałeś najwięcej przeciwników na Świat 158.', img: 'top_player_kills_att' },
         { title: 'Nie do zdobycia', description: 'Jako obrońca pokonałeś najwięcej przeciwników na Świat 158.', img: 'top_player_kills_def' },
