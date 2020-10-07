@@ -92,7 +92,7 @@
                     <textarea rows='5' cols='42'>${error}\n\n${error.stack}</textarea><br/>
                     <a href='${i18n.FORUM_THREAD_HREF}'>${i18n.FORUM_THREAD}</a>
                 </p>
-            q`;
+            `;
             Dialog.show(namespace, gui);
         }
     };
@@ -241,7 +241,7 @@
                 params[resource] = build_target[resource];
             }
             if (HermitowskiPlanerBudowy.build_queue_timestamp) {
-                params['delivery_at'] = HermitowskiPlanerBudowy.build_queue_timestamp;
+                params['delivery_at'] = Math.ceil(HermitowskiPlanerBudowy.build_queue_timestamp / 1000);
             }
             market_anchor.href = TribalWars.buildURL('GET', 'market', params);
             market_anchor.innerText = i18n.LABEL.call;
@@ -353,7 +353,11 @@
             const build_orders = document.querySelectorAll('[class*="buildorder"]');
             if (build_orders.length > 0) {
                 const last_order = build_orders[build_orders.length - 1];
-                return last_order.cells[last_order.cells.length - 2].innerText;
+                let offset = 2;
+                if (BuildingMain.order_count > 2) {
+                    offset += 1;
+                }
+                return last_order.cells[last_order.cells.length - offset].innerText;
             }
             return null;
         },
