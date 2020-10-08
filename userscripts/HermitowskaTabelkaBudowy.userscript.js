@@ -241,7 +241,7 @@
                 params[resource] = build_target[resource];
             }
             if (HermitowskiPlanerBudowy.build_queue_timestamp) {
-                params['delivery_at'] = Math.ceil(HermitowskiPlanerBudowy.build_queue_timestamp / 1000);
+                params['delivery_at'] = HermitowskiPlanerBudowy.build_queue_timestamp;
             }
             market_anchor.href = TribalWars.buildURL('GET', 'market', params);
             market_anchor.innerText = i18n.LABEL.call;
