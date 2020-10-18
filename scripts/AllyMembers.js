@@ -278,7 +278,7 @@
                 row_data.village_name = row.cells[0].innerText.trim();
 
                 for (let j = 0; j < game_data.units.length; j++) {
-                    row_data.units[game_data.units[j]] = row.cells[j + 1].innerText === '?'
+                    row_data.units[game_data.units[j]] = row.cells[j + 1].innerText.trim() === '?'
                         ? null
                         : Number(row.cells[j + 1].innerText);
                 }
@@ -340,7 +340,6 @@
 
             if (!table) return player_data;
 
-
             const has_incomings = table.rows[0].cells.length > (game_data.units.length + 2);
 
             for (let i = 1; i < table.rows.length; i += 2) {
@@ -358,10 +357,10 @@
                 row_data['village'] = {};
                 row_data['transit'] = {};
                 for (let j = 0; j < game_data.units.length; j++) {
-                    row_data['village'][game_data.units[j]] = row_1.cells[j + 2].innerText === '?'
+                    row_data['village'][game_data.units[j]] = row_1.cells[j + 2].innerText.trim() === '?'
                         ? null
                         : Number(row_1.cells[j + 2].innerText);
-                    row_data['transit'][game_data.units[j]] = row_2.cells[j + 1].innerText === '?'
+                    row_data['transit'][game_data.units[j]] = row_2.cells[j + 1].innerText.trim() === '?'
                         ? null
                         : Number(row_2.cells[j + 1].innerText);
                 }
