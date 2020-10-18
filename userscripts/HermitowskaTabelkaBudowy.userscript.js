@@ -39,6 +39,7 @@
                 additional_resources: '+ surowce',
                 additional_consumption: '- produkcja',
                 max_trade: 'Max wymiana',
+                delay: 'Opóźnienie',
             },
             MOBILE: {
                 buy: 'Buy',
@@ -46,6 +47,7 @@
                 additional_resources: 'res',
                 additional_consumption: 'prod',
                 max_trade: 'trade',
+                delay: 'delay'
             }
         },
         MESSAGE: {
@@ -58,6 +60,13 @@
             return value > 9
                 ? `${value}`
                 : `0${value}`;
+        },
+        parse_duration_text: function (duration_text) {
+            const parts = [0, 0, 0, ...duration_text.split(':').map(Number)];
+            const seconds = parts.pop();
+            const minutes = parts.pop();
+            const hours = parts.pop();
+            return ((hours * 60 + minutes) * 60) + seconds;
         },
         get_duration_text: function (duration /* in seconds */) {
             if (!isFinite(duration)) { return duration; }
@@ -129,55 +138,71 @@
             const row = document.createElement('tr');
             const columns = [
                 { name: i18n.LABEL.building },
-                { name: i18n.LABEL.wood, res: 'wood' },
-                { name: i18n.LABEL.stone, res: 'stone' },
-                { name: i18n.LABEL.iron, res: 'iron' },
-                { name: i18n.LABEL.time },
+                { name: i18n.LABEL.wood, input_group_name: 'resources', input_group_prefix: 'wood' },
+                { name: i18n.LABEL.stone, input_group_name: 'resources', input_group_prefix: 'stone' },
+                { name: i18n.LABEL.iron, input_group_name: 'resources', input_group_prefix: 'iron' },
+                { name: i18n.LABEL.time, input_group_name: 'time', input_group_prefix: 'time' },
                 { name: i18n.LABEL.market },
             ];
             for (const column of columns) {
                 const thead_cell = document.createElement('th');
-                if (column.res) {
+                if (column.input_group_name) {
                     const text_div = document.createElement('div');
                     text_div.innerText = column.name;
                     text_div.style.textAlign = 'center';
                     thead_cell.append(text_div);
-                    for (const checkbox_name of HermitowskiPlanerBudowy.user_checkboxes) {
-                        const span = document.createElement('span');
-                        span.style.whiteSpace = 'nowrap';
-                        const label = document.createElement('label');
-                        label.textContent = mobile
-                            ? i18n.LABEL.MOBILE[checkbox_name]
-                            : i18n.LABEL.DESKTOP[checkbox_name];
-                        label.setAttribute('for', Helper.get_id([column.res, checkbox_name]));
-                        const checkbox = document.createElement('input');
-                        checkbox.type = 'checkbox';
-                        checkbox.id = Helper.get_id([column.res, checkbox_name]);
-                        checkbox.checked = true;
-                        span.append(checkbox);
-                        span.append(label);
-                        thead_cell.append(span);
-                        thead_cell.append(document.createElement('br'));
+                    const input_group = HermitowskiPlanerBudowy.input_groups[column.input_group_name];
+                    if (input_group.hasOwnProperty('checkboxes')) {
+                        for (const checkbox_name of input_group.checkboxes) {
+                            const span = document.createElement('span');
+                            span.style.whiteSpace = 'nowrap';
+                            const label = document.createElement('label');
+                            label.textContent = mobile
+                                ? i18n.LABEL.MOBILE[checkbox_name]
+                                : i18n.LABEL.DESKTOP[checkbox_name];
+                            const label_id_parts = [];
+                            if (column.hasOwnProperty('input_group_prefix')) {
+                                label_id_parts.push(column.input_group_prefix);
+                            }
+                            label_id_parts.push(checkbox_name);
+                            label.setAttribute('for', Helper.get_id(label_id_parts));
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.id = Helper.get_id(label_id_parts);
+                            checkbox.checked = true;
+                            span.append(checkbox);
+                            span.append(label);
+                            thead_cell.append(span);
+                            thead_cell.append(document.createElement('br'));
+                        }
                     }
-                    for (const input_name of HermitowskiPlanerBudowy.user_inputs) {
-                        const input = document.createElement('input');
-                        input.id = Helper.get_id([column.res, input_name]);
-                        input.size = mobile
-                            ? 5
-                            : 10;
-                        input.placeholder = mobile
-                            ? i18n.LABEL.MOBILE[input_name]
-                            : i18n.LABEL.DESKTOP[input_name];;
-                        input.title = input_name;
-                        input.style.textIndent = '0.5em';
-                        thead_cell.append(input);
-                        thead_cell.append(document.createElement('br'));
+                    if (input_group.hasOwnProperty('inputs')) {
+                        for (const input_name of input_group.inputs) {
+                            const label_id_parts = [];
+                            if (column.hasOwnProperty('input_group_prefix')) {
+                                label_id_parts.push(column.input_group_prefix);
+                            }
+                            label_id_parts.push(input_name);
+                            const input = document.createElement('input');
+                            input.id = Helper.get_id(label_id_parts);
+                            input.size = mobile
+                                ? 5
+                                : 10;
+                            input.placeholder = mobile
+                                ? i18n.LABEL.MOBILE[input_name]
+                                : i18n.LABEL.DESKTOP[input_name];;
+                            input.title = input_name;
+                            input.style.textIndent = '0.5em';
+                            thead_cell.append(input);
+                            thead_cell.append(document.createElement('br'));
+                        }
                     }
                 }
                 else {
                     thead_cell.innerText = column.name;
                     thead_cell.classList.add('center');
                 }
+
                 row.append(thead_cell);
             }
             thead.append(row);
@@ -213,6 +238,7 @@
                 if (options.bold_name) {
                     cell.style.fontWeight = 'bold';
                     cell.style.whiteSpace = 'nowrap';
+                    cell.style.cursor = 'pointer';
                 }
             }
             if (options.id) {
@@ -389,6 +415,8 @@
             HermitowskiPlanerBudowy.build_queue_time = HermitowskiPlanerBudowy.build_queue_timestamp
                 ? (HermitowskiPlanerBudowy.build_queue_timestamp - HermitowskiPlanerBudowy.calculation_timestamp) / 1000
                 : 0;
+            const delay_time = Helper.parse_duration_text(Helper.get_control(['time', 'delay']).value);
+            HermitowskiPlanerBudowy.build_queue_time += delay_time;
             HermitowskiPlanerBudowy.resource_options = HermitowskiPlanerBudowy.get_resource_options();
         },
         calculate_trades: function () {
@@ -550,6 +578,42 @@
                     });
                 }
             }
+
+            const time_delay = Helper.get_control(['time', 'delay']);
+            time_delay.addEventListener('input', function () {
+                HermitowskiPlanerBudowy.calculate_trades();
+                HermitowskiPlanerBudowy.save_settings();
+            });
+
+            for (const build_target of HermitowskiPlanerBudowy.build_targets) {
+                if (build_target.is_building) {
+                    const control = Helper.get_control([build_target.id, 'name']);
+                    control.addEventListener('click', function () {
+                        const delay_control = Helper.get_control(['time', 'delay']);
+                        let delay_s = Helper.parse_duration_text(delay_control.value);
+                        if (control.style.fontStyle == 'italic') {
+                            delay_s -= build_target.build_time;
+                            control.style.fontStyle = '';
+                            for (const resource of HermitowskiPlanerBudowy.resources) {
+                                let res_amount = Number(Helper.get_control([resource, 'additional_resources']).value);
+                                res_amount += build_target[resource];
+                                Helper.get_control([resource, 'additional_resources']).value = res_amount;
+                            }
+                        } else {
+                            delay_s += build_target.build_time;
+                            for (const resource of HermitowskiPlanerBudowy.resources) {
+                                let res_amount = Number(Helper.get_control([resource, 'additional_resources']).value);
+                                res_amount -= build_target[resource];
+                                Helper.get_control([resource, 'additional_resources']).value = res_amount;
+                            }
+                            control.style.fontStyle = 'italic';
+                        }
+                        delay_control.value = Helper.get_duration_text(delay_s);
+                        HermitowskiPlanerBudowy.calculate_trades();
+                    });
+                }
+            }
+
             for (const build_target of HermitowskiPlanerBudowy.build_targets) {
                 const control = Helper.get_control([build_target.id, 'export']);
                 control.addEventListener('click', HermitowskiPlanerBudowy.export_text_info);
@@ -625,9 +689,9 @@
             const now = Date.now() / 1000;
             for (const resource of HermitowskiPlanerBudowy.resources) {
                 const rates_schedule = HermitowskiPlanerBudowy.resources_schedule.rates.schedules[resource];
-                let production_rate = NaN;
+                let production_rate = game_data.village[`${resource}_prod`];
                 for (const timestamp_str in rates_schedule) {
-                    if (Number(timestamp_str) < now) {
+                    if (Number(timestamp_str) <= now) {
                         production_rate = Number(rates_schedule[timestamp_str]);
                     }
                 }
@@ -635,7 +699,7 @@
                 let amount = NaN;
                 for (const timestamp_str in amounts) {
                     const timestamp = Number(timestamp_str);
-                    if (timestamp < now) {
+                    if (timestamp <= now) {
                         amount = Number(amounts[timestamp_str]) + (now - timestamp) * production_rate;
                     }
                 }
@@ -676,13 +740,16 @@
             const settings = {};
             for (const resource of HermitowskiPlanerBudowy.resources) {
                 settings[resource] = {};
-                for (const control_name of HermitowskiPlanerBudowy.user_inputs) {
+                for (const control_name of HermitowskiPlanerBudowy.input_groups.resources.inputs) {
                     settings[resource][control_name] = Helper.get_control([resource, control_name]).value;
                 }
-                for (const control_name of HermitowskiPlanerBudowy.user_checkboxes) {
+                for (const control_name of HermitowskiPlanerBudowy.input_groups.resources.checkboxes) {
                     settings[resource][control_name] = Helper.get_control([resource, control_name]).checked;
                 }
             }
+            settings['time'] = {
+                delay: Helper.get_control(['time', 'delay']).value
+            };
             localStorage.setItem(namespace, JSON.stringify(settings));
         },
         load_settings: function () {
@@ -693,21 +760,25 @@
             } else {
                 for (const resource of HermitowskiPlanerBudowy.resources) {
                     settings[resource] = {};
-                    for (const control_name of HermitowskiPlanerBudowy.user_checkboxes) {
-                        settings[resource][control_name] = true;
-                    }
-                    for (const control_name of HermitowskiPlanerBudowy.user_inputs) {
+                    for (const control_name of HermitowskiPlanerBudowy.input_groups.resources.inputs) {
                         settings[resource][control_name] = null;
                     }
+                    for (const control_name of HermitowskiPlanerBudowy.input_groups.resources.checkboxes) {
+                        settings[resource][control_name] = true;
+                    }
                 }
+                settings['time'] = { delay: null };
             }
             for (const resource of HermitowskiPlanerBudowy.resources) {
-                for (const control_name of HermitowskiPlanerBudowy.user_inputs) {
-                    Helper.get_control([resource, control_name]).value = settings[resource][control_name];
+                for (const resource of HermitowskiPlanerBudowy.resources) {
+                    for (const control_name of HermitowskiPlanerBudowy.input_groups.resources.inputs) {
+                        Helper.get_control([resource, control_name]).value = settings[resource][control_name];
+                    }
+                    for (const control_name of HermitowskiPlanerBudowy.input_groups.resources.checkboxes) {
+                        Helper.get_control([resource, control_name]).checked = settings[resource][control_name];
+                    }
                 }
-                for (const control_name of HermitowskiPlanerBudowy.user_checkboxes) {
-                    Helper.get_control([resource, control_name]).checked = settings[resource][control_name];
-                }
+                Helper.get_control(['time', 'delay']).value = settings['time']['delay'];
             }
         },
         get_world_info: async function () {
@@ -731,8 +802,16 @@
         },
         build_targets: [],
         resources: ['wood', 'stone', 'iron'],
-        user_inputs: ['additional_resources', 'additional_consumption', 'max_trade'],
-        user_checkboxes: ['buy', 'sell'],
+        input_groups: {
+            resources: {
+                checkboxes: ['buy', 'sell'],
+                inputs: ['additional_resources', 'additional_consumption', 'max_trade'],
+            },
+            time: {
+                inputs: ['delay']
+            }
+        },
+        // context
         build_queue_timestamp: null,
         build_queue_time: null,
         calculation_timestamp: null,
