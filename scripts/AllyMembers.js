@@ -505,6 +505,7 @@
                                 row.push(village_data.buildings[building_name]);
                             }
                         } else {
+                            row.push('');
                             row.push(...new Array(AllyMembers.building_names.length).fill(''));
                         }
                     }
