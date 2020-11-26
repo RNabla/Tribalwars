@@ -4,7 +4,7 @@
 // @version      1.
 // @description  try to take over the world!
 // @author       Hermitowski
-// @match        https://plc1.plemiona.pl/game.php?*&screen=report*&view=*
+// @match        https://*.plemiona.pl/game.php?*&screen=report*&view=*
 // @grant        none
 // ==/UserScript==
 
