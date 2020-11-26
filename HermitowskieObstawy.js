@@ -9,6 +9,7 @@
  * Modified on: 19/08/2019 - version 2.4 - split units option
  * Modified on: 26/08/2019 - version 2.5 - more date formats, ratio of value 0 handling
  * Modified on: 28/11/2019 - version 2.6 - notification of violation no_other_support constraint
+ * Modified on: 27/11/2020 - version 2.7 - mass support sending
  */
 
 (async function (TribalWars) {
@@ -68,9 +69,6 @@
             execute: 'Wykonaj',
             save_settings: 'Zapisz',
             reset_settings: 'Przywr\u{F3}\u{107} domy\u{15B}lne',
-            tab_count: 'Liczba kart',
-            open_tabs: 'Otw\u{F3}rz rozkazy',
-            open_tabs_title: 'Otw\u{F3}rz rozkazy w nowych kartach'
         }
     };
     const Helper = {
@@ -177,88 +175,80 @@
         }
     };
     const Guard = {
-        add_command: function (village, user_input) {
-            const url_params = {
-                x: user_input.target[0],
-                y: user_input.target[1],
-                from: 'simulator',
-                village: village.id
-            };
-
-            const non_empty_units = Guard.deff_units.filter(unit_name => village.units[unit_name] !== 0);
-
-            if (non_empty_units.length === 0) {
-                return;
-            }
-
-            non_empty_units.forEach(unit_name => {
-                url_params[unit_name] = village.units[unit_name];
-            });
-
+        add_command: function (troops_info, user_input, target_info) {
             const row = document.createElement('tr');
 
             const village_cell = document.createElement('td');
             const village_anchor = document.createElement('a');
-            village_anchor.setAttribute('href', TribalWars.buildURL('GET', 'info_village', { id: village.id }))
-            village_anchor.textContent = village.name;
+            if (troops_info.villages.length > 1) {
+                village_anchor.href = '#';
+                village_anchor.innerText = `(${troops_info.villages.length} wiosek)`;
+            }
+            else {
+                village_anchor.href = TribalWars.buildURL('GET', 'info_village', { id: troops_info.villages[0].id });
+                village_anchor.innerText = troops_info.villages[0].name;
+            }
             village_cell.append(village_anchor);
             row.append(village_cell);
 
-            for (const unit in village.units) {
+            for (const unit of Guard.deff_units) {
                 const unit_cell = document.createElement('td');
-                unit_cell.textContent = village.units[unit];
-                if (village.units[unit] === 0) {
+                unit_cell.textContent = troops_info.selected[unit];
+                if (troops_info.selected[unit] === 0) {
                     unit_cell.classList.add('hidden');
                 }
                 row.append(unit_cell);
             }
 
+            const payload = {
+                x: user_input.target[0],
+                y: user_input.target[1],
+                target: target_info[Guard._village_info.VILLAGE_ID],
+                call: {},
+                h: game_data.csrf,
+            };
+
+            for (const village of troops_info.villages) {
+                payload['call'][village.id] = {};
+                for (const unit of Guard.deff_units) {
+                    if (village.units[unit] != 0) {
+                        payload['call'][village.id][unit] = village.units[unit];
+                    }
+                }
+            }
+
             const place_cell = document.createElement('td');
-            const place_anchor = document.createElement('a');
-            place_anchor.setAttribute('href', TribalWars.buildURL('GET', 'place', url_params));
-            place_anchor.textContent = i18n.LABELS.execute;
-            place_anchor.addEventListener('click', (e) => {
+            const place_button = document.createElement('button');
+
+            place_button.innerText = i18n.LABELS.execute;
+            place_button.dataset['payload'] = JSON.stringify(payload);
+            place_button.classList.add('btn');
+
+            place_button.addEventListener('click', (e) => {
+                const payload = JSON.parse(e.target.dataset['payload']);
+
+                let payload_formdata = `x=${payload.x}&y=${payload.y}&target=${payload.target}&h=${game_data.csrf}`;
+                for (const village_id in payload.call) {
+                    const village_troops = payload.call[village_id];
+                    for (const unit_name in village_troops) {
+                        payload_formdata += `&call[${village_id}][${unit_name}]=${village_troops[unit_name]}`;
+                    }
+                }
+                fetch(TribalWars.buildURL('GET', 'place', { mode: 'call', action: 'call' }), {
+                    body: encodeURI(payload_formdata),
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                    }
+                });
                 Guard.group_id2villages.delete(user_input.group_id);
                 row.remove();
-                return true;
+                return false;
             });
-            place_cell.append(place_anchor);
+
+            place_cell.append(place_button);
             row.append(place_cell);
             Helper.get_control('output').append(row);
-        },
-        open_commands: function () {
-            const open_tabs_button = Helper.get_control('open_tabs');
-            const tab_count_control = Helper.get_control('tab_count');
-            Helper.assert_non_negative_number(tab_count_control, i18n.LABELS.tab_count);
-            const tab_count = Number(tab_count_control.value);
-            const rows = [...Helper.get_control('output').rows].slice(0, tab_count);
-            if (rows.length === 0) {
-                return;
-            }
-            const last_row = rows[rows.length - 1];
-            const tabs_per_second = 5;
-
-            open_tabs_button.disabled = true;
-            let new_window_failed = false;
-
-            for (let i = 0; i < rows.length; i += tabs_per_second) {
-                setTimeout(rows => {
-                    for (const row of rows) {
-                        if (!new_window_failed) {
-                            const new_window = window.open([...row.children].pop().children[0].href, '_blank');
-                            if (!new_window) {
-                                new_window_failed = true;
-                                UI.ErrorMessage(i18n.ERROR.NEW_WINDOW_BLOCKED, 15e3);
-                            } else {
-                                row.remove();
-                            }
-                        }
-                        if (row === last_row) {
-                            open_tabs_button.disabled = false;
-                        }
-                    }
-                }, 1000 * (i / tabs_per_second), rows.slice(i, i + tabs_per_second));
-            }
         },
         create_main_panel: function () {
             const options = [
@@ -412,27 +402,6 @@
             span.append(a);
             return span;
         },
-        create_open_tabs_span: function () {
-            const open_tabs_span = document.createElement('span');
-            open_tabs_span.style.display = 'flex';
-            open_tabs_span.style.float = 'right';
-            const open_tabs_label = document.createElement('label');
-            open_tabs_label.setAttribute('for', Helper.get_id('tab_count'));
-            open_tabs_label.textContent = i18n.LABELS.tab_count;
-            const open_tabs_input = document.createElement('input');
-            open_tabs_input.setAttribute('id', Helper.get_id('tab_count'));
-            open_tabs_input.setAttribute('size', 2);
-            const open_tabs_button = document.createElement('button');
-            open_tabs_button.setAttribute('id', Helper.get_id('open_tabs'));
-            open_tabs_button.textContent = i18n.LABELS.open_tabs;
-            open_tabs_button.setAttribute('title', i18n.LABELS.open_tabs_title);
-            open_tabs_button.classList.add('btn');
-            open_tabs_button.disabled = true;
-            open_tabs_span.append(open_tabs_label);
-            open_tabs_span.append(open_tabs_input);
-            open_tabs_span.append(open_tabs_button);
-            return open_tabs_span;
-        },
         create_bottom_panel: function () {
             const panel = document.createElement('div');
             panel.classList.add('vis_item');
@@ -444,7 +413,6 @@
             panel_table.append(panel_tr);
             panel_tr.append(panel_td);
             panel_td.append(Guard.create_signature_span());
-            panel_td.append(Guard.create_open_tabs_span());
             panel.append(panel_table)
             return panel;
         },
@@ -524,12 +492,6 @@
                 Helper.get_control('arrival_date').disabled = !event.target.checked;
             });
             enable_arrival_date.disabled = false;
-            Helper.get_control('tab_count').value = Guard.settings.input.tab_count;
-            const open_tabs = Helper.get_control('open_tabs');
-            open_tabs.addEventListener('click', () => {
-                try { Guard.open_commands(); } catch (ex) { Helper.handle_error(ex); }
-            });
-            open_tabs.disabled = false;
             Helper.get_control('generate').disabled = false;
             if (url_params.has('arrival_date')) {
                 enable_arrival_date.checked = true;
@@ -560,27 +522,12 @@
             }
             return Guard.coords2map_chunk.get(map_key);
         },
-        fetch_target_ally: async function (coords) {
-            const map_key = coords.join("|");
-            if (!Guard.coords2ally_id.has(map_key)) {
-                const x_chunk = coords[0] - coords[0] % 20;
-                const y_chunk = coords[1] - coords[1] % 20;
-                const map_info = await Guard.fetch_map_chunk(x_chunk, y_chunk);
-                const village_info = (map_info[0].data.villages[coords[0] - x_chunk] || [])[coords[1] - y_chunk];
-                Guard.coords2ally_id.set(map_key, village_info
-                    ? village_info[11]
-                    : '-1');
-            }
-            return Guard.coords2ally_id.get(map_key);
-        },
-        check_target_ally: async function (coords) {
-            const target_ally_id = await Guard.fetch_target_ally(coords);
-            if (target_ally_id === '-1') {
-                return UI.ErrorMessage(i18n.ERROR.INVALID_VILLAGE_INFO);
-            }
-            if (target_ally_id !== game_data.player.ally) {
-                return UI.ErrorMessage(i18n.ERROR.NO_OTHER_SUPPORT_CONFLICT);
-            }
+        fetch_village_info: async function (coords) {
+            const x_chunk = coords[0] - coords[0] % 20;
+            const y_chunk = coords[1] - coords[1] % 20;
+            const map_info = await Guard.fetch_map_chunk(x_chunk, y_chunk);
+            const village_info = (map_info[0].data.villages[coords[0] - x_chunk] || [])[coords[1] - y_chunk];
+            return village_info;
         },
         generate_commands: async function () {
             let get_user_input = function () {
@@ -740,44 +687,66 @@
                     Helper.get_control(`${unit_name}.selected`).textContent = Helper.beautify_number(troops_info.selected[unit_name]);
                 }
             };
+
             const user_input = get_user_input();
 
-            if (Guard.world_info.config.ally.no_other_support) {
-                await Guard.check_target_ally(user_input.target);
+            const target_info = await Guard.fetch_village_info(user_input.target);
+
+            const villages = await Guard.get_villages(user_input.group_id);
+
+            if (!target_info) {
+                throw i18n.ERROR.INVALID_VILLAGE_INFO;
+            }
+
+            if (target_info[Guard._village_info.ALLY_ID] !== game_data.player.ally) {
+                throw i18n.ERROR.NO_OTHER_SUPPORT_CONFLICT;
+            }
+
+            if (villages == null) {
+                throw i18n.ERROR.EMPTY_GROUP;
             }
 
             const current_commands = [...Helper.get_control('output').children];
             for (let i = current_commands.length - 1; i >= 0; i--) {
                 current_commands[i].remove();
             }
-            const villages = await Guard.get_villages(user_input.group_id);
-            if (villages == null) {
-                throw i18n.ERROR.EMPTY_GROUP;
-            }
             const generate_button = Helper.get_control('generate');
-            generate_button.disabled = true;
-            const troops_info = get_troops_info(villages, user_input);
-            preprocess(troops_info, user_input);
-            select_troops(troops_info, user_input);
-            if (user_input.deff_count && !user_input.spy_count && !troops_info.selected.deff) {
-                UI.ErrorMessage(i18n.ERROR.EMPTY_DEFF_SELECTION);
-            }
-            for (const village of troops_info.villages) {
+
+            try {
+                generate_button.disabled = true;
+                const troops_info = get_troops_info(villages, user_input);
+                preprocess(troops_info, user_input);
+                select_troops(troops_info, user_input);
+                if (user_input.deff_count && !user_input.spy_count && !troops_info.selected.deff) {
+                    throw i18n.ERROR.EMPTY_DEFF_SELECTION;
+                }
                 if (user_input.split_units) {
-                    const snapshot = Object.assign({}, village.units);
                     for (const speed_group of Guard.speed_groups) {
+                        const snapshot = JSON.parse(JSON.stringify(troops_info));
+                        let total = 0;
                         for (const unit_name of Guard.deff_units) {
-                            village.units[unit_name] = speed_group.includes(unit_name)
-                                ? snapshot[unit_name]
-                                : 0;
+                            snapshot.selected[unit_name] = 0;
+                            for (const village of snapshot.villages) {
+                                if (!speed_group.includes(unit_name)) {
+                                    village.units[unit_name] = 0;
+                                } else {
+                                    snapshot.selected[unit_name] += village.units[unit_name];
+                                }
+                            }
+                            total += snapshot.selected[unit_name];
                         }
-                        Guard.add_command(village, user_input);
+                        if (total) {
+                            Guard.add_command(snapshot, user_input, target_info);
+                        }
                     }
-                } else {
-                    Guard.add_command(village, user_input);
+                }
+                else {
+                    Guard.add_command(troops_info, user_input, target_info);
                 }
             }
-            generate_button.disabled = false;
+            finally {
+                generate_button.disabled = false;
+            }
         },
         get_villages: async function (group_id) {
             if (Guard.group_id2villages.has(group_id)) {
@@ -930,7 +899,10 @@
             });
 
         },
-        coords2ally_id: new Map(),
+        _village_info: {
+            ALLY_ID: 11,
+            VILLAGE_ID: 0
+        },
         coords2map_chunk: new Map(),
         group_id2villages: new Map(),
         group_id2group_name: {
@@ -964,7 +936,6 @@
                 minimal_deff_count: 0,
                 strategy: 'TROOP_DESC',
                 group: '-1',
-                tab_count: 4,
                 split_units: false,
             },
         },
