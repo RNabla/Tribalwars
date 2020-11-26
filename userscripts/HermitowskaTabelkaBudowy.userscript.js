@@ -547,7 +547,7 @@
                 let production_sum = 0;
                 let building_total_cost = 0;
                 for (const resource of HermitowskiPlanerBudowy.resources) {
-                    production_sum += HermitowskiPlanerBudowy.get_production_rate(resource, HermitowskiPlanerBudowy.resource_options, HermitowskiPlanerBudowy.build_queue_time);
+                    production_sum += HermitowskiPlanerBudowy.get_production_rate(resource, HermitowskiPlanerBudowy.build_queue_time);
                     building_total_cost += build_target[resource];
                 }
 
@@ -726,7 +726,7 @@
             const calculation_timestamp_s = HermitowskiPlanerBudowy.calculation_timestamp / 1000;
             const delivery_timestamp_s = calculation_timestamp_s + offset_s;
             const amounts_schedule = HermitowskiPlanerBudowy.resources_schedule.amounts.schedules[resource];
-            const production_rate = HermitowskiPlanerBudowy.get_production_rate(resource, HermitowskiPlanerBudowy.resource_options, offset_s);
+            const production_rate = HermitowskiPlanerBudowy.get_production_rate(resource, offset_s);
             let resource_amount = game_data.village[`${resource}_float`] + (delivery_timestamp_s - calculation_timestamp_s) * production_rate;
             for (const timestamp_str in amounts_schedule) {
                 const timestamp_s = Number(timestamp_str);
