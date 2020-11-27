@@ -175,80 +175,87 @@
         }
     };
     const Guard = {
-        add_command: function (troops_info, user_input, target_info) {
-            const row = document.createElement('tr');
-
-            const village_cell = document.createElement('td');
-            const village_anchor = document.createElement('a');
-            if (troops_info.villages.length > 1) {
-                village_anchor.href = '#';
-                village_anchor.innerText = `(${troops_info.villages.length} wiosek)`;
-            }
-            else {
-                village_anchor.href = TribalWars.buildURL('GET', 'info_village', { id: troops_info.villages[0].id });
-                village_anchor.innerText = troops_info.villages[0].name;
-            }
-            village_cell.append(village_anchor);
-            row.append(village_cell);
-
-            for (const unit of Guard.deff_units) {
-                const unit_cell = document.createElement('td');
-                unit_cell.textContent = troops_info.selected[unit];
-                if (troops_info.selected[unit] === 0) {
-                    unit_cell.classList.add('hidden');
+        add_command: function (troops_info, user_input, target_info, group_name) {
+            for (let i = 0; i < troops_info.villages.length; i++) {
+                const row = document.createElement('tr');
+                row.dataset['group'] = group_name;
+                if (i == troops_info.villages.length - 1) {
+                    row.style.borderBottom = 'black solid 1px';
                 }
-                row.append(unit_cell);
-            }
 
-            const payload = {
-                x: user_input.target[0],
-                y: user_input.target[1],
-                target: target_info[Guard._village_info.VILLAGE_ID],
-                call: {},
-                h: game_data.csrf,
-            };
-
-            for (const village of troops_info.villages) {
-                payload['call'][village.id] = {};
+                const village_cell = document.createElement('td');
+                const village_anchor = document.createElement('a');
+                village_anchor.href = TribalWars.buildURL('GET', 'info_village', { id: troops_info.villages[i].id });
+                village_anchor.innerText = troops_info.villages[i].name;
+                village_cell.append(village_anchor);
+                row.append(village_cell);
                 for (const unit of Guard.deff_units) {
-                    if (village.units[unit] != 0) {
-                        payload['call'][village.id][unit] = village.units[unit];
+                    const unit_cell = document.createElement('td');
+                    unit_cell.textContent = troops_info.villages[i].units[unit];
+                    if (troops_info.villages[i].units[unit] === 0) {
+                        unit_cell.classList.add('hidden');
                     }
+                    row.append(unit_cell);
                 }
+                if (i == 0) {
+                    const payload = {
+                        x: user_input.target[0],
+                        y: user_input.target[1],
+                        target: target_info[Guard._village_info.VILLAGE_ID],
+                        call: {},
+                        h: game_data.csrf,
+                    };
+
+                    for (const village of troops_info.villages) {
+                        payload['call'][village.id] = {};
+                        for (const unit of Guard.deff_units) {
+                            if (village.units[unit] != 0) {
+                                payload['call'][village.id][unit] = village.units[unit];
+                            }
+                        }
+                    }
+
+                    const place_cell = document.createElement('td');
+                    place_cell.rowSpan = troops_info.villages.length;
+                    place_cell.style.verticalAlign = 'top';
+                    const place_button = document.createElement('button');
+
+                    place_button.innerText = i18n.LABELS.execute;
+                    place_button.dataset['payload'] = JSON.stringify(payload);
+                    place_button.classList.add('btn');
+                    place_button.style.margin = '2px';
+
+                    place_button.addEventListener('click', (e) => {
+                        const payload = JSON.parse(e.target.dataset['payload']);
+
+                        let payload_formdata = `x=${payload.x}&y=${payload.y}&target=${payload.target}&h=${game_data.csrf}`;
+                        for (const village_id in payload.call) {
+                            const village_troops = payload.call[village_id];
+                            for (const unit_name in village_troops) {
+                                payload_formdata += `&call[${village_id}][${unit_name}]=${village_troops[unit_name]}`;
+                            }
+                        }
+                        fetch(TribalWars.buildURL('GET', 'place', { mode: 'call', action: 'call' }), {
+                            body: encodeURI(payload_formdata),
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                            }
+                        });
+                        Guard.group_id2villages.delete(user_input.group_id);
+                        const group_rows = Helper.get_control('output').querySelectorAll(`tr[data-group="${group_name}"]`);
+                        for (let i = group_rows.length - 1; i >= 0; i--) {
+                            group_rows[i].remove();
+                        }
+                        return false;
+                    });
+
+                    place_cell.append(place_button);
+                    row.append(place_cell);
+                }
+
+                Helper.get_control('output').append(row);
             }
-
-            const place_cell = document.createElement('td');
-            const place_button = document.createElement('button');
-
-            place_button.innerText = i18n.LABELS.execute;
-            place_button.dataset['payload'] = JSON.stringify(payload);
-            place_button.classList.add('btn');
-
-            place_button.addEventListener('click', (e) => {
-                const payload = JSON.parse(e.target.dataset['payload']);
-
-                let payload_formdata = `x=${payload.x}&y=${payload.y}&target=${payload.target}&h=${game_data.csrf}`;
-                for (const village_id in payload.call) {
-                    const village_troops = payload.call[village_id];
-                    for (const unit_name in village_troops) {
-                        payload_formdata += `&call[${village_id}][${unit_name}]=${village_troops[unit_name]}`;
-                    }
-                }
-                fetch(TribalWars.buildURL('GET', 'place', { mode: 'call', action: 'call' }), {
-                    body: encodeURI(payload_formdata),
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-                    }
-                });
-                Guard.group_id2villages.delete(user_input.group_id);
-                row.remove();
-                return false;
-            });
-
-            place_cell.append(place_button);
-            row.append(place_cell);
-            Helper.get_control('output').append(row);
         },
         create_main_panel: function () {
             const options = [
@@ -736,12 +743,12 @@
                             total += snapshot.selected[unit_name];
                         }
                         if (total) {
-                            Guard.add_command(snapshot, user_input, target_info);
+                            Guard.add_command(snapshot, user_input, target_info, speed_group[0]);
                         }
                     }
                 }
                 else {
-                    Guard.add_command(troops_info, user_input, target_info);
+                    Guard.add_command(troops_info, user_input, target_info, 'all');
                 }
             }
             finally {
