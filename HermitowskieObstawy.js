@@ -705,8 +705,11 @@
                 throw i18n.ERROR.INVALID_VILLAGE_INFO;
             }
 
-            if (target_info[Guard._village_info.ALLY_ID] !== game_data.player.ally) {
-                throw i18n.ERROR.NO_OTHER_SUPPORT_CONFLICT;
+            if (Number(Guard.world_info.config.ally.no_other_support) !== 0) {
+                if (Number(game_data.player.ally) === 0 ||
+                    Number(target_info[Guard._village_info.ALLY_ID]) !== Number(game_data.player.ally)) {
+                    throw i18n.ERROR.NO_OTHER_SUPPORT_CONFLICT;
+                }
             }
 
             if (villages == null) {
