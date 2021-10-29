@@ -10,6 +10,7 @@
  * Modified on: 26/08/2019 - version 2.5 - more date formats, ratio of value 0 handling
  * Modified on: 28/11/2019 - version 2.6 - notification of violation no_other_support constraint
  * Modified on: 27/11/2020 - version 2.7 - mass support sending
+ * Modified on: 29/10/2021 - version 2.7.1 - removed ally conflict check
  */
 
 (async function (TribalWars) {
@@ -21,7 +22,7 @@
         CURRENTLY_SELECTED_GROUP: 'Obecnie wybrana grupa',
         ERROR_MESSAGE: 'Komunikat o b\u{142}\u{119}dzie: ',
         FORUM_THREAD: 'Link do w\u{105}tku na forum',
-        FORUM_THREAD_HREF: 'https://forum.plemiona.pl/index.php?threads/hermitowska-obstawa.124587/',
+        FORUM_THREAD_HREF: 'https://forum.plemiona.pl/index.php?threads/hermitowskie-obstawy.124587/',
         STRATEGY: {
             TROOP_ASC: 'Ilo\u{15B}\u{107} wojsk rosn\u{105}co',
             TROOP_DESC: 'Ilo\u{15B}\u{107} wojsk malej\u{105}co',
@@ -36,10 +37,9 @@
             BAD_FORMAT: 'Pole <strong>__1__</strong> ma z\u{142}y format',
             PAST_DATE: 'Podany punkt w czasie nale\u{17C}y do przesz\u{142}o\u{15B}ci',
             MOBILE: 'Wersja mobilna nie jest wspierana',
-            NEW_WINDOW_BLOCKED: 'Wygl\u0105da na to, \u017Ce preferencje u\u017Cytkownika w przegl\u0105darce nie pozwalaj\u0105 otworzy\u0107 wi\u0119kszej ilo\u015Bci kart',
             EMPTY_DEFF_SELECTION: 'Nie uda\u{142}o si\u0119 wybra\u0107 jednostek defensywnych',
             INVALID_VILLAGE_INFO: 'Wydaje si\u0119, \u017Ce wioska docelowa nie istnieje',
-            NO_OTHER_SUPPORT_CONFLICT: 'Ustawienia \u{15B}wiata nie pozwalaj\u0105 na wysy\u{142}anie wspar\u{107} do graczy innych plemion',
+            REQUEST_FAILED: 'Co\u{15B} posz\u{142}o nie tak. Wi\u0119cej szczeg\u{F3}\u{142}\u{F3}w w otworzonej karcie.',
             EMPTY_GROUP: 'Wybrana grupa nie posiada wiosek'
         },
         UNITS: {
@@ -240,8 +240,15 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                            },
+                        }).then(response => {
+                            const url_params = new URLSearchParams(response.url);
+                            if ((url_params.get('error') || '').length > 0) {
+                                UI.ErrorMessage(i18n.ERROR.REQUEST_FAILED, 5e3);
+                                window.open(response.url);
                             }
                         });
+
                         Guard.group_id2villages.delete(user_input.group_id);
                         const group_rows = Helper.get_control('output').querySelectorAll(`tr[data-group="${group_name}"]`);
                         for (let i = group_rows.length - 1; i >= 0; i--) {
@@ -705,13 +712,6 @@
                 throw i18n.ERROR.INVALID_VILLAGE_INFO;
             }
 
-            if (Number(Guard.world_info.config.ally.no_other_support) !== 0) {
-                if (Number(game_data.player.ally) === 0 ||
-                    Number(target_info[Guard._village_info.ALLY_ID]) !== Number(game_data.player.ally)) {
-                    throw i18n.ERROR.NO_OTHER_SUPPORT_CONFLICT;
-                }
-            }
-
             if (villages == null) {
                 throw i18n.ERROR.EMPTY_GROUP;
             }
@@ -974,7 +974,7 @@
             }
             Guard.init_settings();
             Guard.create_gui();
-            $.ajax({
+            await $.ajax({
                 url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/HermitowskiePlikiMapy.js?_=' + ~~(Date.now() / 9e6),
                 dataType: 'script',
                 cache: true
