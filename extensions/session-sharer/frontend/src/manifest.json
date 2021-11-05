@@ -1,0 +1,23 @@
+{
+    "description": "Allows concurrent playing amongst many cooplayers",
+    "homepage_url": "https://github.com/RNabla/tribalwars-session-sharer",
+    "manifest_version": 2,
+    "name": "HermitowskaKooperacja",
+    "version": "2.1.6",
+    "permissions": [
+        "cookies",
+        "notifications",
+        "*://*.plemiona.pl/*",
+        "webRequest",
+        "webRequestBlocking",
+        "storage"
+    ],
+    "background": {
+        "scripts": [
+            "background.js"
+        ]
+    },
+    "options_ui": {
+        "page": "options.html"
+    }
+}
