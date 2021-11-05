@@ -1,9 +1,9 @@
 {
-    "description": "Allows concurrent playing amongst many cooplayers",
-    "homepage_url": "https://github.com/RNabla/tribalwars-session-sharer",
+    "description": "Enables playing on the same account in Tribalwars in the same time for cooperants",
+    "homepage_url": "https://github.com/RNabla/Tribalwars/extensions/session-sharer",
     "manifest_version": 2,
-    "name": "HermitowskaKooperacja",
-    "version": "2.1.6",
+    "name": "Hermitowski.Cooperation",
+    "version": "2.1.9",
     "permissions": [
         "cookies",
         "notifications",
