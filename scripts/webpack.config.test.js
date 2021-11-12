@@ -4,6 +4,7 @@ module.exports = {
   entry: {
     'Storage': './test/Storage.js',
     'MapFiles': './test/MapFiles.js',
+    'Faking': './test/Faking.js',
   },
   output: {
     filename: 'Hermitowski.[name].test.js',

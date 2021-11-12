@@ -49,3 +49,14 @@ export function assert(action, message) {
         throw message;
     }
 }
+
+export async function assertException(action, message) {
+    try {
+        await action();
+    }
+    catch (ex) {
+        if (ex != message) {
+            throw `Expected: ${message}. Got ${ex} instead`;
+        };
+    }
+}
