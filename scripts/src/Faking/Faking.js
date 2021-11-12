@@ -95,7 +95,7 @@ export const Faking = {
 
         for (const option_name in user_configuration) {
             if (!default_settings.hasOwnProperty(option_name)) {
-                throw resources["ERROR_CONFIGURATION_OPTION_UNKNOWN"].replace('__OPTION_NAME__', option_name);
+                throw resources["ERROR_CONFIGURATION_OPTION_UNKNOWN"];
             }
         }
 

@@ -1,58 +1,5 @@
-import { assert, assertException, TestRunner } from './framework';
+import { assertException, TestRunner } from './framework';
 import { Faking } from '../src/Faking/Faking';
-
-
-// console.clear();
-// window['Hermitowski.Tracing'] = {}
-// window['Hermitowski.Tracing'] = { 'Hermitowski.Faking': true }
-// HermitowskieFejki = {
-//     safeguard: { spear: 5000 },
-//     troops_templates: [{}],
-//     fill_troops: 'spear:2,sword:2,spear:5,spear:2,sword',
-//     fill_exact: false,
-//     // coords: '475|558 500|500 601|601',
-//     coords: '',
-//     players: '',
-//     allies: 'Insomnia in Dreams',
-//     // ally_tags: 'ŁPK..',
-//     include_barbarians: true,
-//     changing_village_enabled: false,
-//     boundaries: [
-//         // { min_x: 400, max_x: 500, min_y: 400, max_y: 500 }, 
-//         // { r: 2, center: [476, 559] },
-//         { r: 40, center: '476|559' },
-//         // { r: 3, center: [508, 637] },
-//         // { r: 3, center: [565, 389] },
-//         // { r: 5, center: [409, 453] }
-//     ],
-//     // forum_config: {
-//     //     thread_id: 8590,
-//     //     // page: 1,
-//     //     spoiler_name: "xd1",
-//     // },
-//     blocking_enabled: false,
-//     blocking_local: {
-//         time: 600,
-//         count: 100,
-//         block_players: false,
-//         scope: 'exclusive'
-//     },
-//     blocking_global: [
-//         { time: 600, count: 100, name: 'global_1' },
-//         { time: 600, count: 100, name: 'global_2' },
-//         { time: 600, count: 100, name: 'unique players', block_players: false }
-//     ],
-//     skip_night_bonus: true,
-//     date_ranges: [
-//         // '23:00 - 23:59',
-//         // '5 23:00 - 6 23:59',
-//         // '5 23:00 - 6 23:59'
-//         // '13:43 - 13:46',
-//         // '02.11.2021 13:46 - 02.11.2021 13:56',
-//     ],
-// };
-
-
 
 !(async function () {
     const test_runner = TestRunner.create('Faking');

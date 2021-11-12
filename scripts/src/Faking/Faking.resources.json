@@ -13,7 +13,7 @@
     "ERROR_SCREEN_REDIRECT": "Przechodzę do przeglądu placu",
     "ERROR_SCREEN_NO_ACTION": "Na tym ekranie nie ma akcji do wykonania",
     "ERROR_CONFIGURATION_MISSING": "Brak konfiguracji użytkownika",
-    "ERROR_CONFIGURATION_OPTION_UNKNOWN": "Nieznana opcja: __OPTION_NAME__",
+    "ERROR_CONFIGURATION_OPTION_UNKNOWN": "Skrypt zawiera nieznaną opcję",
     "ERROR_TROOPS_NOT_ENOUGH": "Nie udało się wybrać wystarczającej liczby jednostek",
     "ERROR_TROOPS_EMPTY": "Obecne ustawienia nie pozwalają na wybór jednostek",
     "ERROR_POOL_EMPTY": "Obecne ustawienia nie definują żadnych celów",
