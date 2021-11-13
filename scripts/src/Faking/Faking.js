@@ -67,8 +67,8 @@ export const Faking = {
     },
     calculate_distance: function (target) {
         return Math.hypot(
-            game_data.village.x - target[LAYOUT_TARGET.X],
-            game_data.village.y - target[LAYOUT_TARGET.Y]
+            game_data["village"]["x"] - target[LAYOUT_TARGET.X],
+            game_data["village"]["y"] - target[LAYOUT_TARGET.Y]
         );
     },
     load_config: async function (user_configuration) {
@@ -165,9 +165,9 @@ export const Faking = {
         const user_configuration = await Faking.map_files.get_or_compute_dynamic(
             async function (config) {
                 const url = TribalWars.buildURL('GET', 'forum', {
-                    screenmode: 'view_thread',
-                    thread_id: config.thread_id,
-                    page: config.page || 0
+                    "screenmode": 'view_thread',
+                    "thread_id": config.thread_id,
+                    "page": config.page || 0
                 });
 
                 Faking.logger.log('Fetching', url);
@@ -222,8 +222,8 @@ export const Faking = {
         if (document.querySelector('.jump_link')) {
             this.change_village(resources["ERROR_SCREEN_VILLAGE_OUT_OF_GROUP"]);
         }
-        if (game_data.screen !== 'place' || $('#command-data-form').length !== 1) {
-            location = TribalWars.buildURL('GET', 'place', { mode: 'command' });
+        if (game_data["screen"] !== 'place' || $('#command-data-form').length !== 1) {
+            location = TribalWars.buildURL('GET', 'place', { "mode": 'command' });
             throw resources["ERROR_SCREEN_REDIRECT"];
         }
         // disable executing script on screen with command confirmation
@@ -290,7 +290,7 @@ export const Faking = {
             return template;
         }
 
-        const population_required = Math.floor(game_data.village.points * fake_limit * 0.01);
+        const population_required = Math.floor(game_data["village"]["points"] * fake_limit * 0.01);
         Faking.logger.log('Population required', population_required);
         const template_population = Faking.count_population(template);
         Faking.logger.log('Template population', template_population);
@@ -609,10 +609,10 @@ export const Faking = {
     },
     blocking_local_get_key: function () {
         if (Faking.settings.blocking_local.scope === 'village') {
-            return `blocking.l.${game_data.village.id}`;
+            return `blocking.l.${game_data["village"]["id"]}`;
         }
         return {
-            village_id: game_data.village.id,
+            village_id: game_data["village"]["id"],
             settings: Faking.settings
         };
     },
@@ -758,7 +758,7 @@ export const Faking = {
         Faking.logger.entry(arguments);
         const dependencies = ['config', 'unit_info'];
         Faking.world_info = await Faking.map_files.get_world_info(dependencies);
-        Faking.units = game_data.units.filter(unit => unit !== 'militia');
+        Faking.units = game_data["units"].filter(unit => unit !== 'militia');
         Faking.current_timestamp_s = get_timestamp_s();
         Faking.logger.exit();
     },
