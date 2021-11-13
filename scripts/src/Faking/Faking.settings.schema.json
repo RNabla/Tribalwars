@@ -204,28 +204,35 @@
             }
         },
         "blocking_global": {
-            "type": "object",
-            "properties": {
-                "time_s": {
-                    "type": "integer",
-                    "default": 3600,
-                    "minimum": 0
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "time_s": {
+                        "type": "integer",
+                        "default": 3600,
+                        "minimum": 0
+                    },
+                    "count": {
+                        "type": "integer",
+                        "default": 1,
+                        "minimum": 1
+                    },
+                    "block_players": {
+                        "type": "boolean"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
                 },
-                "count": {
-                    "type": "integer",
-                    "default": 1,
-                    "minimum": 1
-                },
-                "block_players": {
-                    "type": "boolean"
-                }
+                "required": [
+                    "time_s",
+                    "count",
+                    "block_players",
+                    "name"
+                ],
+                "additionalProperties": false
             },
-            "required": [
-                "time_s",
-                "count",
-                "block_players"
-            ],
-            "additionalProperties": false,
             "options": {
                 "dependencies": {
                     "blocking_enabled": true
