@@ -212,7 +212,7 @@ export const Faking = {
                 Faking.logger.log('Extracted', code_snippet, user_configuration);
 
                 return user_configuration;
-            }, forum_config, forum_config.ttl || 3600);
+            }, forum_config, forum_config.time_to_live_s || 3600);
 
         Faking.logger.exit();
 
@@ -707,14 +707,14 @@ export const Faking = {
         Faking.logger.exit(block_table);
         return block_table;
     },
-    block_table_add_entry: async function (target, key, ttl /* seconds */) {
+    block_table_add_entry: async function (target, key, time_to_live_s) {
         Faking.logger.entry(arguments);
         const block_table = await Faking.block_table_get(key);
-        const expiration_time = parseInt(Date.now() / 1000) + ttl;
+        const expiration_time = parseInt(Date.now() / 1000) + time_to_live_s;
         const entry = [expiration_time, target];
         Faking.logger.log('Adding block entry', entry);
         block_table.push(entry);
-        await Faking.map_files.set_item(key, block_table, ttl);
+        await Faking.map_files.set_item(key, block_table, time_to_live_s);
         Faking.logger.exit();
     },
     get_troops_speed: function (troops) {

@@ -32,6 +32,6 @@ export const Settings = {
         "thread_id": null,
         "page": 0,
         "spoiler_name": null,
-        "ttl": 300
+        "time_to_live_s": 3600
     }
 }
