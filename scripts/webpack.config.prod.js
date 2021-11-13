@@ -28,7 +28,7 @@ module.exports = {
             Script: ${data.chunk.runtime}
             Created by: Hermitowski
             Version: ${versions[data.chunk.runtime]} (${commitHash})
-            Licence: GNU GENERAL PUBLIC LICENSE VERSION 3 https://www.gnu.org/licenses/gpl-3.0.en.html
+            License: GNU GENERAL PUBLIC LICENSE VERSION 3 https://www.gnu.org/licenses/gpl-3.0.en.html
 
             You can find sources used to built this script here: https://github.com/RNabla/tribalwars/scripts
           `;
