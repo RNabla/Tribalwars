@@ -1,0 +1,285 @@
+{
+    "definitions": {
+        "troops_template": {
+            "type": "object",
+            "properties": {
+                "spear": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "sword": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "axe": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "archer": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "spy": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "light": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "marcher": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "heavy": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "ram": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "catapult": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "snob": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
+        "list_of_game_identifiers": {
+            "type": "string",
+            "pattern": "^((\\w*\\s*),{0,1})*$"
+        },
+        "boundary_box": {
+            "type": "object",
+            "properties": {
+                "min_x": {
+                    "type": "integer",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 999
+                },
+                "max_x": {
+                    "type": "integer",
+                    "default": 999,
+                    "minimum": 0,
+                    "maximum": 999
+                },
+                "min_y": {
+                    "type": "integer",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 999
+                },
+                "max_y": {
+                    "type": "integer",
+                    "default": 999,
+                    "minimum": 0,
+                    "maximum": 999
+                }
+            },
+            "required": [
+                "min_x",
+                "max_x",
+                "min_y",
+                "max_y"
+            ],
+            "additionalProperties": false
+        },
+        "boundary_circle": {
+            "type": "object",
+            "properties": {
+                "center": {
+                    "type": "string",
+                    "title": "center",
+                    "pattern": "^\\s*\\d+_\\|\\d+\\s*$"
+                },
+                "radius": {
+                    "type": "integer",
+                    "title": "radius",
+                    "minimum": 0,
+                    "maximum": 9999
+                }
+            },
+            "required": [
+                "radius",
+                "center"
+            ],
+            "additionalProperties": false
+        }
+    },
+    "title": "HermitowskieFejki",
+    "type": "object",
+    "properties": {
+        "safeguard": {
+            "$ref": "#/definitions/troops_template"
+        },
+        "troops_templates": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/troops_template",
+                "title": "troop template"
+            }
+        },
+        "fill_exact": {
+            "type": "boolean"
+        },
+        "fill_troops": {
+            "type": "string",
+            "pattern": "^(\\w+(:\\d+){0,1},{0,1})*$"
+        },
+        "coords": {
+            "type": "string",
+            "pattern": "^\\s*(\\d+\\|\\d+\\s*)*$"
+        },
+        "players": {
+            "type": "string",
+            "$ref": "#/definitions/list_of_game_identifiers"
+        },
+        "allies": {
+            "type": "string",
+            "$ref": "#/definitions/list_of_game_identifiers"
+        },
+        "ally_tags": {
+            "type": "string",
+            "$ref": "#/definitions/list_of_game_identifiers"
+        },
+        "include_barbarians": {
+            "type": "boolean"
+        },
+        "boundaries": {
+            "type": "array",
+            "items": {
+                "oneOf": [
+                    {
+                        "$ref": "#/definitions/boundary_box",
+                        "title": "box"
+                    },
+                    {
+                        "$ref": "#/definitions/boundary_circle",
+                        "title": "circle"
+                    }
+                ]
+            }
+        },
+        "blocking_enabled": {
+            "type": "boolean"
+        },
+        "blocking_local": {
+            "type": "object",
+            "properties": {
+                "time_s": {
+                    "type": "integer",
+                    "default": 3600,
+                    "minimum": 0
+                },
+                "count": {
+                    "type": "integer",
+                    "default": 1,
+                    "minimum": 1
+                },
+                "block_players": {
+                    "type": "boolean"
+                },
+                "scope": {
+                    "type": "string",
+                    "enum": [
+                        "village"
+                    ]
+                }
+            },
+            "required": [
+                "time_s",
+                "count",
+                "block_players"
+            ],
+            "additionalProperties": false,
+            "options": {
+                "dependencies": {
+                    "blocking_enabled": true
+                }
+            }
+        },
+        "blocking_global": {
+            "type": "object",
+            "properties": {
+                "time_s": {
+                    "type": "integer",
+                    "default": 3600,
+                    "minimum": 0
+                },
+                "count": {
+                    "type": "integer",
+                    "default": 1,
+                    "minimum": 1
+                },
+                "block_players": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "time_s",
+                "count",
+                "block_players"
+            ],
+            "additionalProperties": false,
+            "options": {
+                "dependencies": {
+                    "blocking_enabled": true
+                }
+            }
+        },
+        "skip_night_bonus": {
+            "type": "boolean"
+        },
+        "date_ranges": {
+            "type": "array",
+            "items": {
+                "oneOf": [
+                    {
+                        "type": "string",
+                        "pattern": "^(\\s*\\d{1,2}\\.\\d{1,2}.\\d{4}\\s+\\d{1,2}:\\d{1,2}\\s*-{0,1}\\s*){2}$",
+                        "title": "time"
+                    },
+                    {
+                        "type": "string",
+                        "pattern": "^(\\s*\\d{1,2}:\\d{1,2}\\s*-{0,1}\\s*){2}$",
+                        "title": "datetime"
+                    }
+                ]
+            }
+        },
+        "changing_village_enabled": {
+            "type": "boolean"
+        },
+        "forum_config": {
+            "type": "object",
+            "properties": {
+                "thread_id": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "spoiler_name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9]+$"
+                },
+                "page": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "time_to_live_s": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 3600
+                }
+            },
+            "required": [
+                "thread_id",
+                "spoiler_name"
+            ]
+        }
+    }
+}
