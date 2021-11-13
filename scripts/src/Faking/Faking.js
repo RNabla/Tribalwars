@@ -624,7 +624,7 @@ export const Faking = {
 
         const block_table = await Faking.block_table_get(key);
         const village_map = new Map();
-        const player_map = new Set();
+        const player_map = new Map();
 
         const map_function = function (target) {
             return target[LAYOUT_TARGET.X] * 1000 + target[LAYOUT_TARGET.Y];
@@ -640,7 +640,11 @@ export const Faking = {
             if (block_players) {
                 const player_id = block_entry[LAYOUT_BLOCK_ENTRY.TARGET][LAYOUT_TARGET.PLAYER_ID];
                 if (player_id != PLAYER_ID_BARBARIAN) {
-                    player_map.add(player_id);
+                    if (player_map.has(player_id)) {
+                        player_map.set(player_id, player_map.get(player_id) + 1);
+                    } else {
+                        player_map.set(player_id, 1);
+                    }
                 }
             }
         }
@@ -660,7 +664,7 @@ export const Faking = {
         if (block_players) {
             pool = pool.filter(target => {
                 const player_id = target[LAYOUT_TARGET.PLAYER_ID];
-                return !player_map.has(player_id);
+                return (player_map.get(player_id) || 0) < count;
             });
             if (pool.length === 0) {
                 throw resources["ERROR_POOL_EMPTY_BLOCKED_PLAYERS"]
