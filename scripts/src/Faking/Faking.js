@@ -78,15 +78,15 @@ export const Faking = {
             throw resources["ERROR_CONFIGURATION_MISSING"];
         }
 
-        if (user_configuration.forum_config != undefined) {
-            const forum_config = user_configuration.forum_config;
-            if (typeof (forum_config.spoiler_name) !== "string") {
+        if (user_configuration["forum_config"] != undefined) {
+            const forum_config = user_configuration["forum_config"];
+            if (typeof (forum_config["spoiler_name"]) !== "string") {
                 throw resources["ERROR_FORUM_CONFIG_SPOILER_NAME"];
             }
-            if (isNaN(parseInt(forum_config.thread_id))) {
+            if (isNaN(parseInt(forum_config["thread_id"]))) {
                 throw resources["ERROR_FORUM_CONFIG_THREAD_ID"];
             }
-            forum_config.thread_id = parseInt(forum_config.thread_id);
+            forum_config["thread_id"] = parseInt(forum_config["thread_id"]);
             Faking.logger.log(forum_config);
             user_configuration = await Faking.load_config_from_forum(forum_config);
         }
@@ -166,8 +166,8 @@ export const Faking = {
             async function (config) {
                 const url = TribalWars.buildURL('GET', 'forum', {
                     "screenmode": 'view_thread',
-                    "thread_id": config.thread_id,
-                    "page": config.page || 0
+                    "thread_id": config["thread_id"],
+                    "page": config["page"] || 0
                 });
 
                 Faking.logger.log('Fetching', url);
@@ -182,7 +182,7 @@ export const Faking = {
                     throw resources["ERROR_FORUM_CONFIG_THREAD_DOES_NOT_EXIST"];
                 }
 
-                const spoiler_buttons = forum_content.querySelectorAll(`div.spoiler > input[value="${config.spoiler_name}"]`)
+                const spoiler_buttons = forum_content.querySelectorAll(`div.spoiler > input[value="${config["spoiler_name"]}"]`)
 
                 if (spoiler_buttons.length == 0) {
                     throw resources["ERROR_FORUM_CONFIG_SPOILER_NONE"];
@@ -212,7 +212,7 @@ export const Faking = {
                 Faking.logger.log('Extracted', code_snippet, user_configuration);
 
                 return user_configuration;
-            }, forum_config, forum_config.time_to_live_s || 3600);
+            }, forum_config, forum_config["time_to_live_s"] || 3600);
 
         Faking.logger.exit();
 
@@ -249,8 +249,8 @@ export const Faking = {
         Faking.logger.entry(arguments);
         Faking.clear_form();
 
-        if (Faking.settings.troops_templates.length > 0) {
-            for (const template of Faking.settings.troops_templates) {
+        if (Faking.settings["troops_templates"].length > 0) {
+            for (const template of Faking.settings["troops_templates"]) {
                 const template_copy = JSON.parse(JSON.stringify(template));
                 if (Faking.try_select_troops(template_copy)) {
                     Faking.logger.log('Selecting', template_copy)
@@ -276,7 +276,7 @@ export const Faking = {
             }
         }
 
-        const fake_limit = Number(Faking.world_info.config.game.fake_limit); // HACK
+        const fake_limit = Number(Faking.world_info["config"]["game"]["fake_limit"]);
 
         if (fake_limit == 0) {
             Faking.logger.log("There is no fake limit");
@@ -301,7 +301,7 @@ export const Faking = {
             }
         }
 
-        const fill_troops = Faking.settings.fill_troops.split(',');
+        const fill_troops = Faking.settings["fill_troops"].split(',');
         let population_left = population_required - template_population;
 
         Faking.logger.log('fill_troops', fill_troops);
@@ -320,12 +320,12 @@ export const Faking = {
             }
 
             if (counts.length > 0) {
-                if (!Faking.settings.fill_exact || (Faking.settings.fill_exact > population_left > 0)) {
-                    counts.push(Math.ceil(population_left / Faking.world_info.unit_info[unit].pop));
+                if (!Faking.settings["fill_exact"] || (Faking.settings["fill_exact"] > population_left > 0)) {
+                    counts.push(Math.ceil(population_left / Faking.world_info["unit_info"][unit]["pop"]));
                 }
                 const unit_count = Math.min(...counts);
                 template[unit] += unit_count;
-                population_left -= Faking.world_info.unit_info[unit].pop * unit_count;
+                population_left -= Faking.world_info["unit_info"][unit]["pop"] * unit_count;
                 Faking.logger.log('Population left', population_left, 'fill_entry', fill_entry, 'unit', unit, 'unit_count', unit_count);
             }
         }
@@ -353,80 +353,80 @@ export const Faking = {
         Faking.logger.entry(arguments);
 
         const args = {
-            allies: Faking.settings.allies,
-            ally_tags: Faking.settings.ally_tags,
-            players: Faking.settings.players,
-            include_barbarians: Faking.settings.include_barbarians,
-            boundaries: Faking.settings.boundaries,
-            coords: Faking.settings.coords
+            allies: Faking.settings["allies"],
+            ally_tags: Faking.settings["ally_tags"],
+            players: Faking.settings["players"],
+            include_barbarians: Faking.settings["include_barbarians"],
+            boundaries: Faking.settings["boundaries"],
+            coords: Faking.settings["coords"]
         };
 
         const pool = await Faking.map_files.get_or_compute(
             async function (world_info, args) {
                 Faking.logger.entry();
-                const players = args.players.split(',').map(x => x.trim().toLowerCase());
-                const allies = args.allies.split(',').map(x => x.trim().toLowerCase());
-                const ally_tags = args.ally_tags.split(',').map(x => x.trim().toLowerCase());
+                const players = args["players"].split(',').map(x => x.trim().toLowerCase());
+                const allies = args["allies"].split(',').map(x => x.trim().toLowerCase());
+                const ally_tags = args["ally_tags"].split(',').map(x => x.trim().toLowerCase());
 
                 Faking.logger.log('Players', players, 'Allies', allies, 'Ally tags', ally_tags);
 
-                const ally_ids = new Set(world_info.ally
+                const ally_ids = new Set(world_info["ally"]
                     .filter(x =>
-                        allies.includes(x.name.toLowerCase()) ||
-                        ally_tags.includes(x.tag.toLowerCase())
+                        allies.includes(x["name"].toLowerCase()) ||
+                        ally_tags.includes(x["tag"].toLowerCase())
                     )
-                    .map(x => x.id)
+                    .map(x => x["id"])
                 );
 
-                const player_ids = new Set(world_info.player
+                const player_ids = new Set(world_info["player"]
                     .filter(x =>
-                        players.includes(x.name.toLowerCase()) ||
-                        ally_ids.has(x.ally_id)
+                        players.includes(x["name"].toLowerCase()) ||
+                        ally_ids.has(x["ally_id"])
                     )
-                    .map(x => x.id)
+                    .map(x => x["id"])
                 );
 
                 Faking.logger.log('Player ids', player_ids);
                 const unique_villages = new Set();
                 const pool = [];
 
-                let villages = world_info.village
-                    .filter(x => (args.include_barbarians && x.player_id === PLAYER_ID_BARBARIAN) || player_ids.has(x.player_id));
+                let villages = world_info["village"]
+                    .filter(x => (args["include_barbarians"] && x["player_id"] === PLAYER_ID_BARBARIAN) || player_ids.has(x["player_id"]));
 
                 Faking.logger.log('Villages before applying boundaries', villages);
 
-                if (args.boundaries.length) {
+                if (args["boundaries"].length) {
                     villages = villages
-                        .filter(village => Faking.is_in_any_boundary(village, args.boundaries))
+                        .filter(village => Faking.is_in_any_boundary(village, args["boundaries"]))
                 }
 
                 Faking.logger.log('Villages after applying boundaries', villages);
 
                 for (const village of villages) {
-                    const player_metadata = village.player_id !== PLAYER_ID_BARBARIAN
-                        ? world_info.player.find(x => x.id == village.player_id)
+                    const player_metadata = village["player_id"] !== PLAYER_ID_BARBARIAN
+                        ? world_info["player"].find(x => x["id"] == village["player_id"])
                         : null;
-                    const ally_metadata = player_metadata != null && player_metadata.ally_id !== ALLY_ID_NONE
-                        ? world_info.ally.find(x => x.id == player_metadata.ally_id)
+                    const ally_metadata = player_metadata != null && player_metadata["ally_id"] !== ALLY_ID_NONE
+                        ? world_info["ally"].find(x => x["id"] == player_metadata["ally_id"])
                         : null;
 
-                    const player_name = player_metadata ? player_metadata.name : null;
-                    const ally_tag = ally_metadata ? ally_metadata.tag : null;
+                    const player_name = player_metadata ? player_metadata["name"] : null;
+                    const ally_tag = ally_metadata ? ally_metadata["tag"] : null;
 
-                    pool.push([village.x, village.y, village.player_id, player_name, ally_tag]);
+                    pool.push([village["x"], village["y"], village["player_id"], player_name, ally_tag]);
 
-                    unique_villages.add(village.x * 1000 + village.y);
+                    unique_villages.add(village["x"] * 1000 + village["y"]);
                 }
 
                 const coords_regex = new RegExp(/\d{1,3}\|\d{1,3}/g);
-                const coords_matches = args.coords.match(coords_regex);
+                const coords_matches = args["coords"].match(coords_regex);
                 if (coords_matches != null) {
                     for (const coords of coords_matches.map(x => x.split('|').map(Number))) {
                         const village_key = coords[0] * 1000 + coords[1];
                         if (!unique_villages.has(village_key)) {
-                            const village = world_info.village.find(x => x.x == coords[0] && x.y == coords[1]);
+                            const village = world_info["village"].find(x => x.x == coords[0] && x.y == coords[1]);
                             if (village) {
-                                pool.push([village.x, village.y, village.player_id]);
+                                pool.push([village["x"], village["y"], village["player_id"]]);
                                 unique_villages.add(village_key);
                             }
                         }
@@ -448,16 +448,16 @@ export const Faking = {
     is_in_any_boundary: function (village, boundaries) {
         for (const boundary of boundaries) {
             if (boundary.hasOwnProperty('center')) {
-                const dx = boundary.center[0] - village.x;
-                const dy = boundary.center[1] - village.y;
+                const dx = boundary["center"][0] - village["x"];
+                const dy = boundary["center"][1] - village["y"];
                 if (dx * dx + dy * dy <= boundary.r * boundary.r) {
                     Faking.logger.log('Accepting village', village, ' in circle');
                     return true;
                 }
             }
             else if (boundary.hasOwnProperty('min_x')) {
-                if (boundary.min_x <= village.x && village.x <= boundary.max_x &&
-                    boundary.min_y <= village.y && village.y <= boundary.max_y) {
+                if (boundary["min_x"] <= village.x && village.x <= boundary["max_x"] &&
+                    boundary["min_y"] <= village.y && village.y <= boundary["max_y"]) {
                     Faking.logger.log('Accepting village', village, ' in box');
                     return true;
                 }
@@ -471,9 +471,9 @@ export const Faking = {
 
         const only_spies = Object.keys(troops).filter(unit => unit !== 'spy').every(unit => troops[unit] == 0);
 
-        if (Faking.world_info.config.night.active === "1" && Faking.settings.skip_night_bonus && !only_spies) {
-            const start_hour = Number(Faking.world_info.config.night.start_hour);
-            const end_hour = Number(Faking.world_info.config.night.end_hour);
+        if (Faking.world_info["config"]["night"]["active"] === "1" && Faking.settings["skip_night_bonus"] && !only_spies) {
+            const start_hour = Number(Faking.world_info["config"]["night"]["start_hour"]);
+            const end_hour = Number(Faking.world_info["config"]["night"]["end_hour"]);
             pool = pool.filter(target => {
                 if (target[LAYOUT_TARGET.PLAYER_ID] === PLAYER_ID_BARBARIAN) {
                     return true;
@@ -493,12 +493,12 @@ export const Faking = {
             return day_parts[LAYOUT_DATE_RANGE_PART.HOUR] * 60 + day_parts[LAYOUT_DATE_RANGE_PART.MINUTE];
         };
 
-        Faking.logger.log('Faking.settings.date_ranges', Faking.settings.date_ranges);
+        Faking.logger.log('Faking.settings["date_ranges"]', Faking.settings["date_ranges"]);
 
-        if (Faking.settings.date_ranges.length > 0) {
+        if (Faking.settings["date_ranges"].length > 0) {
             const snapshot = pool;
 
-            for (const date_range of Faking.settings.date_ranges) {
+            for (const date_range of Faking.settings["date_ranges"]) {
                 Faking.logger.log('date_range', date_range)
 
                 let filter_function = null;
@@ -563,7 +563,7 @@ export const Faking = {
         Faking.logger.entry(arguments);
         if (troops.snob > 0) {
             Faking.logger.log(pool.map(x => Faking.calculate_distance(x)));
-            pool = pool.filter(x => Faking.calculate_distance(x) < Number(Faking.world_info.config.snob.max_dist));
+            pool = pool.filter(x => Faking.calculate_distance(x) < Number(Faking.world_info["config"]["snob"]["max_dist"]));
             if (pool.length === 0) {
                 Faking.change_village(resources["ERROR_POOL_EMPTY_SNOBS"]);
             }
@@ -573,7 +573,7 @@ export const Faking = {
     },
     pool_apply_blocking: async function (pool) {
         Faking.logger.entry(arguments);
-        if (Faking.settings.blocking_enabled) {
+        if (Faking.settings["blocking_enabled"]) {
             pool = await Faking.pool_apply_blocking_local(pool);
             pool = await Faking.pool_apply_blocking_global(pool);
         }
@@ -586,8 +586,8 @@ export const Faking = {
         pool = await Faking.pool_apply_block_table(
             pool,
             Faking.blocking_local_get_key(),
-            Faking.settings.blocking_local.count,
-            Faking.settings.blocking_local.block_players
+            Faking.settings["blocking_local"]["count"],
+            Faking.settings["blocking_local"]["block_players"]
         );
 
         Faking.logger.exit(pool);
@@ -596,19 +596,19 @@ export const Faking = {
     pool_apply_blocking_global: async function (pool) {
         Faking.logger.entry(arguments);
 
-        for (const blocking of Faking.settings.blocking_global) {
+        for (const blocking of Faking.settings["blocking_global"]) {
             pool = await Faking.pool_apply_block_table(
                 pool,
                 Faking.blocking_global_get_key(blocking.name),
-                blocking.count,
-                blocking.block_players
+                blocking["count"],
+                blocking["block_players"]
             );
         }
         Faking.logger.exit(pool);
         return pool;
     },
     blocking_local_get_key: function () {
-        if (Faking.settings.blocking_local.scope === 'village') {
+        if (Faking.settings["blocking_local"]["scope"] === 'village') {
             return `blocking.l.${game_data["village"]["id"]}`;
         }
         return {
@@ -678,17 +678,17 @@ export const Faking = {
         return pool;
     },
     add_to_block_tables: async function (target) {
-        if (Faking.settings.blocking_enabled) {
+        if (Faking.settings["blocking_enabled"]) {
             await Faking.block_table_add_entry(
                 target,
                 Faking.blocking_local_get_key(),
-                Faking.settings.blocking_local.time_s
+                Faking.settings["blocking_local"]["time_s"]
             );
-            for (const global_entry of Faking.settings.blocking_global) {
+            for (const global_entry of Faking.settings["blocking_global"]) {
                 await Faking.block_table_add_entry(
                     target,
                     Faking.blocking_global_get_key(global_entry.name),
-                    global_entry.time_s
+                    global_entry["time_s"]
                 );
             }
         }
@@ -725,7 +725,7 @@ export const Faking = {
         let speed = 0;
         for (const unit in troops) {
             if (troops.hasOwnProperty(unit) && troops[unit] !== 0) {
-                speed = Math.max(Number(Faking.world_info.unit_info[unit].speed), speed);
+                speed = Math.max(Number(Faking.world_info["unit_info"][unit]["speed"]), speed);
             }
         }
         if (speed === 0) {
@@ -735,7 +735,7 @@ export const Faking = {
     },
     count_population: function (troops) {
         return Object.keys(troops)
-            .map(unit => troops[unit] * Number(Faking.world_info.unit_info[unit].pop))
+            .map(unit => troops[unit] * Number(Faking.world_info["unit_info"][unit]["pop"]))
             .reduce((a, b) => a + b, 0);
     },
     clear_form: function () {
@@ -752,8 +752,8 @@ export const Faking = {
         const available = {};
         for (let unit of Faking.units) {
             available[unit] = Number(document.querySelector(`#unit_input_${unit}`).dataset['allCount']);
-            if (Faking.settings.safeguard.hasOwnProperty(unit)) {
-                available[unit] = Math.max(0, available[unit] - Faking.settings.safeguard[unit]);
+            if (Faking.settings["safeguard"].hasOwnProperty(unit)) {
+                available[unit] = Math.max(0, available[unit] - Faking.settings["safeguard"][unit]);
             }
         }
         return available;
