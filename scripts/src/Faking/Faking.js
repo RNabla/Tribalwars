@@ -424,7 +424,7 @@ export const Faking = {
                     for (const coords of coords_matches.map(x => x.split('|').map(Number))) {
                         const village_key = coords[0] * 1000 + coords[1];
                         if (!unique_villages.has(village_key)) {
-                            const village = world_info["village"].find(x => x.x == coords[0] && x.y == coords[1]);
+                            const village = world_info["village"].find(x => x["x"] == coords[0] && x["y"] == coords[1]);
                             if (village) {
                                 pool.push([village["x"], village["y"], village["player_id"]]);
                                 unique_villages.add(village_key);
