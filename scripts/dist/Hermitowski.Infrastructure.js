@@ -2,7 +2,7 @@
  * 
  *             Script: Infrastructure
  *             Created by: Hermitowski
- *             Version: 2.0.0.0 (a385c8e7f066306140de0485a5d0e716ed817e6f)
+ *             Version: 2.0.0.0 (dad6108f4c7717b7919c3b7baaa8e917bf5316e7)
  *             License: GNU GENERAL PUBLIC LICENSE VERSION 3 https://www.gnu.org/licenses/gpl-3.0.en.html
  *
  *             You can find sources used to built this script here: https://github.com/RNabla/tribalwars/scripts
