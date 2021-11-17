@@ -1,9 +1,10 @@
 import { Logger } from '../inf/Logger'
 import { MapFiles } from '../inf/MapFiles';
-import { Settings } from './Faking.settings';
 import { two_digit_number, get_timestamp_s } from '../inf/Helper'
 
-const resources = require('./Faking.resources')
+import { Settings } from './Faking.settings';
+import { Resources } from './Faking.resources'
+
 const LAYOUT_BLOCK_ENTRY = { EXPIRATION_TIME: 0, TARGET: 1 };
 const LAYOUT_TARGET = { X: 0, Y: 1, PLAYER_ID: 2, PLAYER_NAME: 3, ALLY_TAG: 4 };
 const LAYOUT_DATE_RANGE = { FROM: 0, TO: 1 };
@@ -48,7 +49,7 @@ export const Faking = {
             player_info += ` [${target[LAYOUT_TARGET.ALLY_TAG]}]`;
         }
 
-        const notification = resources["ATTACK_TIME"]
+        const notification = Resources.ATTACK_TIME
             .replace('__DAY__', two_digit_number(arrival_time.getDate()))
             .replace('__MONTH__', two_digit_number(arrival_time.getMonth() + 1))
             .replace('__HOURS__', two_digit_number(arrival_time.getHours()))
@@ -75,16 +76,16 @@ export const Faking = {
         Faking.logger.entry(arguments);
 
         if (typeof (user_configuration) !== "object") {
-            throw resources["ERROR_CONFIGURATION_MISSING"];
+            throw Resources.ERROR_CONFIGURATION_MISSING;
         }
 
         if (user_configuration["forum_config"] != undefined) {
             const forum_config = user_configuration["forum_config"];
             if (typeof (forum_config["spoiler_name"]) !== "string") {
-                throw resources["ERROR_FORUM_CONFIG_SPOILER_NAME"];
+                throw Resources.ERROR_FORUM_CONFIG_SPOILER_NAME;
             }
             if (isNaN(parseInt(forum_config["thread_id"]))) {
-                throw resources["ERROR_FORUM_CONFIG_THREAD_ID"];
+                throw Resources.ERROR_FORUM_CONFIG_THREAD_ID;
             }
             forum_config["thread_id"] = parseInt(forum_config["thread_id"]);
             Faking.logger.log(forum_config);
@@ -95,7 +96,7 @@ export const Faking = {
 
         for (const option_name in user_configuration) {
             if (!default_settings.hasOwnProperty(option_name)) {
-                throw resources["ERROR_CONFIGURATION_OPTION_UNKNOWN"];
+                throw Resources.ERROR_CONFIGURATION_OPTION_UNKNOWN;
             }
         }
 
@@ -179,16 +180,16 @@ export const Faking = {
                 const forum_content = [...thread.querySelectorAll('div.forum-content')].pop();
 
                 if (!forum_content) {
-                    throw resources["ERROR_FORUM_CONFIG_THREAD_DOES_NOT_EXIST"];
+                    throw Resources.ERROR_FORUM_CONFIG_THREAD_DOES_NOT_EXIST;
                 }
 
                 const spoiler_buttons = forum_content.querySelectorAll(`div.spoiler > input[value="${config["spoiler_name"]}"]`)
 
                 if (spoiler_buttons.length == 0) {
-                    throw resources["ERROR_FORUM_CONFIG_SPOILER_NONE"];
+                    throw Resources.ERROR_FORUM_CONFIG_SPOILER_NONE;
                 }
                 if (spoiler_buttons.length > 1) {
-                    throw resources["ERROR_FORUM_CONFIG_SPOILER_MULTIPLE"];
+                    throw Resources.ERROR_FORUM_CONFIG_SPOILER_MULTIPLE;
                 }
 
                 const spoiler_button = spoiler_buttons[0];
@@ -200,10 +201,10 @@ export const Faking = {
                 const code_snippets = spoiler.querySelectorAll('pre');
 
                 if (code_snippets.length == 0) {
-                    throw resources["ERROR_FORUM_CONFIG_CODE_SNIPPET_NONE"];
+                    throw Resources.ERROR_FORUM_CONFIG_CODE_SNIPPET_NONE;
                 }
                 if (code_snippets.length > 1) {
-                    throw resources["ERROR_FORUM_CONFIG_CODE_SNIPPET_MULTIPLE"];
+                    throw Resources.ERROR_FORUM_CONFIG_CODE_SNIPPET_MULTIPLE;
                 }
                 const code_snippet = code_snippets[0].innerText;
 
@@ -220,16 +221,16 @@ export const Faking = {
     },
     check_screen: function () {
         if (document.querySelector('.jump_link')) {
-            this.change_village(resources["ERROR_SCREEN_VILLAGE_OUT_OF_GROUP"]);
+            this.change_village(Resources.ERROR_SCREEN_VILLAGE_OUT_OF_GROUP);
         }
         if (game_data["screen"] !== 'place' || $('#command-data-form').length !== 1) {
             location = TribalWars.buildURL('GET', 'place', { "mode": 'command' });
-            throw resources["ERROR_SCREEN_REDIRECT"];
+            throw Resources.ERROR_SCREEN_REDIRECT;
         }
         // disable executing script on screen with command confirmation
         if (document.querySelector('#troop_confirm_go') ||
             document.querySelector('#troop_confirm_submit')) {
-            throw resources["ERROR_SCREEN_NO_ACTION"];
+            throw Resources.ERROR_SCREEN_NO_ACTION;
         }
     },
     change_village: function (reason) {
@@ -258,9 +259,9 @@ export const Faking = {
                     return template_copy;
                 }
             }
-            Faking.change_village(resources["ERROR_TROOPS_NOT_ENOUGH"]);
+            Faking.change_village(Resources.ERROR_TROOPS_NOT_ENOUGH);
         }
-        Faking.change_village(resources["ERROR_TROOPS_EMPTY"]);
+        Faking.change_village(Resources.ERROR_TROOPS_EMPTY);
         Faking.logger.exit();
     },
     try_select_troops: function (template) {
@@ -440,7 +441,7 @@ export const Faking = {
         );
 
         if (pool.length === 0) {
-            throw resources["ERROR_POOL_EMPTY"];
+            throw Resources.ERROR_POOL_EMPTY;
         }
         Faking.logger.exit(pool);
         return pool;
@@ -485,7 +486,7 @@ export const Faking = {
                 return start_hour <= arrival_time.getHours() && arrival_time <= (end_hour - 1);
             });
             if (pool.length === 0) {
-                throw resources["ERROR_POOL_EMPTY_NIGHT_BONUS"];
+                throw Resources.ERROR_POOL_EMPTY_NIGHT_BONUS;
             }
         }
 
@@ -552,7 +553,7 @@ export const Faking = {
             }
 
             if (pool.length == 0) {
-                throw resources["ERROR_POOL_EMPTY_DATE_RANGES"];
+                throw Resources.ERROR_POOL_EMPTY_DATE_RANGES;
             }
         }
 
@@ -565,7 +566,7 @@ export const Faking = {
             Faking.logger.log(pool.map(x => Faking.calculate_distance(x)));
             pool = pool.filter(x => Faking.calculate_distance(x) < Number(Faking.world_info["config"]["snob"]["max_dist"]));
             if (pool.length === 0) {
-                Faking.change_village(resources["ERROR_POOL_EMPTY_SNOBS"]);
+                Faking.change_village(Resources.ERROR_POOL_EMPTY_SNOBS);
             }
         }
         Faking.logger.exit(pool);
@@ -658,7 +659,7 @@ export const Faking = {
         });
 
         if (pool.length === 0) {
-            throw resources["ERROR_POOL_EMPTY_BLOCKED_VILLAGES"];
+            throw Resources.ERROR_POOL_EMPTY_BLOCKED_VILLAGES;
         }
 
         if (block_players) {
@@ -667,7 +668,7 @@ export const Faking = {
                 return (player_map.get(player_id) || 0) < count;
             });
             if (pool.length === 0) {
-                throw resources["ERROR_POOL_EMPTY_BLOCKED_PLAYERS"]
+                throw Resources.ERROR_POOL_EMPTY_BLOCKED_PLAYERS
             }
         }
 
@@ -729,7 +730,7 @@ export const Faking = {
             }
         }
         if (speed === 0) {
-            throw resources["ERROR_TROOPS_EMPTY"];
+            throw Resources.ERROR_TROOPS_EMPTY;
         }
         return speed;
     },
@@ -777,5 +778,6 @@ export const Faking = {
         const target = await Faking.select_target(troops);
         await Faking.input_data(troops, target);
         Faking.logger.exit();
+        UI.SuccessMessage(Resources.ERROR_CONFIGURATION_MISSING);
     }
 };

@@ -249,12 +249,12 @@
                     {
                         "type": "string",
                         "pattern": "^(\\s*\\d{1,2}\\.\\d{1,2}.\\d{4}\\s+\\d{1,2}:\\d{1,2}\\s*-{0,1}\\s*){2}$",
-                        "title": "time"
+                        "title": "datetime"
                     },
                     {
                         "type": "string",
                         "pattern": "^(\\s*\\d{1,2}:\\d{1,2}\\s*-{0,1}\\s*){2}$",
-                        "title": "datetime"
+                        "title": "time"
                     }
                 ]
             }
