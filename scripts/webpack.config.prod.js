@@ -46,6 +46,9 @@ module.exports = {
             keep_quoted: true,
           },
         },
+        format: {
+          ascii_only: true
+        }
       },
       extractComments: false,
     })],
