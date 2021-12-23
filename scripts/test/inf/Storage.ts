@@ -1,13 +1,15 @@
-import { TestRunner } from './framework';
-import { assert } from './framework';
-import { Storage, SCHEMA_COLUMN_EXPIRATION_TIME_S, SCHEMA_COLUMN_VALUE, SCHEMA_COLUMN_NAME } from '../src/inf/Storage';
-import { sleep, get_timestamp_s } from '../src/inf/Helper';
+import { TestRunner } from '../framework';
+import { assert } from '../framework';
+import { Storage, StorageFactory } from '../../src/inf/Storage';
+import { sleep } from '../../src/inf/Helper';
+import { DataProvider } from '../../src/inf/DataProvider';
 
 !(async function () {
     const test_runner = TestRunner.create('Storage');
     const namespace = 'Hermitowski.Storage.test';
 
-    const storage = await Storage.create_instance();
+    const data_provider = new DataProvider();
+    const storage = await StorageFactory.create_instance(data_provider);
 
     test_runner.test('getItem with no prior item returns null', async () => {
         const item = await storage.get_item(namespace, '41');
@@ -18,8 +20,8 @@ import { sleep, get_timestamp_s } from '../src/inf/Helper';
         await storage.set_item(namespace, '42', 42, 1);
         const item = await storage.get_item(namespace, '42');
         assert(() => null !== item);
-        assert(() => 42 === item[SCHEMA_COLUMN_VALUE]);
-        assert(() => !isNaN(item[SCHEMA_COLUMN_EXPIRATION_TIME_S]));
+        assert(() => 42 === item.value);
+        assert(() => !isNaN(item.expiration_time_s));
     });
 
     test_runner.test('getItem respects expired items', async () => {
@@ -36,7 +38,7 @@ import { sleep, get_timestamp_s } from '../src/inf/Helper';
         await storage.set_item(namespace, key1, 44, 1);
         const item = await storage.get_item(namespace, key2);
         assert(() => item !== null);
-        assert(() => item[SCHEMA_COLUMN_VALUE] === 44);
+        assert(() => item.value === 44);
     });
 
     test_runner.test('get_or_add_item caches computed value', async function () {
@@ -45,8 +47,9 @@ import { sleep, get_timestamp_s } from '../src/inf/Helper';
             await storage.get_or_add_item(namespace, key, async function () {
                 await sleep(1000);
                 return {
-                    [SCHEMA_COLUMN_VALUE]: 42,
-                    [SCHEMA_COLUMN_EXPIRATION_TIME_S]: get_timestamp_s() + 10
+                    name: '',
+                    expiration_time_s: data_provider.get_current_timestamp_s() + 10,
+                    value: 42,
                 };
             });
         }

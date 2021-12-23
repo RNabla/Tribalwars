@@ -11,7 +11,8 @@ export const TestRunner = {
                 tests.push({ test_name, action });
             },
             run: async function () {
-                console.log('Running', tests.length, 'tests for', module_name)
+                console.log('Running', tests.length, 'tests for', module_name);
+                let failed = 0;
                 for (const test_item of tests) {
                     const start = Date.now();
                     let fail = true;
@@ -24,7 +25,9 @@ export const TestRunner = {
                         fail = false;
                     }
                     catch (ex) {
-                        message = ex;
+                        message = '\n' + ex;
+                        console.log(ex);
+                        failed++;
                     }
                     finally {
                         let output = `Elapsed time: [${(Date.now() - start).toString().padStart(4, ' ')}]ms. `;
@@ -38,6 +41,9 @@ export const TestRunner = {
                             console.log(output);
                         }
                     }
+                }
+                if (failed > 0) {
+                    console.log(`FAILED: ${failed}`);
                 }
             }
         }
@@ -58,5 +64,10 @@ export async function assertException(action, message) {
         if (ex != message) {
             throw `Expected: ${message}. Got ${ex} instead`;
         };
+    }
+    finally {
+        for (var i = 0; i < 42; i++) {
+            console.groupEnd();
+        }
     }
 }

@@ -9,6 +9,7 @@ export const Resources = {
     ERROR_FORUM_CONFIG_SPOILER_MULTIPLE: "Znaleziono więcej niż jeden spoiler o podanej nazwie",
     ERROR_FORUM_CONFIG_CODE_SNIPPET_NONE: "Wskazany spoiler nie zawiera konfiguracji",
     ERROR_FORUM_CONFIG_CODE_SNIPPET_MULTIPLE: "Wskazany spoiler zawiera więcej niż jedną konfigurację",
+    ERROR_FORUM_CONFIG_CODE_SNIPPET_MALFORMED: "Wskazany spoiler nie zawiera konfiguracji w formacie JSON",
     ERROR_SCREEN_VILLAGE_OUT_OF_GROUP: "Wioska poza grupą. Przechodzę do następnej wioski z grupy",
     ERROR_SCREEN_REDIRECT: "Przechodzę do przeglądu placu",
     ERROR_SCREEN_NO_ACTION: "Na tym ekranie nie ma akcji do wykonania",
