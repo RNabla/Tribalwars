@@ -1,5 +1,4 @@
 import { Resources } from "./Bootstrap.resources";
-import { DIALOG_PROPERTIES } from "./TribalWars";
 
 declare const UI: any;
 declare const Dialog: {

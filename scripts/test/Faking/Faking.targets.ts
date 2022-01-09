@@ -67,7 +67,7 @@ import { Resources } from '../../src/Faking/Faking.resources';
         const settings = get_default_settings();
         settings.include_barbarians = true;
         const target = await get_default_instance(settings);
-        assertException(async () => {
+        await assertException(async () => {
             await target.select_target({ snob: 1 });
         }, Resources.ERROR_POOL_EMPTY_SNOBS);
     });

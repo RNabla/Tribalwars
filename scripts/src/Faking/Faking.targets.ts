@@ -1,5 +1,5 @@
 import { Logger, LoggerFactory } from "../inf/Logger";
-import { IMapFiles, WorldInfo, WorldInfoType } from "../inf/MapFiles";
+import { IMapFiles, WorldInfo } from "../inf/MapFiles";
 import { Resources } from "./Faking.resources";
 import { GameData } from "../inf/TribalWars";
 import { FakingSettings, Troops } from "./Faking";
@@ -8,6 +8,7 @@ import { LAYOUT_TARGET_ALLY_TAG, LAYOUT_TARGET_PLAYER_NAME, LAYOUT_TARGET_X, LAY
 import { PoolDateRangeFilter } from "./Faking.targets.date_ranges";
 import { PoolBlocker } from "./Faking.targets.blocking";
 import { TargetsHelper } from "./Faking.targets.helper";
+import { ScriptResult } from "../inf/Bootstrap";
 
 export const PLAYER_ID_BARBARIAN = "0";
 export const ALLY_ID_NONE = "0";
@@ -39,7 +40,7 @@ export class TargetSelector implements ITargetSelector {
         game_data: GameData,
         settings: FakingSettings,
     ) {
-        LoggerFactory.create_instance('Hermitowski.Faking.TargetSelector', (logger) => { this.logger = logger; });
+        LoggerFactory.create_instance("Hermitowski.Faking.TargetSelector", (logger) => { this.logger = logger; });
         this.settings = settings;
         this.world_info = world_info;
         this.map_files = map_files;
@@ -101,12 +102,12 @@ export class TargetSelector implements ITargetSelector {
     }
 
 
-    private pool_apply_troops_constraints(pool, troops) {
+    private pool_apply_troops_constraints(pool: PoolTarget[], troops: Troops) {
         this.logger.entry(arguments);
-        if (troops["snob"] > 0) {
-            pool = pool.filter((x: PoolTarget) => TargetsHelper.calculate_distance(this.game_data, x) < Number(this.world_info[WorldInfoType.config]["snob"]["max_dist"]));
+        if (troops.snob > 0) {
+            pool = pool.filter((x: PoolTarget) => TargetsHelper.calculate_distance(this.game_data, x) < Number(this.world_info.config.snob.max_dist));
             if (pool.length === 0) {
-                throw Resources.ERROR_POOL_EMPTY_SNOBS;
+                throw new ScriptResult(Resources.ERROR_POOL_EMPTY_SNOBS);
             }
         }
         this.logger.exit(pool);

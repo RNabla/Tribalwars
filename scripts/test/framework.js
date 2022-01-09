@@ -1,3 +1,4 @@
+import { ScriptResult } from "../src/inf/Bootstrap";
 
 export const TestRunner = {
     create: function (module_name) {
@@ -45,6 +46,9 @@ export const TestRunner = {
                 if (failed > 0) {
                     console.log(`FAILED: ${failed}`);
                 }
+                else {
+                    console.log("ALL ok");
+                }
             }
         }
     }
@@ -61,9 +65,11 @@ export async function assertException(action, message) {
         await action();
     }
     catch (ex) {
-        if (ex != message) {
+        if (ex instanceof (ScriptResult) && ex.message == message) {
+
+        } else {
             throw `Expected: ${message}. Got ${ex} instead`;
-        };
+        }
     }
     finally {
         for (var i = 0; i < 42; i++) {

@@ -1,5 +1,5 @@
 import { Logger, LoggerFactory } from "../inf/Logger";
-import { WorldInfo, WorldInfoType } from "../inf/MapFiles";
+import { UnitInfo, WorldInfo } from "../inf/MapFiles";
 import { Resources } from "./Faking.resources";
 import { IDocument } from "../inf/Document";
 import { GameData } from "../inf/TribalWars";
@@ -31,7 +31,7 @@ export class TroopsSelector implements ITroopsSelector {
         this.settings = settings;
         this.world_info = world_info;
         this.game_data = game_data;
-        this.selectable_unit_names = game_data["units"].filter(unit => unit !== "militia");
+        this.selectable_unit_names = game_data.units.filter(unit => unit !== "militia");
     }
 
     public select_troops(): Troops {
@@ -70,7 +70,8 @@ export class TroopsSelector implements ITroopsSelector {
             }
         }
 
-        const fake_limit = Number(this.world_info[WorldInfoType.config]["game"]["fake_limit"]);
+        console.log(this.world_info.config);
+        const fake_limit = Number(this.world_info.config.game.fake_limit);
 
         if (fake_limit == 0) {
             this.logger.log("There is no fake limit");
@@ -78,20 +79,20 @@ export class TroopsSelector implements ITroopsSelector {
             return troops;
         }
 
-        if (troops["spy"] == 5 && Object.keys(troops).filter(unit_name => unit_name !== "spy").every(unit_name => troops[unit_name] == 0)) {
+        if (troops.spy == 5 && Object.keys(troops).filter(unit_name => unit_name !== "spy").every(unit_name => troops[unit_name] == 0)) {
             this.logger.log("Special case. Only 5 spies");
             this.logger.exit();
             return troops;
         }
 
-        const population_required = Math.floor(this.game_data["village"]["points"] * fake_limit * 0.01);
+        const population_required = Math.floor(this.game_data.village.points * fake_limit * 0.01);
         const troops_population = this.count_population(troops);
 
         this.logger.log("Population required", population_required);
         this.logger.log("Base troops population", troops_population);
 
         for (const unit_name of this.selectable_unit_names) {
-            if (!troops.hasOwnProperty(unit_name)) {
+            if (!Object.prototype.hasOwnProperty.call(troops, unit_name)) {
                 troops[unit_name] = 0;
             }
         }
@@ -112,7 +113,7 @@ export class TroopsSelector implements ITroopsSelector {
                 continue;
             }
 
-            const unit_population = Number(this.world_info[WorldInfoType.unit_info][unit_name]["pop"]);
+            const unit_population = Number((<UnitInfo>this.world_info.unit_info[unit_name]).pop);
 
             const counts = [
                 available_troops[unit_name] - troops[unit_name]
@@ -141,7 +142,7 @@ export class TroopsSelector implements ITroopsSelector {
         const available_troops: Troops = {};
         for (const unit_name of this.selectable_unit_names) {
             available_troops[unit_name] = Number((<HTMLElement>this.document.querySelector(`#unit_input_${unit_name}`)).dataset["allCount"]);
-            if (this.settings.safeguard.hasOwnProperty(unit_name)) {
+            if (Object.prototype.hasOwnProperty.call(this.settings.safeguard, unit_name)) {
                 available_troops[unit_name] = Math.max(0, available_troops[unit_name] - this.settings.safeguard[unit_name]);
             }
         }
@@ -150,7 +151,7 @@ export class TroopsSelector implements ITroopsSelector {
 
     private count_population(troops: Troops): number {
         return Object.keys(troops)
-            .map(unit_name => troops[unit_name] * Number(this.world_info[WorldInfoType.unit_info][unit_name]["pop"]))
+            .map(unit_name => troops[unit_name] * Number((<UnitInfo>this.world_info.unit_info[unit_name].pop)))
             .reduce((a, b) => a + b, 0);
     }
 }

@@ -38,9 +38,5 @@ module.exports = {
 
   },
   mode: 'development',
-  plugins: [
-    new webpack.DefinePlugin({
-      LOGGING_ENABLED: JSON.stringify(true)
-    })
-  ]
+  plugins: []
 };

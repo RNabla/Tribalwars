@@ -2,8 +2,8 @@ import { LoggerFactory, Logger } from "./Logger";
 import { get_digest } from "./Helper";
 import { IDataProvider } from "./DataProvider";
 
-async function promisify(object: IDBRequest): Promise<any> {
-    const promise = new Promise((resolve, reject) => {
+async function promisify<T = any>(object: IDBRequest): Promise<T> {
+    const promise = new Promise<T>((resolve, reject) => {
         object.onsuccess = function (event) {
             resolve((event.target as IDBRequest).result);
         };
@@ -13,24 +13,15 @@ async function promisify(object: IDBRequest): Promise<any> {
 }
 
 const SCHEMA_OBJECT_STORE = "storage";
-export const SCHEMA_COLUMN_NAME = "name";
-export const SCHEMA_COLUMN_EXPIRATION_TIME_S = "expiration_time_s";
-export const SCHEMA_COLUMN_VALUE = "value";
-
-export const SCHEMA = {
-    NAME: "name",
-    EXPIRATION_TIME_S: SCHEMA_COLUMN_EXPIRATION_TIME_S,
-    VALUE: "value",
-}
-
+const SCHEMA_COLUMN_NAME = "name";
+const SCHEMA_COLUMN_EXPIRATION_TIME_S = "expiration_time_s";
+const SCHEMA_COLUMN_VALUE = "value";
 const RW = "readwrite";
 const RO = "readonly";
 
 export interface StorageItem {
-    // 
     [SCHEMA_COLUMN_NAME]: string;
-    // [SCHEMA_COLUMN_EXPIRATION_TIME_S]: number;
-    "expiration_time_s": number;
+    [SCHEMA_COLUMN_EXPIRATION_TIME_S]: number;
     [SCHEMA_COLUMN_VALUE]: any;
 }
 
@@ -122,8 +113,7 @@ export class Storage {
         const item_name = await Storage.get_item_name(user_namespace, key);
         const obj: StorageItem = {
             name: item_name,
-            // expiration_time_s: this.data_provider.get_current_timestamp_s() + time_to_live_s,
-            [SCHEMA_COLUMN_EXPIRATION_TIME_S]: this.data_provider.get_current_timestamp_s() + time_to_live_s,
+            expiration_time_s: this.data_provider.get_current_timestamp_s() + time_to_live_s,
             value: value
         };
         this.logger.log(obj);
@@ -137,7 +127,7 @@ export class Storage {
     public async get_or_add_item(user_namespace: string, key: string | object, factory: () => Promise<StorageItem>): Promise<StorageItem> {
         this.logger.entry(arguments);
         const item_name = await Storage.get_item_name(user_namespace, key);
-        let item = await promisify(this.database
+        let item = await promisify<StorageItem>(this.database
             .transaction(SCHEMA_OBJECT_STORE, RO)
             .objectStore(SCHEMA_OBJECT_STORE)
             .get(item_name)
@@ -152,9 +142,8 @@ export class Storage {
                 .put(item)
             );
         }
-        item[SCHEMA_COLUMN_NAME] = key;
-        this.logger.log("returning", item);
-        this.logger.exit();
+        item[SCHEMA_COLUMN_NAME] = item_name;
+        this.logger.exit(item);
         return item;
     }
 

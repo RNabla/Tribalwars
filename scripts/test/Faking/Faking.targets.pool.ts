@@ -54,7 +54,7 @@ import { PoolGenerator } from '../../src/Faking/Faking.targets.pool';
     test_runner.test('pool empty', async function () {
         const settings = get_default_settings();
         const target = create_target(settings);
-        assertException(async () => {
+        await assertException(async () => {
             const pool = await target.pool_get();
         }, Resources.ERROR_POOL_EMPTY);
     });

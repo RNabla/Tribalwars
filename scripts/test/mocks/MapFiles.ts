@@ -1,7 +1,7 @@
 import { IDataProvider } from "../../src/inf/DataProvider";
 import { get_digest } from "../../src/inf/Helper";
 import { Logger, LoggerFactory } from "../../src/inf/Logger";
-import { IMapFiles, UnitsInfo, WorldInfo, WorldInfoType } from "../../src/inf/MapFiles";
+import { Config, IMapFiles, UnitsInfo, WorldInfo, WorldInfoType } from "../../src/inf/MapFiles";
 
 interface StorageItem {
     value: any,
@@ -85,7 +85,7 @@ export abstract class MapFiles implements IMapFiles {
         };
         for (const type of entities) {
             if (type === WorldInfoType.config) {
-                result[WorldInfoType.config] = this.get_json_from_xml_string(this.config);
+                result[WorldInfoType.config] = (<Config>this.get_json_from_xml_string(this.config));
             }
             if (type === WorldInfoType.unit_info) {
                 result[WorldInfoType.unit_info] = (<UnitsInfo>this.get_json_from_xml_string(this.unit_info));

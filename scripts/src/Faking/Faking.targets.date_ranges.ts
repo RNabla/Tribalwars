@@ -1,5 +1,5 @@
 import { Logger, LoggerFactory } from "../inf/Logger";
-import { WorldInfo, WorldInfoType } from "../inf/MapFiles";
+import { WorldInfo } from "../inf/MapFiles";
 import { Resources } from "./Faking.resources";
 import { GameData } from "../inf/TribalWars";
 import { DateRangePart, FakingSettings, Troops } from "./Faking";
@@ -31,7 +31,7 @@ export class PoolDateRangeFilter {
         game_data: GameData,
         settings: FakingSettings,
     ) {
-        LoggerFactory.create_instance('Hermitowski.Faking.Targets.DateRangeFilter', (logger) => { this.logger = logger; });
+        LoggerFactory.create_instance("Hermitowski.Faking.Targets.DateRangeFilter", (logger) => { this.logger = logger; });
         this.world_info = world_info;
         this.game_data = game_data;
         this.data_provider = data_provider;
@@ -54,12 +54,9 @@ export class PoolDateRangeFilter {
     private apply_night_bonus(pool: PoolTarget[], troops: Troops, troops_speed: number): PoolTarget[] {
         const only_spies = Object.keys(troops).filter(unit => unit !== "spy").every(unit => troops[unit] == 0);
 
-        // if (this.world_info.config["night"]["active"] === "1" && this.settings.skip_night_bonus && !only_spies) {
-        //     const start_hour = Number(this.world_info.config["night"]["start_hour"]);
-        //     const end_hour = Number(this.world_info.config["night"]["end_hour"]);
-        if (this.world_info[WorldInfoType.config]["night"]["active"] === "1" && this.settings.skip_night_bonus && !only_spies) {
-            const start_hour = Number(this.world_info[WorldInfoType.config]["night"]["start_hour"]);
-            const end_hour = Number(this.world_info[WorldInfoType.config]["night"]["end_hour"]);
+        if (this.world_info.config.night.active === "1" && this.settings.skip_night_bonus && !only_spies) {
+            const start_hour = Number(this.world_info.config.night.start_hour);
+            const end_hour = Number(this.world_info.config.night.end_hour);
             this.logger.log("start_hour", start_hour, "end_hour", end_hour);
             pool = pool.filter(target => {
                 if (target[LAYOUT_TARGET_PLAYER_ID] === PLAYER_ID_BARBARIAN) {

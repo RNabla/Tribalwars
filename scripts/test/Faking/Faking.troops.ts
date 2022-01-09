@@ -49,7 +49,7 @@ import { FakingMapFiles } from './mocks/MapFiles';
     const data_provider = new DataProvider();
 
     const get_default_instance = async function (settings: FakingSettings = null): Promise<TroopsSelector> {
-        const map_files = new FakingMapFiles(data_provider);
+        const map_files = new FakingMapFiles(data_provider, 'config_169');
         const document = new FakingDocumentProvider('place');
         const world_info = await map_files.get_world_info([WorldInfoType.unit_info, WorldInfoType.config]);
         return new TroopsSelector(

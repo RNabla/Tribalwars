@@ -1,4 +1,4 @@
-import { WorldInfo, WorldInfoType } from "../inf/MapFiles";
+import { UnitInfo, WorldInfo } from "../inf/MapFiles";
 import { Resources } from "./Faking.resources";
 import { GameData } from "../inf/TribalWars";
 import { Troops } from "./Faking";
@@ -8,8 +8,8 @@ import { ScriptResult } from "../inf/Bootstrap";
 export class TargetsHelper {
     static calculate_distance(game_data: GameData, target: PoolTarget) {
         return Math.hypot(
-            game_data["village"]["x"] - target[LAYOUT_TARGET_X],
-            game_data["village"]["y"] - target[LAYOUT_TARGET_Y]
+            game_data.village.x - target[LAYOUT_TARGET_X],
+            game_data.village.y - target[LAYOUT_TARGET_Y]
         );
     }
 
@@ -21,9 +21,8 @@ export class TargetsHelper {
     static get_troops_speed(world_info: WorldInfo, troops: Troops) {
         let speed = 0;
         for (const unit in troops) {
-            if (troops.hasOwnProperty(unit) && troops[unit] !== 0) {
-                // speed = Math.max(Number(world_info.unit_info[unit]["speed"]), speed);
-                speed = Math.max(Number(world_info[WorldInfoType.unit_info][unit]["speed"]), speed);
+            if (Object.prototype.hasOwnProperty.call(troops, unit) && troops[unit] !== 0) {
+                speed = Math.max(Number((<UnitInfo>world_info.unit_info[unit]).speed), speed);
             }
         }
         if (speed === 0) {

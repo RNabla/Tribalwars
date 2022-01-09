@@ -3,7 +3,6 @@ const webpack = require('webpack');
 const versions = require('./versions.json')
 const TerserPlugin = require("terser-webpack-plugin");
 
-
 let commitHash = require('child_process')
   .execSync('git rev-parse HEAD')
   .toString()
@@ -11,9 +10,6 @@ let commitHash = require('child_process')
 
 module.exports = {
   entry: {
-    // 'Infrastructure': './src/Infrastructure.js',
-    // 'Faking': './src/Faking/Faking.bootstrap.js',
-    // 'FakingTS': './src/Faking/Faking2.ts',
     'Faking': './src/Faking/Faking.bootstrap.ts',
   },
   module: {
@@ -49,9 +45,6 @@ module.exports = {
             You can find sources used to built this script here: https://github.com/RNabla/tribalwars/scripts
           `;
         }
-    }),
-    new webpack.DefinePlugin({
-      LOGGING_ENABLED: JSON.stringify(false)
     })
   ],
   mode: 'production',
@@ -61,7 +54,6 @@ module.exports = {
     minimizer: [new TerserPlugin({
       terserOptions: {
         compress: {
-          // toplevel: true,
           passes: 2,
           pure_funcs: [
             'logger.entry',
@@ -73,23 +65,11 @@ module.exports = {
             'LoggerFactory.create_instance',
           ],
         },
-        // mangle: {
-        //   toplevel: true,
-        //   properties: {
-        //     // builtins: true,
-        //     // debug: true,
-        //     // keep_quoted: "yes",
-        //     // keep_quoted: true,
-        //     keep_quoted: "strict",
-        //     // reserved: ["TribalWars"]
-        //   },
-        // },
         format: {
           ascii_only: true
         }
       },
       extractComments: false,
-
     })],
   },
 };

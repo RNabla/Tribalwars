@@ -1,45 +1,33 @@
 import { LoggerFactory, Logger } from "./Logger";
-import { SCHEMA, SCHEMA_COLUMN_EXPIRATION_TIME_S, SCHEMA_COLUMN_NAME, SCHEMA_COLUMN_VALUE, Storage, StorageFactory, StorageItem } from "./Storage";
+import { Storage, StorageFactory, StorageItem } from "./Storage";
 import { get_digest, get_timestamp_s } from "./Helper";
 import { IDataProvider } from "./DataProvider";
 
 export enum WorldInfoType {
-    config,
-    building_info,
-    unit_info,
-    village,
-    player,
-    ally
+    config = "config",
+    building_info = "building_info",
+    unit_info = "unit_info",
+    village = "village",
+    player = "player",
+    ally = "ally"
 }
 
 export interface WorldInfoCore {
-    [WorldInfoType.config]?: StorageItem,
-    [WorldInfoType.building_info]?: StorageItem,
-    [WorldInfoType.unit_info]?: StorageItem,
-    [WorldInfoType.village]?: StorageItem,
-    [WorldInfoType.player]?: StorageItem,
-    [WorldInfoType.ally]?: StorageItem,
-    // config?: StorageItem,
-    // building_info?: StorageItem,
-    // unit_info?: StorageItem,
-    // village?: StorageItem,
-    // player?: StorageItem,
-    // ally?: StorageItem,
+    config?: StorageItem,
+    building_info?: StorageItem,
+    unit_info?: StorageItem,
+    village?: StorageItem,
+    player?: StorageItem,
+    ally?: StorageItem,
 }
 
 export interface WorldInfo {
-    [WorldInfoType.config]?: any,
-    [WorldInfoType.building_info]?: any,
-    [WorldInfoType.unit_info]?: UnitsInfo,
-    [WorldInfoType.village]?: Village[],
-    [WorldInfoType.player]?: Player[],
-    [WorldInfoType.ally]?: Ally[],
-    // config: any,
-    // building_info: any,
-    // unit_info: UnitsInfo,
-    // village: Village[],
-    // player: Player[],
-    // ally: Ally[],
+    config?: Config,
+    building_info?: any,
+    unit_info?: UnitsInfo,
+    village?: Village[],
+    player?: Player[],
+    ally?: Ally[],
 }
 
 export type UnitName = "spear" | "sword" | "axe" | "archer" | "spy" | "light" | "marcher" | "heavy" | "ram" | "catapult" | "knight" | "snob";
@@ -53,6 +41,20 @@ export interface UnitInfo {
     defense_cavalry: string;
     pop: string;
     speed: string;
+}
+
+export interface Config {
+    night: {
+        active: string,
+        start_hour: string,
+        end_hour: string,
+    },
+    snob: {
+        max_dist: string
+    },
+    game: {
+        fake_limit: string
+    }
 }
 
 export interface UnitsInfo {
@@ -141,34 +143,11 @@ export class MapFiles implements IMapFiles {
 
         const result: WorldInfoCore = {};
 
-        // for (let i = 0; i < entities.length; i++) {
-        //     switch (entities[i]) {
-        //         case WorldInfoType.village:
-        //             result.village = responses[i];
-        //             break;
-        //         case WorldInfoType.player:
-        //             result.player = responses[i];
-        //             break;
-        //         case WorldInfoType.ally:
-        //             result.ally = responses[i];
-        //             break;
-        //         case WorldInfoType.config:
-        //             result.config = responses[i];
-        //             break;
-        //         case WorldInfoType.building_info:
-        //             result.building_info = responses[i];
-        //             break;
-        //         case WorldInfoType.unit_info:
-        //             result.unit_info = responses[i];
-        //             break;
-        //     }
-        // }
-
         for (let i = 0; i < entities.length; i++) {
             result[entities[i]] = responses[i];
         }
 
-        this.logger.exit();
+        this.logger.exit(result);
         return result;
     }
 
@@ -180,7 +159,7 @@ export class MapFiles implements IMapFiles {
                         id: row[0],
                         x: parseInt(row[2]),
                         y: parseInt(row[3]),
-                        "player_id": row[4],
+                        player_id: row[4],
                     };
                 });
             case WorldInfoType.player:
@@ -276,36 +255,23 @@ export class MapFiles implements IMapFiles {
     }
 
     private convert_to_world_info(world_info_core: WorldInfoCore) {
-        const world_info: WorldInfo = {
-            // ally: null,
-            // building_info: null,
-            // config: null,
-            // player: null,
-            // unit_info: null,
-            // village: null
+        return {
+            village: world_info_core.village?.value,
+            player: world_info_core.player?.value,
+            ally: world_info_core.ally?.value,
+            config: world_info_core.config?.value,
+            building_info: world_info_core.building_info?.value,
+            unit_info: world_info_core.unit_info?.value,
         };
-
-        // world_info.village = world_info_core.village?.value;
-        // world_info.player = world_info_core.player?.value;
-        // world_info.ally = world_info_core.ally?.value;
-        // world_info.config = world_info_core.config?.value;
-        // world_info.building_info = world_info_core.building_info?.value;
-        // world_info.unit_info = world_info_core.unit_info?.value;
-
-        return world_info;
     }
 
     public async get_world_info(entities: WorldInfoType[]): Promise<WorldInfo> {
         this.logger.entry(arguments);
 
         const world_info_core = await this.get_world_info_core(entities);
-        // const world_info = this.convert_to_world_info(world_info_core);
-        const world_info: WorldInfo = {};
-        for (const entity of entities) {
-            world_info[entity] = world_info_core[entity];
-        }
+        const world_info = this.convert_to_world_info(world_info_core);
 
-        this.logger.exit();
+        this.logger.exit(world_info);
         return world_info;
     }
 
@@ -343,29 +309,16 @@ export class MapFiles implements IMapFiles {
             );
             this.logger.log("Computed result", computed_result);
 
-            // const expiration_time = Math.min(...[
-            //     world_info_core?.["ally"][SCHEMA_COLUMN_EXPIRATION_TIME_S] ?? -1,
-            //     world_info_core?.player?.[SCHEMA_COLUMN_EXPIRATION_TIME_S] ?? -1,
-            //     world_info_core?.village?.[SCHEMA_COLUMN_EXPIRATION_TIME_S] ?? -1,
-            //     world_info_core?.building_info?.[SCHEMA_COLUMN_EXPIRATION_TIME_S] ?? -1,
-            //     world_info_core?.unit_info?.[SCHEMA.EXPIRATION_TIME_S] ?? -1,
-            //     world_info_core?.config.expiration_time_s ?? -1,
-            // ].filter(x => x > -1));
+            const expiration_time_s = Math.min(...dependency_names.map(world_info_type => {
+                return world_info_core[world_info_type].expiration_time_s;
+            }));
 
-            const expiration_time = Math.min(...dependency_names.map(x => world_info_core[x]["expiration_time_s"]));
-
-            // const expiration_time = Math.min(...Object.keys(world_info_core)
-            //     .map(x => world_info_core[x]["expiration_time_s"])
-            // );
-            // const expiration_time = Math.min(...Object.keys(world_info_core)
-            //     .map(x => (<StorageItem>world_info_core[x])[SCHEMA_COLUMN_EXPIRATION_TIME_S])
-            // );
-            this.logger.log("Expiration time set to", expiration_time);
+            this.logger.log("Expiration time set to", expiration_time_s);
 
             const store_result = {
-                [SCHEMA_COLUMN_NAME]: "",
-                [SCHEMA_COLUMN_EXPIRATION_TIME_S]: expiration_time,
-                [SCHEMA_COLUMN_VALUE]: computed_result,
+                name: "",
+                expiration_time_s: expiration_time_s,
+                value: computed_result,
             };
 
             this.logger.exit();
@@ -385,13 +338,13 @@ export class MapFiles implements IMapFiles {
             this.logger.entry();
             const computed_result = await factory(args);
 
-            const expiration_time = this.data_provider.get_current_timestamp_s() + time_to_live_s;
-            this.logger.log("Expiration time set to", expiration_time);
+            const expiration_time_s = this.data_provider.get_current_timestamp_s() + time_to_live_s;
+            this.logger.log("Expiration time set to", expiration_time_s);
 
             const store_result = {
-                [SCHEMA_COLUMN_NAME]: "",
-                [SCHEMA_COLUMN_EXPIRATION_TIME_S]: expiration_time,
-                [SCHEMA_COLUMN_VALUE]: computed_result,
+                name: "",
+                expiration_time_s: expiration_time_s,
+                value: computed_result,
             };
             this.logger.exit();
             return store_result;

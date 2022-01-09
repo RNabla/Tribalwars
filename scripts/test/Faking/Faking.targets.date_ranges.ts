@@ -1,5 +1,5 @@
 import { assert, assertException, TestRunner } from '../framework';
-import { FakingSettings, Troops } from '../../src/Faking/Faking';
+import { FakingSettings } from '../../src/Faking/Faking';
 import { Resources } from '../../src/Faking/Faking.resources';
 import { FakingMapFiles } from './mocks/MapFiles';
 import { PoolDateRangeFilter } from '../../src/Faking/Faking.targets.date_ranges';

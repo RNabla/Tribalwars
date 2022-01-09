@@ -26,7 +26,7 @@ export class PoolBlocker {
         game_data: GameData,
         settings: FakingSettings,
     ) {
-        LoggerFactory.create_instance('Hermitowski.Faking.Targets.PoolBlocker', (logger) => { this.logger = logger; });
+        LoggerFactory.create_instance("Hermitowski.Faking.Targets.PoolBlocker", (logger) => { this.logger = logger; });
         this.map_files = map_files;
         this.game_data = game_data;
         this.data_provider = data_provider;
@@ -91,10 +91,10 @@ export class PoolBlocker {
 
     private blocking_local_get_key(): string | object {
         if (this.settings.blocking_local.scope === "village") {
-            return `blocking.l.${this.game_data["village"]["id"]}`;
+            return `blocking.l.${this.game_data.village.id}`;
         }
         return {
-            village_id: this.game_data["village"]["id"],
+            village_id: this.game_data.village.id,
             settings: this.settings
         };
     }
@@ -182,7 +182,7 @@ export class PoolBlocker {
         }
         else if (i > 0) {
             this.logger.log("Trimming", key, "block table by", i, "entries");
-            block_table = block_table.slice(i - 1);
+            block_table = block_table.slice(i);
         }
         this.logger.exit(block_table);
         return block_table;

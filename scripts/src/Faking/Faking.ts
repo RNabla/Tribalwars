@@ -1,6 +1,6 @@
 import { Logger, LoggerFactory } from "../inf/Logger";
-import { IMapFiles, UnitInfo, WorldInfo, WorldInfoType } from "../inf/MapFiles";
-import { two_digit_number, Exception } from "../inf/Helper";
+import { IMapFiles, WorldInfo, WorldInfoType } from "../inf/MapFiles";
+import { two_digit_number } from "../inf/Helper";
 
 // import { Settings } from "./Faking.settings";
 import { Resources } from "./Faking.resources";
@@ -12,19 +12,20 @@ import { IDataProvider } from "../inf/DataProvider";
 import { SettingsProvider } from "./Faking.settings";
 import { ScriptResult } from "../inf/Bootstrap";
 
+
 export interface Troops {
-    "spear"?: number,
-    "sword"?: number,
-    "axe"?: number,
-    "archer"?: number,
-    "spy"?: number,
-    "light"?: number,
-    "marcher"?: number,
-    "heavy"?: number,
-    "ram"?: number,
-    "catapult"?: number,
-    "knight"?: number,
-    "snob"?: number,
+    spear?: number,
+    sword?: number,
+    axe?: number,
+    archer?: number,
+    spy?: number,
+    light?: number,
+    marcher?: number,
+    heavy?: number,
+    ram?: number,
+    catapult?: number,
+    knight?: number,
+    snob?: number,
 }
 
 export interface FakingResult {
@@ -59,8 +60,6 @@ export type BlockingGlobal = {
     block_players: boolean,
     name: string
 };
-
-export type UnitName = "spear" | "sword" | "axe" | "archer" | "spy" | "light" | "marcher" | "heavy" | "ram" | "catapult" | "knight" | "snob";
 
 export interface FakingSettings {
     safeguard: Troops,
@@ -110,6 +109,7 @@ export class Faking {
         this.document = document;
         this.tribalwars = tribalwars;
         this.game_data = tribalwars.getGameData();
+        LoggerFactory.create_instance(namespace, (logger) => this.logger = logger);
     }
 
     public async main(user_configuration): Promise<string> {
@@ -138,7 +138,7 @@ export class Faking {
         if (jump_link) {
             throw new ScriptResult(Resources.ERROR_SCREEN_VILLAGE_OUT_OF_GROUP, jump_link.href);
         }
-        if (this.game_data["screen"] !== "place" || !this.document.querySelector("#command-data-form")) {
+        if (this.game_data.screen !== "place" || !this.document.querySelector("#command-data-form")) {
             const place_href = this.tribalwars.buildURL("GET", "place", { "mode": "command" });
             throw new ScriptResult(Resources.ERROR_SCREEN_REDIRECT, place_href);
         }
@@ -149,7 +149,7 @@ export class Faking {
         }
     }
 
-    private async get_settings(user_configuration: any) {
+    private async get_settings(user_configuration: object) {
         const settings_provider = new SettingsProvider(this.tribalwars, this.map_files);
         return await settings_provider.get_settings(user_configuration);
     }
@@ -216,5 +216,5 @@ export class Faking {
 
         return notification;
     }
-};
+}
 

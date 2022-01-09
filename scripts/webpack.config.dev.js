@@ -1,9 +1,7 @@
 const path = require('path');
-const webpack = require('webpack');
 
 module.exports = {
   entry: {
-    // 'Infrastructure': './src/Infrastructure.js',
     'Faking': './src/Faking/Faking.bootstrap.ts',
   },
   module: {
@@ -24,9 +22,4 @@ module.exports = {
     clean: true,
   },
   mode: 'development',
-  plugins: [
-    new webpack.DefinePlugin({
-      LOGGING_ENABLED: JSON.stringify(true)
-    })
-  ]
 };

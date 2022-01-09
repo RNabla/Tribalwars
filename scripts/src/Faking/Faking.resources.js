@@ -23,4 +23,4 @@ export const Resources = {
     ERROR_POOL_EMPTY_BLOCKED_PLAYERS: "W puli wiosek pozostały wioski, które należą od ostatnio wybranych graczy",
     ERROR_POOL_EMPTY_NIGHT_BONUS: "W puli wiosek pozostały wioski, na które atak doszedłby w bonusie nocnym",
     ERROR_POOL_EMPTY_DATE_RANGES: "W puli wiosek pozostały wioski, na które atak doszedłby poza wybranymi przedziałami czasowymi"
-}
+};

@@ -65,6 +65,7 @@ import { FakingMapFiles } from './mocks/MapFiles';
         const tribalwars = get_default_tribalwars_provider();
         const faking = new Faking(namespace, data_provider, map_files, document, tribalwars);
         const settings = get_default_settings();
+        settings.players = 'He He Hermitowski';
         await assertException(async () => {
             await faking.main(settings);
         }, Resources.ERROR_POOL_EMPTY);

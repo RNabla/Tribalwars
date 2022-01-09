@@ -32,7 +32,7 @@ export class PoolGenerator {
         map_files: IMapFiles,
         settings: FakingSettings,
     ) {
-        LoggerFactory.create_instance('Hermitowski.Faking.Targets.Pool', (logger) => { this.logger = logger; });
+        LoggerFactory.create_instance("Hermitowski.Faking.Targets.Pool", (logger) => { this.logger = logger; });
         this.settings = settings;
         this.map_files = map_files;
     }
@@ -59,7 +59,7 @@ export class PoolGenerator {
 
                 this.logger.log("Players", players, "Allies", allies, "Ally tags", ally_tags);
 
-                const ally_ids = new Set(world_info[WorldInfoType.ally]
+                const ally_ids = new Set(world_info.ally
                     .filter(x =>
                         allies.includes(x.name.toLowerCase()) ||
                         ally_tags.includes(x.tag.toLowerCase())
@@ -69,7 +69,7 @@ export class PoolGenerator {
 
                 this.logger.log("Ally ids", ally_ids);
 
-                const player_ids = new Set(world_info[WorldInfoType.player]
+                const player_ids = new Set(world_info.player
                     .filter(x =>
                         players.includes(x.name.toLowerCase()) ||
                         ally_ids.has(x.ally_id)
@@ -82,7 +82,7 @@ export class PoolGenerator {
                 const unique_villages = new Set();
                 const pool: PoolTarget[] = [];
 
-                let villages = world_info[WorldInfoType.village]
+                let villages = world_info.village
                     .filter(x =>
                         (args.include_barbarians && x.player_id === PLAYER_ID_BARBARIAN)
                         ||
@@ -115,7 +115,7 @@ export class PoolGenerator {
                     for (const coords of coords_matches.map(x => x.split("|").map(Number))) {
                         const village_key = coords[0] * 1000 + coords[1];
                         if (!unique_villages.has(village_key)) {
-                            const village = world_info[WorldInfoType.village].find(x => x.x == coords[0] && x.y == coords[1]);
+                            const village = world_info.village.find(x => x.x == coords[0] && x.y == coords[1]);
                             if (village) {
                                 const target = this.get_village_as_target(world_info, village);
                                 pool.push(target);
@@ -141,12 +141,12 @@ export class PoolGenerator {
 
     private get_village_as_target(world_info: WorldInfo, village: Village): PoolTarget {
         const player_metadata = village.player_id !== PLAYER_ID_BARBARIAN
-            ? world_info[WorldInfoType.player].find(player =>
+            ? world_info.player.find(player =>
                 player.id == village.player_id
             )
             : null;
         const ally_metadata = player_metadata != null && player_metadata.ally_id !== ALLY_ID_NONE
-            ? world_info[WorldInfoType.ally].find(ally =>
+            ? world_info.ally.find(ally =>
                 ally.id == player_metadata.ally_id
             )
             : null;

@@ -2,7 +2,7 @@ import { assert, assertException, TestRunner } from '../framework';
 import { FakingSettings } from '../../src/Faking/Faking';
 import { Resources } from '../../src/Faking/Faking.resources';
 import { FakingMapFiles } from './mocks/MapFiles';
-import { PoolGenerator, PoolTarget } from '../../src/Faking/Faking.targets.pool';
+import { PoolTarget } from '../../src/Faking/Faking.targets.pool';
 import { PoolBlocker } from '../../src/Faking/Faking.targets.blocking';
 import { IMapFiles } from '../../src/inf/MapFiles';
 import { DataProvider } from '../../src/inf/DataProvider';
@@ -97,7 +97,7 @@ type Configuration = {
         let pool = await target.apply_blocking([pool_target]);
         assert(() => pool.length === 1);
         await target.add_to_block_tables(pool_target);
-        assertException(async () => {
+        await assertException(async () => {
             await target.apply_blocking([pool_target]);
         }, Resources.ERROR_POOL_EMPTY_BLOCKED_VILLAGES);
         await sleep(2500);
@@ -129,7 +129,7 @@ type Configuration = {
         assert(() => pool.length === 1);
         await target.add_to_block_tables(pool_target);
         // 3rd
-        assertException(async () => {
+        await assertException(async () => {
             await target.apply_blocking([pool_target]);
         }, Resources.ERROR_POOL_EMPTY_BLOCKED_VILLAGES);
         await sleep(2000);

@@ -54,7 +54,7 @@ export class SettingsProvider {
             }
             const spoiler_name = SetttingsMapper.as_string(user_forum_configuration["spoiler_name"], null);
             if (spoiler_name == null) {
-                throw new ScriptResult(Resources.ERROR_FORUM_CONFIG_SPOILER_NAME)
+                throw new ScriptResult(Resources.ERROR_FORUM_CONFIG_SPOILER_NAME);
             }
             const page = SetttingsMapper.as_number(user_forum_configuration["page"], 0);
             const time_to_live_s = SetttingsMapper.as_number(user_forum_configuration["time_to_live_s"], 3600);
@@ -63,7 +63,7 @@ export class SettingsProvider {
         return null;
     }
 
-    private async load_config_from_forum(forum_config: ForumConfiguration): Promise<any> {
+    private async load_config_from_forum(forum_config: ForumConfiguration): Promise<object> {
         this.logger.entry(arguments);
 
         const user_configuration = await this.map_files.get_or_compute_dynamic(async (config) => {
