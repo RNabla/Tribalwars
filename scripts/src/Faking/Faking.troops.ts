@@ -70,7 +70,6 @@ export class TroopsSelector implements ITroopsSelector {
             }
         }
 
-        console.log(this.world_info.config);
         const fake_limit = Number(this.world_info.config.game.fake_limit);
 
         if (fake_limit == 0) {
