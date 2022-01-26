@@ -127,8 +127,10 @@ export class TroopsSelector implements ITroopsSelector {
             }
 
             const unit_count = Math.min(...counts);
-            troops[unit_name] += unit_count;
-            population_left -= unit_population * unit_count;
+            if (unit_count > 0) {
+                troops[unit_name] += unit_count;
+                population_left -= unit_population * unit_count;
+            }
         }
 
         this.logger.exit();
