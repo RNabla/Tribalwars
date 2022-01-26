@@ -170,12 +170,15 @@ export class PoolBlocker {
 
         const current_timestamp_s = this.data_provider.get_current_timestamp_s();
 
+        this.logger.log('Got block table: ', block_table, 'current (cutoff) timestamp_s: ', current_timestamp_s);
+
         let i = 0;
         for (; i < block_table.length; i++) {
             if (block_table[i][LAYOUT_BLOCK_ENTRY_EXPIRATION_TIME] >= current_timestamp_s) {
                 break;
             }
         }
+
         if (i == block_table.length) {
             this.logger.log("All entries has expired");
             block_table = [];
@@ -184,6 +187,7 @@ export class PoolBlocker {
             this.logger.log("Trimming", key, "block table by", i, "entries");
             block_table = block_table.slice(i);
         }
+
         this.logger.exit(block_table);
         return block_table;
     }

@@ -62,9 +62,11 @@ export class TargetSelector implements ITargetSelector {
         pool = await this.pool_apply_troops_constraints(pool, troops);
         this.logger.log("After applying troops constraints", pool);
 
+        let pool_blocker = null;
+
         if (this.settings.blocking_enabled) {
             this.logger.log("Applying PoolBlocker");
-            const pool_blocker = new PoolBlocker(
+            pool_blocker = new PoolBlocker(
                 this.map_files,
                 this.data_provider,
                 this.game_data,
@@ -88,6 +90,10 @@ export class TargetSelector implements ITargetSelector {
         const target = pool[idx];
 
         const troops_speed = TargetsHelper.get_troops_speed(this.world_info, troops);
+
+        if (this.settings.blocking_enabled) {
+            pool_blocker.add_to_block_tables(target);
+        }
 
         this.logger.log("Returning", target);
         this.logger.exit();
