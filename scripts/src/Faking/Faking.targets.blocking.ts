@@ -137,15 +137,6 @@ export class PoolBlocker {
         this.logger.log(village_map, player_map);
         this.logger.log("Block table", block_table);
 
-        pool = pool.filter(target => {
-            const map_key = map_function(target);
-            return (village_map.get(map_key) || 0) < count;
-        });
-
-        if (pool.length === 0) {
-            throw new ScriptResult(Resources.ERROR_POOL_EMPTY_BLOCKED_VILLAGES);
-        }
-
         if (block_players) {
             pool = pool.filter(target => {
                 const player_id = (<string>target[LAYOUT_TARGET_PLAYER_ID]);
@@ -153,6 +144,15 @@ export class PoolBlocker {
             });
             if (pool.length === 0) {
                 throw new ScriptResult(Resources.ERROR_POOL_EMPTY_BLOCKED_PLAYERS);
+            }
+        }
+        else {
+            pool = pool.filter(target => {
+                const map_key = map_function(target);
+                return (village_map.get(map_key) || 0) < count;
+            });
+            if (pool.length === 0) {
+                throw new ScriptResult(Resources.ERROR_POOL_EMPTY_BLOCKED_VILLAGES);
             }
         }
 
