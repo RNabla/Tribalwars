@@ -146,8 +146,8 @@ export class SetttingsMapper {
             const time_s = SetttingsMapper.as_number(provided_value["time_s"], null);
             const count = SetttingsMapper.as_number(provided_value["count"], null);
             const block_players = SetttingsMapper.as_boolean(provided_value["block_players"], null);
-            const scope = SetttingsMapper.as_string(provided_value["scope"], null) === "village"
-                ? "village"
+            const scope = SetttingsMapper.as_string(provided_value["scope"], null) === "instance"
+                ? "instance"
                 : null;
             if (time_s != null && count != null && block_players != null) {
                 return { time_s, count, block_players, scope };

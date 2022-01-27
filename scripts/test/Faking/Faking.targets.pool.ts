@@ -31,7 +31,7 @@ import { PoolGenerator } from '../../src/Faking/Faking.targets.pool';
                 // { r: 30, center: [500, 500] }
             ],
             "blocking_enabled": false,
-            "blocking_local": { "time_s": 5, "count": 1, "block_players": true, "scope": "village" },
+            "blocking_local": { "time_s": 5, "count": 1, "block_players": true, "scope": "instance" },
             "blocking_global": [
                 // { time_s: 10, count: 1, name: 'global_1', block_players: false }
             ],

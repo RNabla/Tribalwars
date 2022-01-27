@@ -90,13 +90,13 @@ export class PoolBlocker {
     }
 
     private blocking_local_get_key(): string | object {
-        if (this.settings.blocking_local.scope === "village") {
-            return `blocking.l.${this.game_data.village.id}`;
+        if (this.settings.blocking_local.scope === "instance") {
+            return {
+                village_id: this.game_data.village.id,
+                settings: this.settings
+            };
         }
-        return {
-            village_id: this.game_data.village.id,
-            settings: this.settings
-        };
+        return `blocking.l.${this.game_data.village.id}`;
     }
 
     private blocking_global_get_key(name: string): string {
