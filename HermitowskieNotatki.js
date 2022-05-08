@@ -292,8 +292,8 @@
             }
 
             let forwarder = get_forwarder();
-            let is_side_att = game_data.player.id === att_player_id || forwarder === att_player_name;
-            let is_side_def = game_data.player.id === def_player_id || forwarder === def_player_name;
+            let is_side_att = game_data.player.id == att_player_id || forwarder === att_player_name;
+            let is_side_def = game_data.player.id == def_player_id || forwarder === def_player_name;
 
             if (is_side_att && !is_side_def) {
                 NotesScript.context.side = 'att';
@@ -745,7 +745,7 @@
             }
         }
     }
-    
+
     $.ajax({
         url: 'https://media.innogamescdn.com/com_DS_PL/skrypty/HermitowskiePlikiMapy.js?_=' + ~~(Date.now() / 9e6),
         dataType: 'script',
