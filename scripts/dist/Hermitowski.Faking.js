@@ -2,7 +2,7 @@
  * 
  *             Script: Faking
  *             Created by: Hermitowski
- *             Version: 4.0.1.1 (86dccbaf7b89d11ffc942d190cf018211fcd81f1)
+ *             Version: 4.0.1.1 (4d5421cf8bc4d157ad49949c39b1cd77560cf9a3)
  *             License: GNU GENERAL PUBLIC LICENSE VERSION 3 https://www.gnu.org/licenses/gpl-3.0.en.html
  *
  *             You can find sources used to built this script here: https://github.com/RNabla/tribalwars/scripts
