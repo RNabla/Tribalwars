@@ -73,7 +73,7 @@ export class SettingsProvider {
                 "page": config.page
             });
 
-            const forum_content = [...document.querySelectorAll("div.forum-content")].pop();
+            const forum_content = [...document.querySelectorAll("div.forum-container")].pop();
 
             if (!forum_content) {
                 throw new ScriptResult(Resources.ERROR_FORUM_CONFIG_THREAD_DOES_NOT_EXIST);
