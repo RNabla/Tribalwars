@@ -26,7 +26,7 @@ export class TargetsHelper {
             }
         }
         if (speed === 0) {
-            throw new ScriptResult(Resources.ERROR_TROOPS_EMPTY);
+            throw new ScriptResult(Resources.ERROR_TROOPS_EMPTY_SELECTION);
         }
         return speed;
     }

@@ -38,7 +38,7 @@ export class TroopsSelector implements ITroopsSelector {
         this.logger.entry(arguments);
 
         if (this.settings.troops_templates.length == 0) {
-            throw new ScriptResult(Resources.ERROR_TROOPS_EMPTY);
+            throw new ScriptResult(Resources.ERROR_TROOPS_EMPTY_TEMPLATES);
         }
 
         const available_troops = this.get_available_troops();
