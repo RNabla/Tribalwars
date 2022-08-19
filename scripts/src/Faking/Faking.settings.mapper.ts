@@ -10,10 +10,12 @@ export class SetttingsMapper {
 
             coords: SetttingsMapper.as_string(user_configuration["coords"], ""),
             players: SetttingsMapper.as_string(user_configuration["players"], ""),
+            player_ids: SetttingsMapper.as_string(user_configuration["player_ids"], ""),
             allies: SetttingsMapper.as_string(user_configuration["allies"], ""),
             ally_tags: SetttingsMapper.as_string(user_configuration["ally_tags"], ""),
-            include_barbarians: SetttingsMapper.as_boolean(user_configuration["include_barbarians"], false),
+            ally_ids: SetttingsMapper.as_string(user_configuration["ally_ids"], ""),
 
+            include_barbarians: SetttingsMapper.as_boolean(user_configuration["include_barbarians"], false),
             boundaries_circle: SetttingsMapper.as_array(user_configuration["boundaries"], SetttingsMapper.as_boundary_circle),
             boundaries_box: SetttingsMapper.as_array(user_configuration["boundaries"], SetttingsMapper.as_boundary_box),
 

@@ -70,8 +70,11 @@ export interface FakingSettings {
 
     coords: string,
     players: string,
+    player_ids: string,
     allies: string,
     ally_tags: string,
+    ally_ids: string,
+
     include_barbarians: boolean,
     boundaries_circle: BoundaryCircle[],
     boundaries_box: BoundaryBox[],

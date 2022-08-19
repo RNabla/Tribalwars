@@ -16,8 +16,10 @@ export type PoolTarget = [number, number, string, string, string];
 export interface PoolSettings {
     coords: string,
     players: string,
+    player_ids: string,
     allies: string,
     ally_tags: string,
+    ally_ids: string,
     include_barbarians: boolean,
     boundaries_circle: BoundaryCircle[],
     boundaries_box: BoundaryBox[],
@@ -43,7 +45,9 @@ export class PoolGenerator {
         const args: PoolSettings = {
             allies: this.settings.allies,
             ally_tags: this.settings.ally_tags,
+            ally_ids: this.settings.ally_ids,
             players: this.settings.players,
+            player_ids: this.settings.player_ids,
             include_barbarians: this.settings.include_barbarians,
             boundaries_box: this.settings.boundaries_box,
             boundaries_circle: this.settings.boundaries_circle,
@@ -54,25 +58,29 @@ export class PoolGenerator {
             async (world_info, args) => {
                 this.logger.entry();
                 const players = args.players.split(",").map(x => x.trim().toLowerCase());
+                const player_ids = args.player_ids.split(",").map(x => x.trim());
                 const allies = args.allies.split(",").map(x => x.trim().toLowerCase());
                 const ally_tags = args.ally_tags.split(",").map(x => x.trim().toLowerCase());
+                const ally_ids = args.ally_ids.split(",").map(x => x.trim());
 
                 this.logger.log("Players", players, "Allies", allies, "Ally tags", ally_tags);
 
-                const ally_ids = new Set(world_info.ally
+                const target_ally_ids = new Set(world_info.ally
                     .filter(x =>
                         allies.includes(x.name.toLowerCase()) ||
-                        ally_tags.includes(x.tag.toLowerCase())
+                        ally_tags.includes(x.tag.toLowerCase()) ||
+                        ally_ids.includes(x.id)
                     )
                     .map(x => x.id)
                 );
 
-                this.logger.log("Ally ids", ally_ids);
+                this.logger.log("Ally ids", target_ally_ids);
 
-                const player_ids = new Set(world_info.player
+                const target_player_ids = new Set(world_info.player
                     .filter(x =>
                         players.includes(x.name.toLowerCase()) ||
-                        ally_ids.has(x.ally_id)
+                        target_ally_ids.has(x.ally_id) ||
+                        player_ids.includes(x.id)
                     )
                     .map(x => x.id)
                 );
@@ -86,7 +94,7 @@ export class PoolGenerator {
                     .filter(x =>
                         (args.include_barbarians && x.player_id === PLAYER_ID_BARBARIAN)
                         ||
-                        player_ids.has(x.player_id)
+                        target_player_ids.has(x.player_id)
                     );
 
                 this.logger.log("Villages before applying boundaries", villages);

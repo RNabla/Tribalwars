@@ -22,8 +22,10 @@ import { Resources } from '../../src/Faking/Faking.resources';
             "fill_troops": 'spear,sword,axe,archer,spy,light,marcher,heavy,ram,catapult',
             "coords": '',
             "players": '',
+            "player_ids": '',
             "allies": '',
             "ally_tags": '',
+            "ally_ids": '',
             "include_barbarians": false,
             "boundaries_box": [
                 // { min_x: 400, max_x: 500, min_y: 400, max_y: 500 },
