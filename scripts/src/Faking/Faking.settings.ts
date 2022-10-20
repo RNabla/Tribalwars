@@ -104,19 +104,50 @@ export class SettingsProvider {
             }
             const code_snippet = code_snippets[0].innerText;
 
-            try {
-                const user_configuration = JSON.parse(code_snippet);
-                this.logger.log("Extracted", code_snippet, user_configuration);
-                return user_configuration;
-            }
-            catch {
-                throw new ScriptResult(Resources.ERROR_FORUM_CONFIG_CODE_SNIPPET_MALFORMED);
-            }
+            return this.parse_forum_configuration(code_snippet);
 
         }, forum_config, forum_config.time_to_live_s);
 
         this.logger.exit();
 
         return user_configuration;
+    }
+
+    private parse_forum_configuration(code_snippet: string): object {
+        try {
+            try {
+                const user_configuration = JSON.parse(code_snippet);
+                this.logger.log("Extracted", code_snippet, user_configuration);
+                return user_configuration;
+            }
+            catch {
+                // OK - it's not a valid JSON, but maybe we can still parse it
+
+                // try to remove `var Hermitowskie Fejki = `
+                if (code_snippet.indexOf("HermitowskieFejki") != -1) {
+                    code_snippet = code_snippet.substring(code_snippet.indexOf("=") + 1);
+                }
+
+                // try to remove ; $.ajax
+                if (code_snippet.indexOf(";") !== -1) {
+                    code_snippet = code_snippet.substring(0, code_snippet.indexOf(";"));
+                }
+
+                // in quickbar we can use ' and " interchangeably
+                code_snippet = code_snippet.replace(/'/g, "\"");
+                // in quickbar we can also use comments
+                code_snippet = code_snippet.replace(/\/\/.*/g, "");
+                // we can also have /* */ comments
+                code_snippet = code_snippet.replace(/\/\*.*?\*\//sg, "");
+
+                this.logger.log("Trying to parse", code_snippet);
+                const user_configuration = JSON.parse(code_snippet);
+                this.logger.log("Extracted", code_snippet, user_configuration);
+                return user_configuration;
+            }
+        }
+        catch {
+            throw new ScriptResult(Resources.ERROR_FORUM_CONFIG_CODE_SNIPPET_MALFORMED);
+        }
     }
 }

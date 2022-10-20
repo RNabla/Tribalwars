@@ -2,7 +2,7 @@ import { assertException, TestRunner } from '../framework';
 import { Faking, FakingSettings } from '../../src/Faking/Faking';
 import { Resources } from '../../src/Faking/Faking.resources';
 import { DocumentProvider } from '../mocks/Document';
-import { TribalWarsProvider } from '../TribalWars';
+import { TribalWarsProvider } from '../mocks/TribalWars';
 import { WorldInfoType } from '../../src/inf/MapFiles';
 import { DataProvider } from '../../src/inf/DataProvider';
 import { FakingDocumentProvider } from './mocks/Document';
@@ -25,7 +25,9 @@ import { FakingMapFiles } from './mocks/MapFiles';
             "fill_troops": 'spear,sword,axe,archer,spy,light,marcher,heavy,ram,catapult',
             "coords": '',
             "players": '',
+            "player_ids": "",
             "allies": '',
+            "ally_ids": "",
             "ally_tags": '',
             "include_barbarians": false,
             "boundaries_box": [

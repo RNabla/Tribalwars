@@ -30,7 +30,9 @@ type Configuration = {
             "fill_troops": 'spear,sword,axe,archer,spy,light,marcher,heavy,ram,catapult',
             "coords": '',
             "players": '',
+            "player_ids": "",
             "allies": '',
+            "ally_ids": "",
             "ally_tags": '',
             "include_barbarians": false,
             "boundaries_box": [
@@ -119,7 +121,7 @@ type Configuration = {
         }
         const target = create_target(cfg);
         const pool_target: PoolTarget = [500, 500, "1", null, null];
-        // 1st 
+        // 1st
         let pool = await target.apply_blocking([pool_target]);
         assert(() => pool.length === 1);
         await target.add_to_block_tables(pool_target);

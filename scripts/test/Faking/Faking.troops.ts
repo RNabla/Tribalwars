@@ -23,7 +23,9 @@ import { FakingMapFiles } from './mocks/MapFiles';
             "fill_troops": 'spear,sword,axe,archer,spy,light,marcher,heavy,ram,catapult',
             "coords": '',
             "players": '',
+            "player_ids": "",
             "allies": '',
+            "ally_ids": "",
             "ally_tags": '',
             "include_barbarians": false,
             "boundaries_box": [
