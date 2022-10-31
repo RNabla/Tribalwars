@@ -63,7 +63,8 @@ export class Logger {
         const start = this.timers.get(frame_name);
         const items = [stack_trace.join(" | "), this.style, `Exit | Elapsed time: ${Date.now() - start} [ms]`];
         if (args.length > 0) {
-            items.push(` Returning: ${args[0]}`);
+            items.push("|");
+            items.push(args[0]);
         }
         console.log.apply(undefined, items);
         console.groupEnd();

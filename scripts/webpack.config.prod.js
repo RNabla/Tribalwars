@@ -11,6 +11,7 @@ let commitHash = require('child_process')
 module.exports = {
   entry: {
     'Faking': './src/Faking/Faking.bootstrap.ts',
+    'XY': './src/XY/XY.bootstrap.ts',
   },
   module: {
     rules: [

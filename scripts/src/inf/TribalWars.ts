@@ -1,5 +1,5 @@
 export interface ITribalWars {
-    buildURL(method: "POST" | "GET", screen: string, args: { [name: string]: string }): string;
+    buildURL(method: "POST" | "GET", screen: string, args?: { [name: string]: string }): string;
     fetchDocument(method: "POST" | "GET", screen: string, args: { [name: string]: string | number }): Promise<HTMLElement>;
     fetchJSON(method: "POST" | "GET", screen: string, args: { [name: string]: string }): Promise<object>;
     getGameData(): GameData;
@@ -8,7 +8,13 @@ export interface ITribalWars {
 export interface GameData {
     units: string[],
     village: GameDataVillage,
-    screen: string
+    screen: string,
+    player: PlayerData
+}
+
+export interface PlayerData {
+    id: number;
+    ally: string;
 }
 
 export interface GameDataVillage {

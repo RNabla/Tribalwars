@@ -90,7 +90,6 @@ export interface FakingSettings {
 }
 
 export class Faking {
-    private namespace: string;
     private map_files: IMapFiles;
     private document: IDocument;
     private tribalwars: ITribalWars;
@@ -106,7 +105,6 @@ export class Faking {
         document: IDocument,
         tribalwars: ITribalWars,
     ) {
-        this.namespace = namespace;
         this.data_provider = data_provider;
         this.map_files = map_files;
         this.document = document;
