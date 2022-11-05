@@ -1,23 +1,17 @@
 import { Bootstrap } from "../inf/Bootstrap";
-import { DocumentProvider } from "../inf/Document";
 import { TribalWarsProvider } from "../inf/TribalWars";
-import { TWMapProvider } from "../inf/impl/ITWMap";
 import { UIImpl } from "../inf/impl/UI";
-import { XY } from "./XY";
-import { Resources } from "./XY.resources";
+import { TroopsCounter } from "./TroopsCounter";
+import { Resources } from "./TroopsCounter.resources";
 
 !(async function () {
     await Bootstrap.run(Resources.FORUM_THREAD_HREF, async () => {
-        const namespace = "Hermitowski.XY";
-        const map = new TWMapProvider();
-        const document = new DocumentProvider();
+        const namespace = "Hermitowski.TroopsCounter";
         const tribalwarsProvider = new TribalWarsProvider();
         const ui = new UIImpl(namespace, Resources.UI);
-        const script = new XY(
+        const script = new TroopsCounter(
             namespace,
-            document,
             tribalwarsProvider,
-            map,
             ui
         );
         return await script.main();

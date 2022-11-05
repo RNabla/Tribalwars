@@ -4,6 +4,7 @@ module.exports = {
   entry: {
     'Faking': './src/Faking/Faking.bootstrap.ts',
     'XY': './src/XY/XY.bootstrap.ts',
+    'TroopsCounter': './src/TroopsCounter/TroopsCounter.bootstrap.ts',
   },
   module: {
     rules: [

@@ -1,7 +1,7 @@
 export interface ITribalWars {
     buildURL(method: "POST" | "GET", screen: string, args?: { [name: string]: string }): string;
     fetchDocument(method: "POST" | "GET", screen: string, args: { [name: string]: string | number }): Promise<HTMLElement>;
-    fetchJSON(method: "POST" | "GET", screen: string, args: { [name: string]: string }): Promise<object>;
+    fetchJSON<T>(method: "POST" | "GET", screen: string, args: { [name: string]: string }): Promise<T>;
     getGameData(): GameData;
 }
 
@@ -45,7 +45,7 @@ export class TribalWarsProvider implements ITribalWars {
         return doc;
     }
 
-    async fetchJSON(method: "POST" | "GET", screen: string, args: { [name: string]: string; }): Promise<object> {
+    async fetchJSON<T>(method: "POST" | "GET", screen: string, args: { [name: string]: string; }): Promise<T> {
         const url = this.buildURL(method, screen, args);
         const response = await fetch(url);
         return await response.json();

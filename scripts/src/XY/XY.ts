@@ -93,17 +93,17 @@ export class XY {
             },
         ];
 
-        const container = this.ui.create_container();
-        container.append(this.ui.create_control_panel(options));
-        container.append(this.ui.create_panel([{
-            type: "div",
-            id: "output",
-            styles: {
-                padding: "6px"
-            },
-        }], { height: '100px' }));
-        container.append(this.ui.create_signature_panel(Resources.FORUM_THREAD_HREF));
-        this.document.querySelector('#contentContainer').prepend(container);
+        this.ui.create_container([
+            this.ui.create_control_panel(options),
+            this.ui.create_output_panel([{
+                type: "div",
+                id: "output",
+                styles: {
+                    padding: "6px"
+                },
+            }], { height: '100px' }),
+            this.ui.create_signature_panel(Resources.FORUM_THREAD_HREF)
+        ]);
         this.logger.exit();
     }
 

@@ -51,7 +51,7 @@ export const Resources: IResources = {
             title: "Czy zbierać wioski, które nie należą do wcześniej grup"
         },
         filter_type: {
-            label: "Filtr",
+            label: "Typ filtru",
             title: "Określa w jaki sposób aplikować filtry"
         },
         filter_type_union: {

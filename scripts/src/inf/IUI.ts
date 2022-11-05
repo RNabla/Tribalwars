@@ -1,10 +1,13 @@
 export interface IUI {
-    create_container(): HTMLElement;
+    get_control(control_name?: string): HTMLElement;
+
+    create_container(elements: HTMLElement[]): void;
     create_control_panel(options: ControlOption[]): HTMLElement;
     create_signature_panel(forum_thread_href: string): HTMLElement;
-    create_panel(node: PanelNodeDef[], panel_options?: PanelOptions): HTMLElement;
-    get_control(control_name?: string): HTMLElement;
-    init_select(control_name: string, options: SelectOption[]): void;
+    create_output_panel(node: NodeDef[], panel_options?: PanelOptions): HTMLElement;
+
+    create_dialog(node_defs: NodeDef[], options?: DialogOptions): void;
+    get_selected_label(control_name: string): string;
 }
 
 export interface UIResources {
@@ -19,21 +22,37 @@ export interface UIResource {
 export interface PanelOptions {
     height?: string;
 }
+export interface DialogOptions {
+    header_name?: string;
+    forum_thread_href?: string;
+}
 
-export interface PanelNodeDef {
+export interface NodeDef {
     id?: string;
     type: string;
     classes?: string[];
     styles?: {
         [key: string]: string
-    }
-    childs?: PanelNodeDef[]
+    };
+    attributes?: {
+        [key: string]: string
+    };
+    childs?: NodeDef[];
+    options?: string[] | SelectOptions;
+    text?: string;
+    handlers?: {
+        [key: string]: () => void
+    };
+}
+
+export interface SelectOptions {
+    options: SelectOption[];
+    selected_value: string;
 }
 
 export interface SelectOption {
     label: string;
     value: string;
-    title?: string;
 }
 
 
