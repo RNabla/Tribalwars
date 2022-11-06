@@ -58,7 +58,7 @@ export class TroopsCounter {
     }
 
     private count_units_in_row(row: HTMLTableRowElement, start: number): number[] {
-        let units = [];
+        const units = [];
         for (let i = 0; i < this.game_data.units.length; i++) {
             units.push(Number(row.cells[i + start].innerText.match(/\d+/).pop()));
         }
@@ -98,7 +98,7 @@ export class TroopsCounter {
             return this.units.get(group_id);
         }
 
-        const document = await this.tribalwars.fetchDocument('GET', 'overview_villages', { mode: 'units', group: group_id, page: -1 });
+        const document = await this.tribalwars.fetchDocument("GET", "overview_villages", { mode: "units", group: group_id, page: -1 });
         const units_table: HTMLTableElement = document.querySelector("#units_table");
         const rows = [];
         if (units_table !== null) {
@@ -108,13 +108,13 @@ export class TroopsCounter {
                     in_village: this.count_units_in_row(units_table.rows[i + 1], 1),
                     outwards: this.count_units_in_row(units_table.rows[i + 2], 1),
                     in_transit: this.count_units_in_row(units_table.rows[i + 3], 1),
-                })
+                });
             }
         }
-        const own = this.sum_rows(rows, 'own');
-        const in_village = this.sum_rows(rows, 'in_village');
-        const outwards = this.sum_rows(rows, 'outwards');
-        const in_transit = this.sum_rows(rows, 'in_transit');
+        const own = this.sum_rows(rows, "own");
+        const in_village = this.sum_rows(rows, "in_village");
+        const outwards = this.sum_rows(rows, "outwards");
+        const in_transit = this.sum_rows(rows, "in_transit");
         const defense = this.subtract_rows(in_village, own);
         const total_own = this.add_rows(this.add_rows(own, outwards), in_transit);
         const result = { own, in_transit, in_village, outwards, defense, total_own, villages_count: rows.length };
@@ -137,9 +137,9 @@ export class TroopsCounter {
             `[b]${Resources.UI["type"].label}[/b] ${this.ui.get_selected_label("type")}`
             , ...units[type]
                 .map((x: number, i: number) => `[unit]${this.game_data.units[i]}[/unit]${x}`)
-                .filter((x: string) => x.indexOf('militia') === -1)
+                .filter((x: string) => x.indexOf("militia") === -1)
         ].join(" ");
-        prompt('CTRL + C', clipboard_text);
+        prompt("CTRL + C", clipboard_text);
         this.logger.exit();
     }
 
@@ -168,7 +168,7 @@ export class TroopsCounter {
 
     private update_results(units: number[], village_count: number) {
         for (let i = 0; i < this.game_data.units.length; i++) {
-            if (this.game_data.units[i] !== 'militia') {
+            if (this.game_data.units[i] !== "militia") {
                 this.ui.get_control(this.game_data.units[i]).textContent = units[i].toString();
             }
         }
@@ -177,10 +177,10 @@ export class TroopsCounter {
 
     private async fetch_groups(): Promise<SelectOptions> {
         this.logger.entry();
-        const response = await this.tribalwars.fetchJSON<GroupMenuResponse>('GET', 'groups', { mode: 'overview', ajax: 'load_group_menu' });
+        const response = await this.tribalwars.fetchJSON<GroupMenuResponse>("GET", "groups", { mode: "overview", ajax: "load_group_menu" });
         const result = {
             options: response.result
-                .filter(x => x.type !== 'separator')
+                .filter(x => x.type !== "separator")
                 .map(x => ({ label: x.name, value: x.group_id })),
             selected_value: response.group_id
         };
@@ -198,7 +198,7 @@ export class TroopsCounter {
                     type: "thead",
                     childs: [
                         this.create_header_row("group", groups),
-                        this.create_header_row("type", ['own', 'defense', 'in_village', 'outwards', 'in_transit', 'total_own'])
+                        this.create_header_row("type", ["own", "defense", "in_village", "outwards", "in_transit", "total_own"])
                     ]
                 },
                 {

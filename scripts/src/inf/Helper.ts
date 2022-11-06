@@ -60,7 +60,7 @@ export class Throttler {
             }
             while (task_queue.length && active_tasks.length < this.concurrent_tasks) {
                 const task_def = task_queue.pop();
-                const task = this.wrap_task(task_def);;
+                const task = this.wrap_task(task_def);
                 task_ids.push(task_def);
                 active_tasks.push(task);
             }

@@ -73,22 +73,22 @@ export class XY {
         this.logger.entry();
 
         const options: ControlOption[] = [
-            { inputs: [{ type: 'checkbox', id: 'include_partners' }], styles: { width: '100px' } },
-            { inputs: [{ type: 'checkbox', id: 'include_naps' }], styles: { width: '100px' } },
-            { inputs: [{ type: 'checkbox', id: 'include_enemies', checked: true }], styles: { width: '100px' } },
-            { inputs: [{ type: 'checkbox', id: 'include_own' }], styles: { width: '100px' } },
-            { inputs: [{ type: 'checkbox', id: 'include_friends' }], styles: { width: '100px' } },
-            { inputs: [{ type: 'checkbox', id: 'include_non_attackable' }], styles: { width: '100px' } },
-            { inputs: [{ type: 'checkbox', id: 'include_barbarians' }], styles: { width: '100px' } },
-            { inputs: [{ type: 'checkbox', id: 'include_bonuses' }], styles: { width: '100px' } },
-            { inputs: [{ type: 'checkbox', id: 'include_others', checked: true }], styles: { width: '100px' } },
-            { inputs: [{ type: 'select', id: 'filter_type', options: ["union", "intersection"] }], styles: { width: '100px' } },
+            { inputs: [{ type: "checkbox", id: "include_partners" }], styles: { width: "100px" } },
+            { inputs: [{ type: "checkbox", id: "include_naps" }], styles: { width: "100px" } },
+            { inputs: [{ type: "checkbox", id: "include_enemies", checked: true }], styles: { width: "100px" } },
+            { inputs: [{ type: "checkbox", id: "include_own" }], styles: { width: "100px" } },
+            { inputs: [{ type: "checkbox", id: "include_friends" }], styles: { width: "100px" } },
+            { inputs: [{ type: "checkbox", id: "include_non_attackable" }], styles: { width: "100px" } },
+            { inputs: [{ type: "checkbox", id: "include_barbarians" }], styles: { width: "100px" } },
+            { inputs: [{ type: "checkbox", id: "include_bonuses" }], styles: { width: "100px" } },
+            { inputs: [{ type: "checkbox", id: "include_others", checked: true }], styles: { width: "100px" } },
+            { inputs: [{ type: "select", id: "filter_type", options: ["union", "intersection"] }], styles: { width: "100px" } },
             {
                 label: { type: "empty" },
                 inputs: [
-                    { type: 'button', id: 'scan', click: this.button_handler_scan.bind(this) },
-                    { type: 'button', id: 'clear', click: this.button_handler_clear.bind(this) },
-                    { type: 'button', id: 'end', click: this.button_handler_end.bind(this) }
+                    { type: "button", id: "scan", click: this.button_handler_scan.bind(this) },
+                    { type: "button", id: "clear", click: this.button_handler_clear.bind(this) },
+                    { type: "button", id: "end", click: this.button_handler_end.bind(this) }
                 ]
             },
         ];
@@ -101,7 +101,7 @@ export class XY {
                 styles: {
                     padding: "6px"
                 },
-            }], { height: '100px' }),
+            }], { height: "100px" }),
             this.ui.create_signature_panel(Resources.FORUM_THREAD_HREF)
         ]);
         this.logger.exit();
@@ -162,7 +162,7 @@ export class XY {
         this.logger.exit();
     }
 
-    private map_handler_onclick(x: number, y: number, event: Event): boolean {
+    private map_handler_onclick(x: number, y: number): boolean {
         try {
             this.logger.entry(arguments);
             const village = this.map.villages[x * 1000 + y];
@@ -176,11 +176,10 @@ export class XY {
                 this.refresh_results();
             }
             this.logger.exit();
+            return false;
         }
         catch (ex) {
             Bootstrap.handle_error(ex, Resources.FORUM_THREAD_HREF);
-        }
-        finally {
             return false;
         }
     }
@@ -226,26 +225,26 @@ export class XY {
         const dy = village.xy % 5;
         if (canvas.nodeName != "CANVAS" && create_if_not_exist) {
             this.logger.log("Sibling is not a canvas. Creating new one.");
-            canvas = <HTMLCanvasElement>this.document.createElement('canvas');
-            canvas.style.position = 'absolute';
+            canvas = <HTMLCanvasElement>this.document.createElement("canvas");
+            canvas.style.position = "absolute";
             canvas.style.left = `${dx * 53}px`;
             canvas.style.top = `${dy * 38}px`;
             canvas.width = 18;
             canvas.height = 18;
-            canvas.style.zIndex = '4';
-            canvas.style.marginTop = '0px';
-            canvas.style.marginLeft = '0px';
+            canvas.style.zIndex = "4";
+            canvas.style.marginTop = "0px";
+            canvas.style.marginLeft = "0px";
             element.parentNode.insertBefore(canvas, element);
             this.logger.log("Canvas inserted before", canvas, element);
             this.created_canvases.set(village.xy, canvas);
         }
 
         if (canvas.nodeName == "CANVAS") {
-            const context = canvas.getContext('2d');
+            const context = canvas.getContext("2d");
             context.clearRect(0, 0, canvas.width, canvas.height);
             const color = this.map.getColorByPlayer(village.owner as string, Number(village.ally_id), village.id);
-            context.fillStyle = 'rgb(' + color[0] + ',' + color[1] + ',' + color[2] + ')';
-            context.strokeStyle = '#000000';
+            context.fillStyle = "rgb(" + color[0] + "," + color[1] + "," + color[2] + ")";
+            context.strokeStyle = "#000000";
             context.beginPath();
             context.arc(5, 5, 3.3, 0, 2 * Math.PI, !1);
             context.fill();

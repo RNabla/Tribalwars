@@ -108,7 +108,7 @@ export class Storage {
             : null;
     }
 
-    public async set_item(user_namespace: string, key: string | object, value: any, time_to_live_s: number) {
+    public async set_item(user_namespace: string, key: string | object, value: object, time_to_live_s: number) {
         this.logger.entry(arguments);
         const item_name = await Storage.get_item_name(user_namespace, key);
         const obj: StorageItem = {

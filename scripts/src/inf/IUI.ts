@@ -78,7 +78,7 @@ export interface ControlLabelImage {
 export type ControlInput = ControlInputText | ControlInputCheckbox | ControlInputSelect | ControlInputButton
 
 export interface ControlInputText {
-    type: 'text',
+    type: "text",
     id: string;
     attributes: {
         size: number,
@@ -86,19 +86,19 @@ export interface ControlInputText {
 }
 
 export interface ControlInputCheckbox {
-    type: 'checkbox';
+    type: "checkbox";
     id: string;
     checked?: boolean;
 }
 
 export interface ControlInputSelect {
-    type: 'select';
+    type: "select";
     id: string;
     options: string[];
 }
 
 export interface ControlInputButton {
-    type: 'button';
+    type: "button";
     id: string;
     click: () => void
 }

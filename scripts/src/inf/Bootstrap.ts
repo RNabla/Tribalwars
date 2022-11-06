@@ -1,8 +1,11 @@
 import { Resources } from "./Bootstrap.resources";
 
-declare const UI: any;
+declare const UI: {
+    ErrorMessage(message: string): void;
+    SuccessMessage(message: string): void;
+};
 declare const Dialog: {
-    show(id: string, html: string);
+    show(id: string, html: string): void;
 };
 declare const document: Document;
 

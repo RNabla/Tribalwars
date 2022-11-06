@@ -170,7 +170,7 @@ export class PoolBlocker {
 
         const current_timestamp_s = this.data_provider.get_current_timestamp_s();
 
-        this.logger.log('Got block table: ', block_table, 'current (cutoff) timestamp_s: ', current_timestamp_s);
+        this.logger.log("Got block table: ", block_table, "current (cutoff) timestamp_s: ", current_timestamp_s);
 
         let i = 0;
         for (; i < block_table.length; i++) {

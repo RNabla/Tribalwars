@@ -116,7 +116,7 @@ export class AllyMembers {
             },
             {
                 type: "div", id: "summary", styles: { display: "flex", "justify-content": "space-between", "align-items": "center" }, childs: [
-                    { type: "span", id: "status", text: '' },
+                    { type: "span", id: "status", text: "" },
                     { type: "button", id: "export", handlers: { click: this.export.bind(this) }, styles: { "margin-top": "2px" } }
                 ]
             }
@@ -135,24 +135,24 @@ export class AllyMembers {
                 { type: "td", childs: [{ type: "input", id: export_option, attributes: { type: "checkbox" } }] },
                 { type: "td", childs: [{ type: "label", attributes: { for: export_option } }] }
             ]
-        }
+        };
     }
 
     private async export() {
         try {
-            this.ui.get_control<HTMLButtonElement>('export').disabled = true;
+            this.ui.get_control<HTMLButtonElement>("export").disabled = true;
             const export_options = this.get_export_options();
             const export_info = await this.get_export_info(export_options);
             const player_data = await this.fetch_data(export_info);
             const member_data = this.merge_member_data(player_data, export_options);
             const [table, skipped_players] = this.generate_table(export_info, member_data, export_options);
-            this.save_as_file(table.join('\n'));
+            this.save_as_file(table.join("\n"));
             if (skipped_players.length) {
-                this.print_progress(Resources.ERROR.SKIPPED_PLAYERS + '\n' + skipped_players.map(x => `${x.player_name} - ${x.reason}`).join('\n'));
+                this.print_progress(Resources.ERROR.SKIPPED_PLAYERS + "\n" + skipped_players.map(x => `${x.player_name} - ${x.reason}`).join("\n"));
             } else {
-                this.print_progress('');
+                this.print_progress("");
             }
-            this.ui.get_control<HTMLButtonElement>('export').disabled = false;
+            this.ui.get_control<HTMLButtonElement>("export").disabled = false;
         }
         catch (ex) {
             Bootstrap.handle_error(ex, Resources.FORUM_THREAD_HREF);
@@ -179,8 +179,8 @@ export class AllyMembers {
 
     private async get_player_list(export_option: string) {
         this.logger.entry(arguments);
-        const document = await this.tribalwars.fetchDocument("GET", 'ally', { mode: export_option });
-        const option_nodes = [...document.querySelectorAll('select option')];
+        const document = await this.tribalwars.fetchDocument("GET", "ally", { mode: export_option });
+        const option_nodes = [...document.querySelectorAll("select option")];
         if (option_nodes.length === 0) { throw new ScriptResult(Resources.ERROR.BOT_CHECK); }
         const options = option_nodes.map((option: HTMLOptionElement) => {
             const access_granted = !option.disabled;
@@ -191,7 +191,7 @@ export class AllyMembers {
             }
             return { player_id, player_name, access_granted };
         });
-        this.ally_name = document.querySelector('h2').innerText;
+        this.ally_name = document.querySelector("h2").innerText;
         const result = [export_option, options.slice(1)];
         this.logger.exit(result);
         return result;
@@ -199,14 +199,14 @@ export class AllyMembers {
 
     private async fetch_document(input: TaskData): Promise<VillageData[]> {
         const url = this.tribalwars.buildURL("GET", "ally", { mode: input.mode, player_id: input.player_id });
-        const response = await fetch(url, { redirect: 'manual' });
+        const response = await fetch(url, { redirect: "manual" });
         if (response.type === "opaqueredirect") { return []; }
         if (response.status === 200) {
             const text = await response.text();
-            const body = this.document.createElement('body');
+            const body = this.document.createElement("body");
             body.innerHTML = text;
-            if (document.querySelector('#content_value').childElementCount === 0) { throw new ScriptResult(Resources.ERROR.BOT_CHECK); }
-            const table = <HTMLTableElement>body.querySelector('#ally_content table.vis.w100');
+            if (document.querySelector("#content_value").childElementCount === 0) { throw new ScriptResult(Resources.ERROR.BOT_CHECK); }
+            const table = <HTMLTableElement>body.querySelector("#ally_content table.vis.w100");
             if (table == null) { return []; }
 
             if (input.mode === "members_troops") {
@@ -258,8 +258,8 @@ export class AllyMembers {
 
         const responses = await throttler.await_all(tasks, (pending_tasks: number, total_tasks: number) => {
             this.print_progress(Resources.PROGRESS.PLAYER_TROOPS
-                .replace('{0}', (total_tasks - pending_tasks).toString())
-                .replace('{1}', total_tasks.toString())
+                .replace("{0}", (total_tasks - pending_tasks).toString())
+                .replace("{1}", total_tasks.toString())
             );
         });
 
@@ -279,15 +279,15 @@ export class AllyMembers {
     private async map_members_troops(table: HTMLTableElement): Promise<VillageData[]> {
         this.logger.entry();
         const village_data: VillageData[] = [];
-        const commands_info = { 'incoming': -1, 'outgoing': -1 };
+        const commands_info = { "incoming": -1, "outgoing": -1 };
 
         for (let i = this.game_data.units.length + 1; i < table.rows[0].cells.length; i++) {
-            switch ((<HTMLImageElement>table.rows[0].cells[i].children[0]).src.split('/').pop()) {
+            switch ((<HTMLImageElement>table.rows[0].cells[i].children[0]).src.split("/").pop()) {
                 case "commands_outgoing.png":
-                    commands_info['outgoing'] = i;
+                    commands_info["outgoing"] = i;
                     break;
                 case "att.png":
-                    commands_info['incoming'] = i;
+                    commands_info["incoming"] = i;
                     break;
             }
         }
@@ -306,17 +306,17 @@ export class AllyMembers {
             row_data.village_name = row.cells[0].innerText.trim();
 
             for (let j = 0; j < this.game_data.units.length; j++) {
-                row_data.units[this.game_data.units[j]] = row.cells[j + 1].innerText.trim() === '?'
+                row_data.units[this.game_data.units[j]] = row.cells[j + 1].innerText.trim() === "?"
                     ? null
                     : Number(row.cells[j + 1].innerText);
             }
 
-            row_data.outgoing = commands_info['outgoing'] === -1
+            row_data.outgoing = commands_info["outgoing"] === -1
                 ? null
-                : Number(row.cells[commands_info['outgoing']].innerText);
-            row_data.incoming = commands_info['incoming'] === -1
+                : Number(row.cells[commands_info["outgoing"]].innerText);
+            row_data.incoming = commands_info["incoming"] === -1
                 ? null
-                : Number(row.cells[commands_info['incoming']].innerText);
+                : Number(row.cells[commands_info["incoming"]].innerText);
             village_data.push(row_data);
         }
         this.logger.exit(village_data);
@@ -328,7 +328,7 @@ export class AllyMembers {
         const village_data: VillageData[] = [];
         const building_info = {};
         for (let i = 2; i < table.rows[0].cells.length; i++) {
-            building_info[i] = (<HTMLImageElement>table.rows[0].cells[i].children[0]).src.split('/').pop().split('.png')[0];
+            building_info[i] = (<HTMLImageElement>table.rows[0].cells[i].children[0]).src.split("/").pop().split(".png")[0];
         }
 
         if (!this.building_names) {
@@ -341,7 +341,7 @@ export class AllyMembers {
 
             row_data.village_name = row.cells[0].innerText.trim();
             row_data.coords = row.cells[0].innerText.match(/\d+\|\d+/).pop();
-            row_data.points = Number(row.cells[1].innerText.replace('.', ''));
+            row_data.points = Number(row.cells[1].innerText.replace(".", ""));
 
             for (const building_index in building_info) {
                 row_data.buildings[building_info[building_index]] = Number(row.cells[building_index].innerText);
@@ -373,10 +373,10 @@ export class AllyMembers {
             row_data.village = {};
             row_data.transit = {};
             for (let j = 0; j < this.game_data.units.length; j++) {
-                row_data.village[this.game_data.units[j]] = row_1.cells[j + 2].innerText.trim() === '?'
+                row_data.village[this.game_data.units[j]] = row_1.cells[j + 2].innerText.trim() === "?"
                     ? null
                     : Number(row_1.cells[j + 2].innerText);
-                row_data.transit[this.game_data.units[j]] = row_2.cells[j + 1].innerText.trim() === '?'
+                row_data.transit[this.game_data.units[j]] = row_2.cells[j + 1].innerText.trim() === "?"
                     ? null
                     : Number(row_2.cells[j + 1].innerText);
             }
@@ -452,24 +452,24 @@ export class AllyMembers {
     }
 
     private generate_table_header(export_options: ExportOptions) {
-        const header = ['player_name', 'village_name', 'coords'];
+        const header = ["player_name", "village_name", "coords"];
 
-        if (export_options['members_troops'] || export_options['members_defense']) {
-            header.push('incoming');
+        if (export_options["members_troops"] || export_options["members_defense"]) {
+            header.push("incoming");
         }
 
-        if (export_options['members_troops']) {
-            header.push('outgoing');
+        if (export_options["members_troops"]) {
+            header.push("outgoing");
             header.push(...this.game_data.units);
         }
 
-        if (export_options['members_buildings']) {
-            header.push('points', ...this.building_names);
+        if (export_options["members_buildings"]) {
+            header.push("points", ...this.building_names);
         }
 
-        if (export_options['members_defense']) {
-            header.push(...this.game_data.units.map(unit_name => 'village_' + unit_name));
-            header.push(...this.game_data.units.map(unit_name => 'transit_' + unit_name));
+        if (export_options["members_defense"]) {
+            header.push(...this.game_data.units.map(unit_name => "village_" + unit_name));
+            header.push(...this.game_data.units.map(unit_name => "transit_" + unit_name));
         }
 
         return header;
@@ -512,65 +512,65 @@ export class AllyMembers {
                 const row = [];
                 const village_data = member_data[village_coords];
                 row.push(`"${member_metadata_info.player_name}"`, `"${village_data.village_name}"`, village_data.coords);
-                if (export_options['members_troops'] || export_options['members_defense']) {
+                if (export_options["members_troops"] || export_options["members_defense"]) {
                     row.push(village_data.incoming !== null
                         ? village_data.incoming
-                        : ''
+                        : ""
                     );
                 }
-                if (export_options['members_troops']) {
+                if (export_options["members_troops"]) {
                     row.push(village_data.outgoing !== null
                         ? village_data.outgoing
-                        : ''
+                        : ""
                     );
-                    if (member_metadata_info.access_granted['members_troops']) {
+                    if (member_metadata_info.access_granted["members_troops"]) {
                         for (const unit_name of this.game_data.units) {
                             row.push(village_data.units[unit_name] !== null
                                 ? village_data.units[unit_name]
-                                : ''
+                                : ""
                             );
                         }
                     } else {
-                        row.push(...new Array(this.game_data.units.length).fill(''));
+                        row.push(...new Array(this.game_data.units.length).fill(""));
                     }
                 }
-                if (export_options['members_buildings']) {
-                    if (member_metadata_info.access_granted['members_buildings']) {
+                if (export_options["members_buildings"]) {
+                    if (member_metadata_info.access_granted["members_buildings"]) {
                         row.push(village_data.points);
                         for (const building_name of this.building_names) {
                             row.push(village_data.buildings[building_name]);
                         }
                     } else {
-                        row.push('');
-                        row.push(...new Array(this.building_names.length).fill(''));
+                        row.push("");
+                        row.push(...new Array(this.building_names.length).fill(""));
                     }
                 }
-                if (export_options['members_defense']) {
-                    if (member_metadata_info.access_granted['members_defense']) {
-                        for (const troops_type of ['village', 'transit']) {
+                if (export_options["members_defense"]) {
+                    if (member_metadata_info.access_granted["members_defense"]) {
+                        for (const troops_type of ["village", "transit"]) {
                             for (const unit_name of this.game_data.units) {
                                 row.push(village_data[troops_type][unit_name] !== null
                                     ? village_data[troops_type][unit_name]
-                                    : ''
+                                    : ""
                                 );
                             }
                         }
                     } else {
-                        row.push(...new Array(2 * this.game_data.units.length).fill(''));
+                        row.push(...new Array(2 * this.game_data.units.length).fill(""));
                     }
                 }
-                table.push(row.join(','));
+                table.push(row.join(","));
             }
         }
         return [table, skipped_players];
     }
 
     private save_as_file(content: string) {
-        const a = <HTMLAnchorElement>this.document.createElement('a');
+        const a = <HTMLAnchorElement>this.document.createElement("a");
         const timestamp = (new Date())
             .toISOString()
-            .replace('T', '_')
-            .replace(':', '-')
+            .replace("T", "_")
+            .replace(":", "-")
             .slice(0, 16);
         a.download = `${this.ally_name}_${timestamp}.csv`;
         a.href = window.URL.createObjectURL(new Blob([content], { type: "text/csv" }));
