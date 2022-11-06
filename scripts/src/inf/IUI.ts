@@ -1,5 +1,5 @@
 export interface IUI {
-    get_control(control_name?: string): HTMLElement;
+    get_control<T = HTMLElement>(control_name?: string): T;
 
     create_container(elements: HTMLElement[]): void;
     create_control_panel(options: ControlOption[]): HTMLElement;

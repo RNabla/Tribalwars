@@ -40,9 +40,9 @@ export class UIImpl implements IUI {
         return panel;
     }
 
-    public get_control(control_name: string | undefined): HTMLElement {
+    public get_control<T>(control_name: string | undefined): T {
         const id = this.get_id(control_name).replace(/\./g, '\\.');
-        return document.querySelector(`#${id}`);
+        return <T><any>document.querySelector(`#${id}`);
     }
 
     private get_id(control_name: string | undefined): string {

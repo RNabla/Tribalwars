@@ -330,27 +330,6 @@ export class MapFiles implements IMapFiles {
     }
 
     public async get_or_compute_dynamic<T1, T2>(factory: (args: T2) => Promise<T1>, args: T2, time_to_live_s: number): Promise<T1> {
-        this.logger.entry();
-        const digest = await get_digest(factory.toString() + JSON.stringify(args));
-        this.logger.log("Digest: ", digest);
-
-        const item = await this.storage.get_or_add_item(this.user_namespace, digest, async () => {
-            this.logger.entry();
-            const computed_result = await factory(args);
-
-            const expiration_time_s = this.data_provider.get_current_timestamp_s() + time_to_live_s;
-            this.logger.log("Expiration time set to", expiration_time_s);
-
-            const store_result = {
-                name: "",
-                expiration_time_s: expiration_time_s,
-                value: computed_result,
-            };
-            this.logger.exit();
-            return store_result;
-        });
-
-        this.logger.exit();
-        return item.value;
+        return this.storage.get_or_compute_dynamic(this.user_namespace, factory, args, time_to_live_s);
     }
 }
