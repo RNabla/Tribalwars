@@ -5,6 +5,7 @@ export const Resources = {
         NO_ALLY: "Jesteś poza plemieniem",
         NO_VILLAGES: "Gracz nie posiada wiosek",
         NO_PERMISSIONS: "Gracz nie udostępnia informacji",
+        NO_SELECTION: "Wybierz conajmniej jedną zakładkę do exportu",
         SKIPPED_PLAYERS: "Pominięci gracze",
         BOT_CHECK: "Wydaje się, że wyskoczyła ochrona botowa. Odśwież stronę, rozwiąż zagadkę i spróbuj ponownie"
     },
@@ -15,17 +16,21 @@ export const Resources = {
     },
     PLAYER_NO_ACCESS: "(brak dostępu)",
     UI: {
+        members_legend: {
+            label: "Opcje exportu",
+            title: "Określa z których zakładek zebrać dane"
+        },
         members_troops: {
             label: "Wojska",
-            title: "Czy wyexportować wojska współplemieńców"
+            title: ""
         },
         members_buildings: {
             label: "Budynki",
-            title: "Czy wyexportować poziomy budynków współplemieńców"
+            title: ""
         },
         members_defense: {
             label: "Obrona",
-            title: "Czy wyexportować obronę współplemieńców"
+            title: ""
         },
         status: {
             label: "",

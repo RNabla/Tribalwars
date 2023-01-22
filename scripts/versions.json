@@ -2,5 +2,6 @@
     "Infrastructure": "2.0.1",
     "Faking": "4.2.2",
     "XY": "2.0.0",
-    "TroopsCounter": "2.0.0"
+    "TroopsCounter": "2.0.0",
+    "AllyMembers": "2.0.0"
 }

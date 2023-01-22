@@ -235,23 +235,31 @@ export class UIImpl implements IUI {
                 }
             }
         }
+
         if (node_def.text !== undefined) {
             element.textContent = node_def.text;
         }
-        if (node_def.childs !== undefined) {
-            for (const child_node_def of node_def.childs) {
-                const child_node = this.create_node(child_node_def);
-                element.append(child_node);
-            }
-        }
+
         if (node_def.type == "button") {
             const resource = this.resources[node_def.id];
             element.textContent = resource.label;
             element.title = resource.title;
             element.classList.add("btn");
         }
+        if (node_def.type == "legend") {
+            const resource = this.resources[node_def.id];
+            element.textContent = resource.label;
+            element.title = resource.title;
+        }
         if (node_def.type == "select") {
             this.populate_options(<HTMLSelectElement>element, node_def.id, node_def.options);
+        }
+
+        if (node_def.childs !== undefined) {
+            for (const child_node_def of node_def.childs) {
+                const child_node = this.create_node(child_node_def);
+                element.append(child_node);
+            }
         }
         if (node_def.handlers !== undefined) {
             for (const key in node_def.handlers) {

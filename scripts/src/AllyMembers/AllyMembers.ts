@@ -104,7 +104,7 @@ export class AllyMembers {
         const panel_def: NodeDef[] = [
             {
                 type: "fieldset", childs: [
-                    { type: "legend", text: "Opcje exportu" },
+                    { type: "legend", id: "members_legend" },
                     {
                         type: "table",
                         childs: [
@@ -152,10 +152,12 @@ export class AllyMembers {
             } else {
                 this.print_progress("");
             }
-            this.ui.get_control<HTMLButtonElement>("export").disabled = false;
         }
         catch (ex) {
             Bootstrap.handle_error(ex, Resources.FORUM_THREAD_HREF);
+        }
+        finally {
+            this.ui.get_control<HTMLButtonElement>("export").disabled = false;
         }
     }
 
@@ -419,8 +421,15 @@ export class AllyMembers {
     private get_export_options(): ExportOptions {
         this.logger.entry();
         const result = {};
+        let any_selection = false;
         for (const export_option of export_option_names) {
             result[export_option] = this.ui.get_control<HTMLInputElement>(export_option).checked;
+            if (!any_selection) {
+                any_selection = this.ui.get_control<HTMLInputElement>(export_option).checked;
+            }
+        }
+        if (!any_selection) {
+            throw new ScriptResult(Resources.ERROR.NO_SELECTION);
         }
         this.logger.exit(result);
         return <ExportOptions>result;
