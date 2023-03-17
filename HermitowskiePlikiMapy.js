@@ -1,7 +1,10 @@
 /**
  * Script for downloading map files and configs.
  * Created by Hermitowski on 04/08/2019
+ *
+ * 2023-03-17: added option for fetching recent conquers
  */
+
 
 async function get_world_info(settings) {
     const start = Date.now();
@@ -215,6 +218,58 @@ async function get_world_info(settings) {
         return config;
     }
 
+    async function get_conquers(settings) {
+        let conquers = get_conquers_from_local_storage(settings);
+        if (!conquers) {
+            conquers = await get_conquers_from_server();
+        }
+        return ['conquers', conquers];
+    }
+
+    function get_conquers_from_local_storage(settings) {
+        const key = get_key('conquers');
+        const payload = get_item(key);
+        const now_s = ~~(Date.now() / 1000);
+        if (payload) {
+            let freshness_s = 60;
+            if (settings.hasOwnProperty('freshness')) {
+                freshness_s = settings['freshness'];
+            }
+            if (freshness_s < 15) {
+                freshness_s = 15;
+            }
+            if ((payload.last_update_s + freshness_s) > now_s) {
+                return payload;
+            }
+        }
+        return null;
+    }
+
+    async function get_conquers_from_server() {
+        // -24h + 5 minutes, so we won't get ERR ONLY_ONE_DAY_AGO
+        const now_s = Date.now();
+        const since_timestamp_s = ~~((now_s - 24 * 3600 * 1000 + 5 * 60 * 1000) / 1000);
+        const last_update_s = ~~(now_s / 1000);
+        const response = await fetch(`/interface.php?func=get_conquer&since=${since_timestamp_s}`);
+        const content = await response.text();
+        const lines = content.split('\n');
+        const conquers = [];
+        for (let i = 0; i < lines.length; i++) {
+            const columns = lines[i].split(',');
+            if (columns.length < 4) { continue; }
+            conquers.push({
+                village_id: Number(columns[0]),
+                timestamp: Number(columns[1]),
+                owner_new: columns[2],
+                owner_old: columns[3]
+            });
+        }
+        const payload = { conquers, since_timestamp_s, last_update_s };
+        const key = get_key('conquers');
+        set_item(key, payload);
+        return payload;
+    }
+
     let requests = [];
 
     if (settings.hasOwnProperty('entities')) {
@@ -235,7 +290,25 @@ async function get_world_info(settings) {
         }
     }
 
+    if (settings.hasOwnProperty('conquers')) {
+        requests.push(get_conquers(settings['conquers']));
+    }
+
     const results = await Promise.all(requests);
     console.log(`${namespace} | Elapsed time: ${Date.now() - start} [ms]`);
     return Object.fromEntries(results);
 };
+
+// Example:
+// world_settings = {                                  // AVAILABLE options
+//     configs: ['config', 'unit_info'],               // config, unit_info, building_info
+//     entities: {
+//         'ally': ['id'],                             // id, name, tag, players_count, villages_count, top40_points, points, ranking
+//         'player': ['id', 'ally_id', 'name'],        // id, name, ally_id, villages_count, points, ranking
+//         'village': ['id', 'x', 'y', 'player_id']    // id, name, x, y, player_id, points, bonus
+//     },
+//     conquers: {
+//         freshness: 15                               // (optional) indicates for how long (in seconds) to cache recent results; default: 60, min: 15
+//     }
+// };
+// await get_world_info(world_settings);
