@@ -62,7 +62,7 @@
             village_count: 'Ilo\u{15B}\u{107} wiosek',
             minimal_deff_count: 'Minimalna ilo\u{15B}\u{107} deffa',
             strategy: 'Strategia wybierania',
-            arrival_date: 'Data dotarcia przed',
+            arrival_date_before: 'Data dotarcia przed',
             split_units: 'Rozdziel jednostki',
             generate: 'Generuj',
             command: 'Rozkaz',
@@ -273,7 +273,7 @@
                 { name: 'village_count', controls: [{ type: 'input', attributes: { id: 'village_count', size: 10 } }] },
                 { name: 'minimal_deff_count', controls: [{ type: 'input', attributes: { id: 'minimal_deff_count', size: 10 } }] },
                 { name: 'strategy', controls: [{ type: 'select', attributes: { id: 'strategy' } }] },
-                { name: 'arrival_date', for: 'is_arrival_date_enabled', controls: [{ type: 'input', attributes: { id: 'is_arrival_date_enabled', type: 'checkbox' } }, { type: 'input', attributes: { id: 'arrival_date', size: 12 } }] },
+                { name: 'arrival_date_before', for: 'is_arrival_date_before_enabled', controls: [{ type: 'input', attributes: { id: 'is_arrival_date_before_enabled', type: 'checkbox' } }, { type: 'input', attributes: { id: 'arrival_date_before', size: 12 } }] },
                 { name: 'split_units', controls: [{ type: 'input', attributes: { id: 'split_units', type: 'checkbox' } }] },
             ];
 
@@ -493,23 +493,26 @@
                 default_date.setHours(end_hour);
             }
 
-            const arrival_date = Helper.get_control('arrival_date');
-            arrival_date.value = url_params.get('arrival_date') || `${default_date.getDate()}.${default_date.getMonth() + 1} ${default_date.getHours()}:00:00`;
+            const arrival_date_before = Helper.get_control('arrival_date_before');
+            arrival_date_before.value = null
+                || url_params.get('arrival_date_before')
+                || url_params.get('arrival_date') // NOTE: HermitowskieKoperty sets this parameter
+                || `${default_date.getDate()}.${default_date.getMonth() + 1} ${default_date.getHours()}:00:00`;
             Helper.get_control('generate').addEventListener('click', async () => {
                 try { await Guard.generate_commands(); } catch (ex) { Helper.handle_error(ex); }
             });
             Helper.get_control('settings').addEventListener('click', () => {
                 try { Guard.edit_settings(); } catch (ex) { Helper.handle_error(ex); }
             });
-            const enable_arrival_date = Helper.get_control('is_arrival_date_enabled');
-            enable_arrival_date.addEventListener('change', event => {
-                Helper.get_control('arrival_date').disabled = !event.target.checked;
+            const enable_arrival_date_before = Helper.get_control('is_arrival_date_before_enabled');
+            enable_arrival_date_before.addEventListener('change', event => {
+                Helper.get_control('arrival_date_before').disabled = !event.target.checked;
             });
-            enable_arrival_date.disabled = false;
+            enable_arrival_date_before.disabled = false;
             Helper.get_control('generate').disabled = false;
-            if (url_params.has('arrival_date')) {
-                enable_arrival_date.checked = true;
-                arrival_date.disabled = false;
+            if (url_params.has('arrival_date_before')) {
+                enable_arrival_date_before.checked = true;
+                arrival_date_before.disabled = false;
             }
         },
         get_groups_info: async function () {
@@ -564,13 +567,13 @@
                 user_input.group_id = Helper.get_control('group').value;
                 user_input.split_units = Helper.get_control('split_units').checked;
                 user_input.travel_time = NaN;
-                if (Helper.get_control('is_arrival_date_enabled').checked) {
-                    let arrival_date = Helper.parse_date(Helper.get_control('arrival_date').value, i18n.LABELS.arrival_date);
-                    if (arrival_date.getTime() <= Date.now()) {
-                        Helper.get_control('arrival_date').focus();
+                if (Helper.get_control('is_arrival_date_before_enabled').checked) {
+                    let arrival_date_before = Helper.parse_date(Helper.get_control('arrival_date_before').value, i18n.LABELS.arrival_date_before);
+                    if (arrival_date_before.getTime() <= Date.now()) {
+                        Helper.get_control('arrival_date_before').focus();
                         throw i18n.ERROR.PAST_DATE;
                     }
-                    user_input.travel_time = (arrival_date.getTime() - Date.now()) / 60 / 1000;
+                    user_input.travel_time = (arrival_date_before.getTime() - Date.now()) / 60 / 1000;
                 }
                 return user_input;
             };
