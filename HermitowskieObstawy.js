@@ -63,6 +63,7 @@
             minimal_deff_count: 'Minimalna ilo\u{15B}\u{107} deffa',
             strategy: 'Strategia wybierania',
             arrival_date: 'Data dotarcia przed',
+            arrival_date_after: 'Data dotarcia po',
             split_units: 'Rozdziel jednostki',
             generate: 'Generuj',
             command: 'Rozkaz',
@@ -274,6 +275,7 @@
                 { name: 'minimal_deff_count', controls: [{ type: 'input', attributes: { id: 'minimal_deff_count', size: 10 } }] },
                 { name: 'strategy', controls: [{ type: 'select', attributes: { id: 'strategy' } }] },
                 { name: 'arrival_date', for: 'is_arrival_date_enabled', controls: [{ type: 'input', attributes: { id: 'is_arrival_date_enabled', type: 'checkbox' } }, { type: 'input', attributes: { id: 'arrival_date', size: 12 } }] },
+                { name: 'arrival_date_after', for: 'is_arrival_date_after_enabled', controls: [{ type: 'input', attributes: { id: 'is_arrival_date_after_enabled', type: 'checkbox' } }, { type: 'input', attributes: { id: 'arrival_date_after', size: 12 } }] },
                 { name: 'split_units', controls: [{ type: 'input', attributes: { id: 'split_units', type: 'checkbox' } }] },
             ];
 
@@ -511,6 +513,20 @@
                 enable_arrival_date.checked = true;
                 arrival_date.disabled = false;
             }
+
+            const arrival_date_after = Helper.get_control('arrival_date_after');
+            arrival_date_after.value = url_params.get('arrival_date_after') || `${default_date.getDate()}.${default_date.getMonth() + 1} ${default_date.getHours()}:00:00`;
+
+            const enable_arrival_date_after= Helper.get_control('is_arrival_date_after_enabled');
+            enable_arrival_date_after.addEventListener('change', event => {
+                Helper.get_control('arrival_date_after').disabled = !event.target.checked;
+            });
+            enable_arrival_date_after.disabled = false;
+            Helper.get_control('generate').disabled = false;
+            if (url_params.has('arrival_date_after')) {
+                enable_arrival_date_after.checked = true;
+                arrival_date_after.disabled = false;
+            }
         },
         get_groups_info: async function () {
             let url = TribalWars.buildURL('GET', 'groups', { mode: 'overview', ajax: 'load_group_menu' });
@@ -572,6 +588,16 @@
                     }
                     user_input.travel_time = (arrival_date.getTime() - Date.now()) / 60 / 1000;
                 }
+
+                if (Helper.get_control('is_arrival_date_after_enabled').checked) {
+                    let arrival_date_after = Helper.parse_date(Helper.get_control('arrival_date_after').value, i18n.LABELS.arrival_date_after);
+                    if (arrival_date_after.getTime() <= Date.now()) {
+                        Helper.get_control('arrival_date_after').focus();
+                        throw i18n.ERROR.PAST_DATE;
+                    }
+                    user_input.travel_time_after = (arrival_date_after.getTime() - Date.now()) / 60 / 1000;
+                }
+
                 return user_input;
             };
 
@@ -643,6 +669,14 @@
 
                         if (!isNaN(user_input.travel_time) && Guard.world_info.unit_info.hasOwnProperty(unit_name)) {
                             if (Number(Guard.world_info.unit_info[unit_name].speed) * village_troop_info.distance > user_input.travel_time) {
+
+                                village_troop_info.units[unit_name] = 0;
+                            }
+                        }
+
+                        if (!isNaN(user_input.travel_time_after) && Guard.world_info.unit_info.hasOwnProperty(unit_name)) {
+                            if (Number(Guard.world_info.unit_info[unit_name].speed) * village_troop_info.distance < user_input.travel_time_after) {
+
                                 village_troop_info.units[unit_name] = 0;
                             }
                         }
@@ -986,4 +1020,3 @@
     try { await Guard.main(); } catch (ex) { Helper.handle_error(ex); }
     console.log(`${namespace} | Elapsed time: ${Date.now() - start} [ms]`);
 })(TribalWars);
-
