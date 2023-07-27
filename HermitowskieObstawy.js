@@ -172,7 +172,12 @@
                     <a href='${i18n.FORUM_THREAD_HREF}'>${i18n.FORUM_THREAD}</a>
                  </p>`;
             Dialog.show(namespace, gui);
-        }
+        },
+        two_digit: function (value) {
+            return value > 9
+                ? `${value}`
+                : `0${value}`;
+        },
     };
     const Guard = {
         add_command: function (troops_info, user_input, target_info, group_name) {
@@ -443,12 +448,30 @@
         },
         init_gui: async function () {
             const url_params = new URLSearchParams(location.search);
+            Guard.init_gui_target(url_params);
+            Guard.init_gui_strategy();
+            Guard.init_gui_default_input_fields(url_params);
+            Guard.init_gui_split_units();
+            await Guard.init_gui_groups();
+            await Guard.get_world_info();
+            Guard.init_gui_arrival_date_before(url_params);
+
+            Helper.get_control('generate').addEventListener('click', async () => {
+                try { await Guard.generate_commands(); } catch (ex) { Helper.handle_error(ex); }
+            });
+            Helper.get_control('settings').addEventListener('click', () => {
+                try { Guard.edit_settings(); } catch (ex) { Helper.handle_error(ex); }
+            });
+            Helper.get_control('generate').disabled = false;
+        },
+        init_gui_target: function (url_params) {
             const target = Helper.get_control('target');
             target.value = url_params.get('target') || (game_data.screen === 'info_village'
                 ? `${TWMap.pos[0]}|${TWMap.pos[1]}`
                 : `${game_data.village.x}|${game_data.village.y}`);
             target.disabled = false;
-
+        },
+        init_gui_strategy: function () {
             const strategy = Helper.get_control('strategy');
             for (const key in Guard.strategies) {
                 const option = document.createElement('option');
@@ -458,17 +481,20 @@
             }
             strategy.value = Guard.settings.input.strategy;
             strategy.disabled = false;
-
+        },
+        init_gui_default_input_fields: function (url_params) {
             for (const option_name of ['deff_count', 'spy_count', 'minimal_deff_count', 'village_count']) {
                 const control = Helper.get_control(option_name);
                 control.value = url_params.get(option_name) || Guard.settings.input[option_name];
                 control.disabled = false;
             }
-
+        },
+        init_gui_split_units: function () {
             const split_units = Helper.get_control('split_units');
             split_units.checked = Guard.settings.input.split_units;
             split_units.disabled = false;
-
+        },
+        init_gui_groups: async function () {
             const groups_info = await Guard.get_groups_info();
             const group = Helper.get_control('group');
             for (const group_info of groups_info.result) {
@@ -481,9 +507,8 @@
                 ? groups_info.group_id
                 : Guard.settings.input.group;
             group.disabled = false;
-
-            await Guard.get_world_info();
-
+        },
+        init_gui_arrival_date_before: function (url_params) {
             let default_date = new Date();
             if (Guard.world_info.config.night.active) {
                 let end_hour = Number(Guard.world_info.config.night.end_hour);
@@ -497,19 +522,12 @@
             arrival_date_before.value = null
                 || url_params.get('arrival_date_before')
                 || url_params.get('arrival_date') // NOTE: HermitowskieKoperty sets this parameter
-                || `${default_date.getDate()}.${default_date.getMonth() + 1} ${default_date.getHours()}:00:00`;
-            Helper.get_control('generate').addEventListener('click', async () => {
-                try { await Guard.generate_commands(); } catch (ex) { Helper.handle_error(ex); }
-            });
-            Helper.get_control('settings').addEventListener('click', () => {
-                try { Guard.edit_settings(); } catch (ex) { Helper.handle_error(ex); }
-            });
+                || `${Helper.two_digit(default_date.getDate())}.${Helper.two_digit(default_date.getMonth() + 1)} ${Helper.two_digit(default_date.getHours())}:00:00`;
             const enable_arrival_date_before = Helper.get_control('is_arrival_date_before_enabled');
             enable_arrival_date_before.addEventListener('change', event => {
                 Helper.get_control('arrival_date_before').disabled = !event.target.checked;
             });
             enable_arrival_date_before.disabled = false;
-            Helper.get_control('generate').disabled = false;
             if (url_params.has('arrival_date_before')) {
                 enable_arrival_date_before.checked = true;
                 arrival_date_before.disabled = false;
