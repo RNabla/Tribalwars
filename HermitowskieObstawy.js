@@ -516,12 +516,7 @@
 
             const arrival_date_after = Helper.get_control('arrival_date_after');
             arrival_date_after.value = url_params.get('arrival_date_after') || `${default_date.getDate()}.${default_date.getMonth() + 1} ${default_date.getHours()}:00:00`;
-            Helper.get_control('generate').addEventListener('click', async () => {
-                try { await Guard.generate_commands(); } catch (ex) { Helper.handle_error(ex); }
-            });
-            Helper.get_control('settings').addEventListener('click', () => {
-                try { Guard.edit_settings(); } catch (ex) { Helper.handle_error(ex); }
-            });
+
             const enable_arrival_date_after= Helper.get_control('is_arrival_date_after_enabled');
             enable_arrival_date_after.addEventListener('change', event => {
                 Helper.get_control('arrival_date_after').disabled = !event.target.checked;
