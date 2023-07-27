@@ -11,6 +11,7 @@
  * Modified on: 28/11/2019 - version 2.6 - notification of violation no_other_support constraint
  * Modified on: 27/11/2020 - version 2.7 - mass support sending
  * Modified on: 29/10/2021 - version 2.7.1 - removed ally conflict check
+ * Modified on: 28/07/2023 - version 2.7.2 - added after time range filter
  */
 
 (async function (TribalWars) {
@@ -63,6 +64,7 @@
             minimal_deff_count: 'Minimalna ilo\u{15B}\u{107} deffa',
             strategy: 'Strategia wybierania',
             arrival_date_before: 'Data dotarcia przed',
+            arrival_date_after: 'Data dotarcia po',
             split_units: 'Rozdziel jednostki',
             generate: 'Generuj',
             command: 'Rozkaz',
@@ -279,6 +281,7 @@
                 { name: 'minimal_deff_count', controls: [{ type: 'input', attributes: { id: 'minimal_deff_count', size: 10 } }] },
                 { name: 'strategy', controls: [{ type: 'select', attributes: { id: 'strategy' } }] },
                 { name: 'arrival_date_before', for: 'is_arrival_date_before_enabled', controls: [{ type: 'input', attributes: { id: 'is_arrival_date_before_enabled', type: 'checkbox' } }, { type: 'input', attributes: { id: 'arrival_date_before', size: 12 } }] },
+                { name: 'arrival_date_after', for: 'is_arrival_date_after_enabled', controls: [{ type: 'input', attributes: { id: 'is_arrival_date_after_enabled', type: 'checkbox' } }, { type: 'input', attributes: { id: 'arrival_date_after', size: 12 } }] },
                 { name: 'split_units', controls: [{ type: 'input', attributes: { id: 'split_units', type: 'checkbox' } }] },
             ];
 
@@ -455,6 +458,7 @@
             await Guard.init_gui_groups();
             await Guard.get_world_info();
             Guard.init_gui_arrival_date_before(url_params);
+            Guard.init_gui_arrival_date_after(url_params);
 
             Helper.get_control('generate').addEventListener('click', async () => {
                 try { await Guard.generate_commands(); } catch (ex) { Helper.handle_error(ex); }
@@ -509,6 +513,7 @@
             group.disabled = false;
         },
         init_gui_arrival_date_before: function (url_params) {
+            // default date is end of current or next night bonus
             let default_date = new Date();
             if (Guard.world_info.config.night.active) {
                 let end_hour = Number(Guard.world_info.config.night.end_hour);
@@ -531,6 +536,34 @@
             if (url_params.has('arrival_date_before')) {
                 enable_arrival_date_before.checked = true;
                 arrival_date_before.disabled = false;
+            }
+        },
+        init_gui_arrival_date_after: function (url_params) {
+            // default date is start of next night bonus
+            let default_date = new Date();
+            if (Guard.world_info.config.night.active) {
+                let start_hour = Number(Guard.world_info.config.night.start_hour);
+                let end_hour = Number(Guard.world_info.config.night.end_hour);
+
+                if ((start_hour < end_hour && default_date.getHours() > end_hour) ||
+                    (start_hour > end_hour && default_date.getHours() > start_hour)) {
+                    default_date.setDate(default_date.getDate() + 1);
+                }
+                default_date.setHours(start_hour);
+            }
+
+            const arrival_date_after = Helper.get_control('arrival_date_after');
+            arrival_date_after.value = null
+                || url_params.get('arrival_date_after')
+                || `${Helper.two_digit(default_date.getDate())}.${Helper.two_digit(default_date.getMonth() + 1)} ${Helper.two_digit(default_date.getHours())}:00:00`;
+            const enable_arrival_date_after = Helper.get_control('is_arrival_date_after_enabled');
+            enable_arrival_date_after.addEventListener('change', event => {
+                Helper.get_control('arrival_date_after').disabled = !event.target.checked;
+            });
+            enable_arrival_date_after.disabled = false;
+            if (url_params.has('arrival_date_after')) {
+                enable_arrival_date_after.checked = true;
+                arrival_date_after.disabled = false;
             }
         },
         get_groups_info: async function () {
@@ -584,14 +617,19 @@
                 user_input.strategy = Helper.get_control('strategy').value;
                 user_input.group_id = Helper.get_control('group').value;
                 user_input.split_units = Helper.get_control('split_units').checked;
-                user_input.travel_time = NaN;
+                user_input.travel_time_before = NaN;
+                user_input.travel_time_after = NaN;
                 if (Helper.get_control('is_arrival_date_before_enabled').checked) {
                     let arrival_date_before = Helper.parse_date(Helper.get_control('arrival_date_before').value, i18n.LABELS.arrival_date_before);
                     if (arrival_date_before.getTime() <= Date.now()) {
                         Helper.get_control('arrival_date_before').focus();
                         throw i18n.ERROR.PAST_DATE;
                     }
-                    user_input.travel_time = (arrival_date_before.getTime() - Date.now()) / 60 / 1000;
+                    user_input.travel_time_before = (arrival_date_before.getTime() - Date.now()) / 60 / 1000;
+                }
+                if (Helper.get_control('is_arrival_date_after_enabled').checked) {
+                    let arrival_date_after = Helper.parse_date(Helper.get_control('arrival_date_after').value, i18n.LABELS.arrival_date_after);
+                    user_input.travel_time_after = (arrival_date_after.getTime() - Date.now()) / 60 / 1000;
                 }
                 return user_input;
             };
@@ -662,8 +700,14 @@
                             ? 0
                             : Math.max(village.units[unit_name] - Number(Guard.settings.safeguard[unit_name]), 0);
 
-                        if (!isNaN(user_input.travel_time) && Guard.world_info.unit_info.hasOwnProperty(unit_name)) {
-                            if (Number(Guard.world_info.unit_info[unit_name].speed) * village_troop_info.distance > user_input.travel_time) {
+                        if (!isNaN(user_input.travel_time_before) && Guard.world_info.unit_info.hasOwnProperty(unit_name)) {
+                            if (Number(Guard.world_info.unit_info[unit_name].speed) * village_troop_info.distance > user_input.travel_time_before) {
+                                village_troop_info.units[unit_name] = 0;
+                            }
+                        }
+
+                        if (!isNaN(user_input.travel_time_after) && Guard.world_info.unit_info.hasOwnProperty(unit_name)) {
+                            if (Number(Guard.world_info.unit_info[unit_name].speed) * village_troop_info.distance < user_input.travel_time_after) {
                                 village_troop_info.units[unit_name] = 0;
                             }
                         }
