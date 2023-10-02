@@ -4,6 +4,7 @@
  * Modified on: 11/10/2019 - version 2.0
  * Modified on: 25/03/2020 - version 2.1 - fixed dumping village troops
  * Modified on: 25/03/2020 - version 2.2 - added allytime_support warning
+ * Modified on: 02/10/2023 - version 2.2.1 - fixed dumping village troops info
  */
 
 (async function (TribalWars) {
@@ -606,10 +607,10 @@
                     Mailing.world_info.village.some(v => v.player_id == p.id && is_in_range(v))
             }).map(p => p.name);
         },
-        dump_troops_info: function (units_overview) {
-            const unit_names = Object.keys(units_overview).filter(unit_name => typeof (units_overview[unit_name]) === 'object');
-            return unit_names.length
-                ? unit_names.map(unit_name => `[unit]${unit_name}[/unit]${units_overview[unit_name].count}`).join(' ')
+        dump_troops_info: function (unit_type) {
+            const nodes = document.querySelectorAll(`#show_units table tbody > tr.${unit_type}`);
+            return nodes.length
+                ? [...nodes].map(x => x.querySelector('strong')).map(x => `[unit]${x.dataset['count']}[/unit]${x.innerText}`).join(" ")
                 : i18n.NO_TROOPS;
         },
         peek_wall_in_build_queue: function (target_timestamp) {
@@ -646,10 +647,10 @@
                     content += `\n[b]${i18n.TEMPLATE.LOYALTY}[/b]: ${loyalty}`;
                 }
                 if (Mailing.settings.village_info.show_troops) {
-                    content += `\n[b]${i18n.TEMPLATE.TROOPS}[/b]: ${Mailing.dump_troops_info(VillageOverview.units[0])}`;
+                    content += `\n[b]${i18n.TEMPLATE.TROOPS}[/b]: ${Mailing.dump_troops_info('all_unit')}`;
                 }
                 if (Mailing.settings.village_info.show_own_troops) {
-                    content += `\n[b]${i18n.TEMPLATE.OWN_TROOPS}[/b]: ${Mailing.dump_troops_info(VillageOverview.units[1])}`;
+                    content += `\n[b]${i18n.TEMPLATE.OWN_TROOPS}[/b]: ${Mailing.dump_troops_info('home_unit')}`;
                 }
                 if (Mailing.settings.village_info.show_wall_level) {
                     content += `\n[b]${i18n.TEMPLATE.WALL}[/b]: ${game_data.village.buildings.wall}`;
