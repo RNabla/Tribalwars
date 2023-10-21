@@ -9,7 +9,7 @@ export const TestRunner = {
             },
             run: async function () {
                 console.log('Running', tests.length, 'tests for', module_name);
-                let failed = 0;
+                let failed = [];
                 for (const test_item of tests) {
                     const start = Date.now();
                     let fail = true;
@@ -21,7 +21,7 @@ export const TestRunner = {
                     catch (ex) {
                         message = '\n' + ex;
                         console.log(ex);
-                        failed++;
+                        failed.push(test_item.test_name);
                     }
                     finally {
                         let output = `Elapsed time: [${(Date.now() - start).toString().padStart(4, ' ')}]ms. `;
@@ -36,8 +36,11 @@ export const TestRunner = {
                         }
                     }
                 }
-                if (failed > 0) {
-                    console.log(`FAILED: ${failed}`);
+                if (failed.length > 0) {
+                    console.log(`FAILED TESTS: ${failed.length}`);
+                    for (const test_name of failed) {
+                        console.log(`- ${test_name}`);
+                    }
                 }
                 else {
                     console.log("ALL ok");

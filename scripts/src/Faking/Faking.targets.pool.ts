@@ -87,7 +87,6 @@ export class PoolGenerator {
 
                 this.logger.log("Player ids", player_ids);
 
-                const unique_villages = new Set();
                 const pool: PoolTarget[] = [];
 
                 let villages = world_info.village
@@ -114,20 +113,24 @@ export class PoolGenerator {
                 for (const village of villages) {
                     const target = this.get_village_as_target(world_info, village);
                     pool.push(target);
-                    unique_villages.add(village.x * 1000 + village.y);
                 }
 
-                const coords_regex = new RegExp(/\d{1,3}\|\d{1,3}/g);
-                const coords_matches = args.coords.match(coords_regex);
-                if (coords_matches != null) {
-                    for (const coords of coords_matches.map(x => x.split("|").map(Number))) {
-                        const village_key = coords[0] * 1000 + coords[1];
-                        if (!unique_villages.has(village_key)) {
-                            const village = world_info.village.find(x => x.x == coords[0] && x.y == coords[1]);
-                            if (village) {
-                                const target = this.get_village_as_target(world_info, village);
+                // "500|500 501|501:42"
+                const coords_def_regex = new RegExp(/\d{1,3}\|\d{1,3}(:\d+)?/g);
+                const coords_def_matches = args.coords.match(coords_def_regex);
+                if (coords_def_matches != null) {
+                    for (const coords_def of coords_def_matches.map(x => x.split(":"))) {
+                        // [ ["500|500"], ["500|500", "42"] ]
+                        let count = 1;
+                        if (coords_def.length == 2) {
+                            count = Number(coords_def[1]);
+                        }
+                        const coords = coords_def[0].split("|").map(Number);
+                        const village = world_info.village.find(x => x.x == coords[0] && x.y == coords[1]);
+                        if (village) {
+                            const target = this.get_village_as_target(world_info, village);
+                            for (let i = 0; i < count; i++) {
                                 pool.push(target);
-                                unique_villages.add(village_key);
                             }
                         }
                     }

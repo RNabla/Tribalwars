@@ -31,6 +31,22 @@ import { get_default_settings } from './Faking';
         assert(() => pool.length === 3);
     });
 
+    test_runner.test('pool coords duplicates are kept', async function () {
+        const settings = get_default_settings();
+        settings.coords = '503|486 503|486 500|507 503|510'
+        const target = create_target(settings);
+        const pool = await target.pool_get();
+        assert(() => pool.length === 4);
+    });
+
+    test_runner.test('pool coords duplicates can be specified with :', async function () {
+        const settings = get_default_settings();
+        settings.coords = '503|486:4 500|507 503|510 503|486:2'
+        const target = create_target(settings);
+        const pool = await target.pool_get();
+        assert(() => pool.length === 8);
+    });
+
     test_runner.test('pool players', async function () {
         const settings = get_default_settings();
         settings.players = '*Skatek*';
