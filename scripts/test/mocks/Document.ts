@@ -10,7 +10,7 @@ export abstract class DocumentProvider implements IDocument {
         this.document.innerHTML = this.document_raw;
     }
 
-    createElement(element: string): HTMLElement {
+    createElement(_: string): HTMLElement {
         throw new Error("Method not implemented.");
     }
 

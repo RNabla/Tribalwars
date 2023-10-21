@@ -3,7 +3,7 @@ import { FakingSettings } from '../../src/Faking/Faking';
 import { Resources } from '../../src/Faking/Faking.resources';
 import { DataProvider } from '../../src/inf/DataProvider';
 import { FakingMapFiles } from './mocks/MapFiles';
-import { PoolGenerator } from '../../src/Faking/Faking.targets.pool';
+import { LAYOUT_TARGET_X, LAYOUT_TARGET_Y, PoolGenerator } from '../../src/Faking/Faking.targets.pool';
 import { get_default_settings } from './Faking';
 
 !(async function () {
@@ -15,12 +15,16 @@ import { get_default_settings } from './Faking';
         return new PoolGenerator(map_files, settings);
     };
 
+    const assertEmptyPool = async function (target: PoolGenerator) {
+        await assertException(async () => {
+            await target.pool_get();
+        }, Resources.ERROR_POOL_EMPTY);
+    }
+
     test_runner.test('pool empty', async function () {
         const settings = get_default_settings();
         const target = create_target(settings);
-        await assertException(async () => {
-            const pool = await target.pool_get();
-        }, Resources.ERROR_POOL_EMPTY);
+        await assertEmptyPool(target);
     });
 
     test_runner.test('pool coords', async function () {
@@ -47,29 +51,122 @@ import { get_default_settings } from './Faking';
         assert(() => pool.length === 8);
     });
 
-    test_runner.test('pool players', async function () {
-        const settings = get_default_settings();
-        settings.players = '*Skatek*';
-        const target = create_target(settings);
-        const pool = await target.pool_get();
-        assert(() => pool.length > 0);
+    test_runner.test('pool [ players | player_ids ]', async function () {
+        const override = { "players": "*Skatek*", "player_ids": "699559694" };
+        for (const key in override) {
+            const settings = get_default_settings();
+            settings[key] = override[key];
+            const target = create_target(settings);
+            const pool = await target.pool_get();
+            assert(() => pool.length > 0);
+        }
     });
 
-    test_runner.test('pool allies', async function () {
-        const settings = get_default_settings();
-        settings.allies = '*Forever*';
-        const target = create_target(settings);
-        const pool = await target.pool_get();
-        assert(() => pool.length > 0);
+    test_runner.test('pool [ allies | ally_tags | ally_ids ]', async function () {
+        const override = { "allies": "*Forever*", "ally_tags": "*F*", "ally_ids": "3" };
+        for (const key in override) {
+            const settings = get_default_settings();
+            settings[key] = override[key];
+            const target = create_target(settings);
+            const pool = await target.pool_get();
+            assert(() => pool.length == 1);
+            assert(() => pool[0][LAYOUT_TARGET_X] == 505);
+            assert(() => pool[0][LAYOUT_TARGET_Y] == 509);
+        }
     });
 
-    test_runner.test('pool ally_tags', async function () {
-        const settings = get_default_settings();
-        settings.ally_tags = '*F*';
-        const target = create_target(settings);
-        const pool = await target.pool_get();
-        assert(() => pool.length > 0);
+    test_runner.test('pool [ exclude_players | exclude_player_ids ] x [ coords ]', async function () {
+        const left = { "exclude_players": "jans665", "exclude_player_ids": "8594320" };
+        const right = { "coords": "505|509" };
+
+        for (const key2 in right) {
+            const settings = get_default_settings();
+            settings[key2] = right[key2];
+            const target = create_target(settings);
+            const pool = await target.pool_get();
+            assert(() => pool.length > 0, "Pool should be non empty before testing exclusion");
+        }
+
+        for (const key1 in left) {
+            for (const key2 in right) {
+                const settings = get_default_settings();
+                settings[key1] = left[key1];
+                settings[key2] = right[key2];
+                const target = create_target(settings);
+                await assertEmptyPool(target);
+            }
+        }
     });
+
+    test_runner.test('pool [ exclude_players | exclude_player_ids ] x [ allies | ally_tags | ally_ids ]', async function () {
+        const left = { "exclude_players": "jans665", "exclude_player_ids": "8594320" };
+        const right = { "allies": "*Forever*", "ally_tags": "*F*", "ally_ids": "3" };
+
+        for (const key2 in right) {
+            const settings = get_default_settings();
+            settings[key2] = right[key2];
+            const target = create_target(settings);
+            const pool = await target.pool_get();
+            assert(() => pool.length > 0, "Pool should be non empty before testing exclusion");
+        }
+
+        for (const key1 in left) {
+            for (const key2 in right) {
+                const settings = get_default_settings();
+                settings[key1] = left[key1];
+                settings[key2] = right[key2];
+                const target = create_target(settings);
+                await assertEmptyPool(target);
+            }
+        }
+    });
+
+    test_runner.test('pool [ exclude_allies | exclude_ally_tags | exclude_ally_ids ] x [ coords ]', async function () {
+        const left = { "exclude_allies": "*Forever*", "exclude_ally_tags": "*F*", "exclude_ally_ids": "3" };
+        const right = { "coords": "505|509" };
+
+        for (const key2 in right) {
+            const settings = get_default_settings();
+            settings[key2] = right[key2];
+            const target = create_target(settings);
+            const pool = await target.pool_get();
+            assert(() => pool.length > 0, "Pool should be non empty before testing exclusion");
+        }
+
+        for (const key1 in left) {
+            for (const key2 in right) {
+                const settings = get_default_settings();
+                settings[key1] = left[key1];
+                settings[key2] = right[key2];
+                const target = create_target(settings);
+                await assertEmptyPool(target);
+            }
+        }
+    });
+
+    test_runner.test('pool [ exclude_allies | exclude_ally_tags | exclude_ally_ids ] x [ players | player_ids ]', async function () {
+        const left = { "exclude_allies": "*Forever*", "exclude_ally_tags": "*F*", "exclude_ally_ids": "3" };
+        const right = { "players": "jans665", "player_ids": "8594320" };
+
+        for (const key2 in right) {
+            const settings = get_default_settings();
+            settings[key2] = right[key2];
+            const target = create_target(settings);
+            const pool = await target.pool_get();
+            assert(() => pool.length > 0, "Pool should be non empty before testing exclusion");
+        }
+
+        for (const key1 in left) {
+            for (const key2 in right) {
+                const settings = get_default_settings();
+                settings[key1] = left[key1];
+                settings[key2] = right[key2];
+                const target = create_target(settings);
+                await assertEmptyPool(target);
+            }
+        }
+    });
+
 
     test_runner.test('pool include_barbarians', async function () {
         const settings = get_default_settings();

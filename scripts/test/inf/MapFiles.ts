@@ -1,9 +1,8 @@
 import { TestRunner } from '../framework';
 import { assert } from '../framework';
-import { MapFiles, MapFilesFactory, WorldInfoType } from '../../src/inf/MapFiles';
+import { MapFilesFactory, WorldInfoType } from '../../src/inf/MapFiles';
 import { sleep } from '../../src/inf/Helper';
 import { DataProvider } from '../../src/inf/DataProvider';
-// import * as WorldInfoSchema from '../src/inf/MapFiles.schema'
 
 !(async function () {
     const test_runner = TestRunner.create('MapFiles');

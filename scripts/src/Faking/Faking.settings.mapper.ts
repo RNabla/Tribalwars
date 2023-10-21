@@ -15,6 +15,13 @@ export class SetttingsMapper {
             ally_tags: SetttingsMapper.as_string(user_configuration["ally_tags"], ""),
             ally_ids: SetttingsMapper.as_string(user_configuration["ally_ids"], ""),
 
+            exclude_players: SetttingsMapper.as_string(user_configuration["exclude_players"], ""),
+            exclude_player_ids: SetttingsMapper.as_string(user_configuration["exclude_player_ids"], ""),
+            exclude_allies: SetttingsMapper.as_string(user_configuration["exclude_allies"], ""),
+            exclude_ally_tags: SetttingsMapper.as_string(user_configuration["exclude_ally_tags"], ""),
+            exclude_ally_ids: SetttingsMapper.as_string(user_configuration["exclude_ally_ids"], ""),
+
+
             include_barbarians: SetttingsMapper.as_boolean(user_configuration["include_barbarians"], false),
             boundaries_circle: SetttingsMapper.as_array(user_configuration["boundaries"], SetttingsMapper.as_boundary_circle),
             boundaries_box: SetttingsMapper.as_array(user_configuration["boundaries"], SetttingsMapper.as_boundary_box),

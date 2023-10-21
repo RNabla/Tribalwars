@@ -75,6 +75,12 @@ export interface FakingSettings {
     ally_tags: string,
     ally_ids: string,
 
+    exclude_players: string,
+    exclude_player_ids: string,
+    exclude_allies: string,
+    exclude_ally_tags: string,
+    exclude_ally_ids: string,
+
     include_barbarians: boolean,
     boundaries_circle: BoundaryCircle[],
     boundaries_box: BoundaryBox[],

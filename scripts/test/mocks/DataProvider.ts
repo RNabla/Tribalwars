@@ -18,7 +18,7 @@ export class DataProvider implements IDataProvider {
         return get_timestamp_s(new Date()) - this.offset_s;
     }
 
-    get_random_number(min: number, max: number): number {
+    get_random_number(min: number, _: number): number {
         return min;
     }
 }

@@ -21,7 +21,10 @@ export const TestRunner = {
                     catch (ex) {
                         message = '\n' + ex;
                         console.log(ex);
-                        failed.push(test_item.test_name);
+                        let result = test_item.test_name;
+                        result += ' ';
+                        result += ex;
+                        failed.push(result);
                     }
                     finally {
                         let output = `Elapsed time: [${(Date.now() - start).toString().padStart(4, ' ')}]ms. `;
@@ -38,8 +41,8 @@ export const TestRunner = {
                 }
                 if (failed.length > 0) {
                     console.log(`FAILED TESTS: ${failed.length}`);
-                    for (const test_name of failed) {
-                        console.log(`- ${test_name}`);
+                    for (const result of failed) {
+                        console.log(`- ${result}`);
                     }
                 }
                 else {

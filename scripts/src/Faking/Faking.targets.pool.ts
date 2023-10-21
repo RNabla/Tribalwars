@@ -20,6 +20,11 @@ export interface PoolSettings {
     allies: string,
     ally_tags: string,
     ally_ids: string,
+    exclude_players: string,
+    exclude_player_ids: string,
+    exclude_allies: string,
+    exclude_ally_tags: string,
+    exclude_ally_ids: string,
     include_barbarians: boolean,
     boundaries_circle: BoundaryCircle[],
     boundaries_box: BoundaryBox[],
@@ -40,7 +45,7 @@ export class PoolGenerator {
     }
 
     public async pool_get() {
-        this.logger.entry(arguments);
+        this.logger.entry();
 
         const args: PoolSettings = {
             allies: this.settings.allies,
@@ -48,6 +53,11 @@ export class PoolGenerator {
             ally_ids: this.settings.ally_ids,
             players: this.settings.players,
             player_ids: this.settings.player_ids,
+            exclude_allies: this.settings.exclude_allies,
+            exclude_ally_tags: this.settings.exclude_ally_tags,
+            exclude_ally_ids: this.settings.exclude_ally_ids,
+            exclude_players: this.settings.exclude_players,
+            exclude_player_ids: this.settings.exclude_player_ids,
             include_barbarians: this.settings.include_barbarians,
             boundaries_box: this.settings.boundaries_box,
             boundaries_circle: this.settings.boundaries_circle,
@@ -56,12 +66,18 @@ export class PoolGenerator {
 
         const pool = await this.map_files.get_or_compute(
             async (world_info, args) => {
-                this.logger.entry();
+                this.logger.entry(world_info, args);
                 const players = args.players.split(",").map(x => x.trim().toLowerCase());
                 const player_ids = args.player_ids.split(",").map(x => x.trim());
                 const allies = args.allies.split(",").map(x => x.trim().toLowerCase());
                 const ally_tags = args.ally_tags.split(",").map(x => x.trim().toLowerCase());
                 const ally_ids = args.ally_ids.split(",").map(x => x.trim());
+
+                const exclude_players = args.exclude_players.split(",").map(x => x.trim().toLowerCase());
+                const exclude_player_ids = args.exclude_player_ids.split(",").map(x => x.trim());
+                const exclude_allies = args.exclude_allies.split(",").map(x => x.trim().toLowerCase());
+                const exclude_ally_tags = args.exclude_ally_tags.split(",").map(x => x.trim().toLowerCase());
+                const exclude_ally_ids = args.exclude_ally_ids.split(",").map(x => x.trim());
 
                 this.logger.log("Players", players, "Allies", allies, "Ally tags", ally_tags);
 
@@ -74,13 +90,34 @@ export class PoolGenerator {
                     .map(x => x.id)
                 );
 
+                const excluded_ally_ids = new Set(world_info.ally
+                    .filter(x =>
+                        exclude_allies.includes(x.name.toLowerCase()) ||
+                        exclude_ally_tags.includes(x.tag.toLowerCase()) ||
+                        exclude_ally_ids.includes(x.id)
+                    )
+                    .map(x => x.id)
+                );
+
                 this.logger.log("Ally ids", target_ally_ids);
 
                 const target_player_ids = new Set(world_info.player
                     .filter(x =>
-                        players.includes(x.name.toLowerCase()) ||
-                        target_ally_ids.has(x.ally_id) ||
-                        player_ids.includes(x.id)
+                        (
+                            players.includes(x.name.toLowerCase()) ||
+                            player_ids.includes(x.id) ||
+                            target_ally_ids.has(x.ally_id)
+                        )
+                        && !excluded_ally_ids.has(x.ally_id)
+                    )
+                    .map(x => x.id)
+                );
+
+                const excluded_player_ids = new Set(world_info.player
+                    .filter(x =>
+                        exclude_players.includes(x.name.toLowerCase()) ||
+                        exclude_player_ids.includes(x.id) ||
+                        excluded_ally_ids.has(x.ally_id)
                     )
                     .map(x => x.id)
                 );
@@ -93,7 +130,7 @@ export class PoolGenerator {
                     .filter(x =>
                         (args.include_barbarians && x.player_id === PLAYER_ID_BARBARIAN)
                         ||
-                        target_player_ids.has(x.player_id)
+                        (target_player_ids.has(x.player_id) && !excluded_player_ids.has(x.player_id))
                     );
 
                 this.logger.log("Villages before applying boundaries", villages);
@@ -129,6 +166,11 @@ export class PoolGenerator {
                         const village = world_info.village.find(x => x.x == coords[0] && x.y == coords[1]);
                         if (village) {
                             const target = this.get_village_as_target(world_info, village);
+
+                            if (excluded_player_ids.has(target[LAYOUT_TARGET_PLAYER_ID])) {
+                                continue;
+                            }
+
                             for (let i = 0; i < count; i++) {
                                 pool.push(target);
                             }

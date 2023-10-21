@@ -23,6 +23,11 @@ export function get_default_settings(): FakingSettings {
         "allies": '',
         "ally_ids": "",
         "ally_tags": '',
+        "exclude_players": '',
+        "exclude_player_ids": "",
+        "exclude_allies": '',
+        "exclude_ally_ids": "",
+        "exclude_ally_tags": '',
         "include_barbarians": false,
         "boundaries_box": [
             // { min_x: 400, max_x: 500, min_y: 400, max_y: 500 },

@@ -5,6 +5,9 @@
         "module": "ES2020",
         "target": "ES2020",
         "allowJs": false,
-        "moduleResolution": "node"
+        "moduleResolution": "node",
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noImplicitReturns": true,
     }
 }
