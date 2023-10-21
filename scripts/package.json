@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "prod": "npx webpack --config webpack.config.prod.js"
+    "prod": "npx webpack --config webpack.config.prod.js",
+    "dev": "npx webpack --config webpack.config.dev.js",
+    "test": "npx webpack --config webpack.config.test.js",
+    "all": "npx eslint src && npm run dev && npm run test && npm run prod"
   },
   "keywords": [],
   "author": "",

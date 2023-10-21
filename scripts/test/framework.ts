@@ -1,14 +1,10 @@
 import { ScriptResult } from "../src/inf/Bootstrap";
 
 export const TestRunner = {
-    create: function (module_name) {
+    create: function (module_name: string) {
         const tests = [];
-        const pre_actions = [];
         return {
-            add_pre_action: async function (pre_action) {
-                pre_actions.push(pre_action);
-            },
-            test: async function (test_name, action) {
+            test: async function (test_name: string, action: () => any) {
                 tests.push({ test_name, action });
             },
             run: async function () {
@@ -19,9 +15,6 @@ export const TestRunner = {
                     let fail = true;
                     let message = '';
                     try {
-                        for (let pre_action of pre_actions) {
-                            await pre_action();
-                        }
                         await test_item.action();
                         fail = false;
                     }
@@ -54,13 +47,13 @@ export const TestRunner = {
     }
 }
 
-export function assert(action, message) {
+export function assert(action: () => boolean, message?: string) {
     if (!action()) {
         throw message;
     }
 }
 
-export async function assertException(action, message) {
+export async function assertException(action: () => any, message?: string) {
     try {
         await action();
     }
@@ -68,6 +61,7 @@ export async function assertException(action, message) {
         if (ex instanceof (ScriptResult) && ex.message == message) {
 
         } else {
+            // console.log(ex);
             throw `Expected: ${message}. Got ${ex} instead`;
         }
     }

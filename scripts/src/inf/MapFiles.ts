@@ -13,18 +13,18 @@ export enum WorldInfoType {
 }
 
 export interface WorldInfoCore {
-    config?: StorageItem,
-    building_info?: StorageItem,
-    unit_info?: StorageItem,
-    village?: StorageItem,
-    player?: StorageItem,
-    ally?: StorageItem,
+    config?: StorageItem<Config>,
+    building_info?: StorageItem<any>,
+    unit_info?: StorageItem<UnitInfo>,
+    village?: StorageItem<Village[]>,
+    player?: StorageItem<Player[]>,
+    ally?: StorageItem<Ally[]>,
 }
 
 export interface WorldInfo {
     config?: Config,
     building_info?: any,
-    unit_info?: UnitsInfo,
+    unit_info?: UnitInfo,
     village?: Village[],
     player?: Player[],
     ally?: Ally[],
@@ -187,7 +187,7 @@ export class MapFiles implements IMapFiles {
         }
     }
 
-    private async fetch_from_server_map_files(entity_name: string, row_mapper: any): Promise<StorageItem> {
+    private async fetch_from_server_map_files<T>(entity_name: string, row_mapper: any): Promise<StorageItem<T[]>> {
         this.logger.entry(arguments);
         const response = await fetch(`map/${entity_name}.txt`);
         const last_modified = new Date(response.headers.get("last-modified"));
@@ -216,11 +216,11 @@ export class MapFiles implements IMapFiles {
         return storage_item;
     }
 
-    private async fetch_from_server_config(config_name: string): Promise<StorageItem> {
+    private async fetch_from_server_config<T>(config_name: string): Promise<StorageItem<T>> {
         this.logger.entry(arguments);
         const response = await fetch(`interface.php?func=get_${config_name}`);
         const content = await response.text();
-        const config = this.get_json_from_xml_string(content);
+        const config = (this.get_json_from_xml_string(content) as unknown) as T;
         this.logger.exit();
 
         const storage_item = {
@@ -237,22 +237,22 @@ export class MapFiles implements IMapFiles {
         return decodeURIComponent(encodedString.replace(this.regex, " "));
     }
 
-    private get_json_from_xml_string(xml_string: string) {
+    private get_json_from_xml_string(xml_string: string): object {
         const parser = new window.DOMParser();
         const document = parser.parseFromString(xml_string, "text/xml");
         return this.convert_xml_to_json(document.children[0]);
     }
 
-    private convert_xml_to_json(root: Node & ParentNode): object | string {
+    private convert_xml_to_json(root: Node & ParentNode): object {
         const obj = {};
-        if (root.childElementCount === 0) {
-            return root.textContent;
-        }
         for (const node of root.children) {
-            obj[node.nodeName] = this.convert_xml_to_json(node);
+            obj[node.nodeName] = (node.childElementCount === 0)
+                ? node.textContent
+                : this.convert_xml_to_json(node);
         }
         return obj;
     }
+
 
     private convert_to_world_info(world_info_core: WorldInfoCore) {
         return {

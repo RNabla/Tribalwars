@@ -5,6 +5,24 @@
         "module": "ES2020",
         "target": "ES2020",
         "allowJs": false,
-        "moduleResolution": "node"
+        "moduleResolution": "node",
+        // "strict": true,
+        // "strictNullChecks": true,
+        // "strictFunctionTypes": true,
+        // "strictBindCallApply": true,
+        // "strictPropertyInitialization": true,
+        // "noImplicitThis": true,
+        // "useUnknownInCatchVariables": true,
+        // "alwaysStrict": true,
+        // "noUnusedLocals": true,
+        // "noUnusedParameters": true,
+        // "exactOptionalPropertyTypes": true,
+        // "noImplicitReturns": true,
+        // "noFallthroughCasesInSwitch": true,
+        // "noUncheckedIndexedAccess": true,
+        // "noImplicitOverride": true,
+        // "noPropertyAccessFromIndexSignature": true,
+        // "allowUnusedLabels": false,
+        // "allowUnreachableCode": false
     }
 }

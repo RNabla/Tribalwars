@@ -7,6 +7,7 @@ import { PoolBlocker } from '../../src/Faking/Faking.targets.blocking';
 import { IMapFiles } from '../../src/inf/MapFiles';
 import { DataProvider } from '../../src/inf/DataProvider';
 import { sleep } from '../../src/inf/Helper';
+import { get_default_settings, get_default_tribalwars_provider } from './Faking';
 
 type Configuration = {
     settings?: FakingSettings,
@@ -16,56 +17,13 @@ type Configuration = {
 
 !(async function () {
     const test_runner = TestRunner.create('Faking');
-
-    const get_default_settings = function (): FakingSettings {
-        return {
-            "safeguard": {},
-            "troops_templates": [
-                { "spy": 1, "ram": 1 },
-                { "spy": 1, "catapult": 1 },
-                { "ram": 1 },
-                { "catapult": 1 }
-            ],
-            "fill_exact": false,
-            "fill_troops": 'spear,sword,axe,archer,spy,light,marcher,heavy,ram,catapult',
-            "coords": '',
-            "players": '',
-            "player_ids": "",
-            "allies": '',
-            "ally_ids": "",
-            "ally_tags": '',
-            "include_barbarians": false,
-            "boundaries_box": [
-                // { min_x: 400, max_x: 500, min_y: 400, max_y: 500 },
-            ],
-            "boundaries_circle": [
-                // { r: 30, center: [500, 500] }
-            ],
-            "blocking_enabled": true,
-            "blocking_local": null,
-            "blocking_global": [
-                // { time_s: 10, count: 1, name: 'global_1', block_players: false }
-            ],
-            "skip_night_bonus": true,
-            "date_ranges": [
-                // [dd.mm.yyyy hh:ss - dd.mm.yyyy hh:ss]
-                // [hh:ss - hh:ss]
-            ],
-            "changing_village_enabled": true
-        };
-    }
-
     const data_provider = new DataProvider();
 
     const create_target = function (cfg: Configuration = null): PoolBlocker {
         return new PoolBlocker(
             cfg.map_files ?? new FakingMapFiles(data_provider),
             data_provider,
-            {
-                screen: "place",
-                units: [],
-                village: { x: 500, y: 500, id: 42, points: 9000 }
-            },
+            get_default_tribalwars_provider().game_data,
             cfg.settings ?? get_default_settings()
         );
     };
@@ -135,6 +93,7 @@ type Configuration = {
             await target.apply_blocking([pool_target]);
         }, Resources.ERROR_POOL_EMPTY_BLOCKED_VILLAGES);
         await sleep(2000);
+        // 4th
         pool = await target.apply_blocking([pool_target]);
         assert(() => pool.length === 1);
     });

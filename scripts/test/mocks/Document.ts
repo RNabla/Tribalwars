@@ -10,6 +10,10 @@ export abstract class DocumentProvider implements IDocument {
         this.document.innerHTML = this.document_raw;
     }
 
+    createElement(element: string): HTMLElement {
+        throw new Error("Method not implemented.");
+    }
+
     querySelector<E extends Element = Element>(selectors: string): E {
         return this.document.querySelector(selectors);
     }

@@ -12,7 +12,7 @@ export class TribalWarsProvider implements ITribalWars {
     fetchDocument(method: "POST" | "GET", screen: string, args: { [name: string]: string; }): Promise<HTMLElement> {
         throw new Error("Method not implemented.");
     }
-    fetchJSON(method: "POST" | "GET", screen: string, args: { [name: string]: string; }): Promise<object> {
+    fetchJSON<T>(method: "POST" | "GET", screen: string, args: { [name: string]: string; }): Promise<T> {
         throw new Error("Method not implemented.");
     }
     getGameData(): GameData {
