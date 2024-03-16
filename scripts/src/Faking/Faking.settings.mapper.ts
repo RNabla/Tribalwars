@@ -3,8 +3,13 @@ import { BlockingGlobal, BlockingLocal, BoundaryBox, BoundaryCircle, DateRange, 
 export class SetttingsMapper {
     public static map_configuration(user_configuration: object): FakingSettings {
         return {
-            safeguard: SetttingsMapper.as_troops(user_configuration["safeguard"], {}),
-            troops_templates: SetttingsMapper.as_array(user_configuration["troops_templates"], SetttingsMapper.as_troops),
+            safeguard: SetttingsMapper.as_troops(user_configuration["safeguard"]),
+            troops_templates: SetttingsMapper.as_array(user_configuration["troops_templates"], SetttingsMapper.as_troops, [
+                { spy: 1, ram: 1 },
+                { spy: 1, catapult: 1 },
+                { ram: 1 },
+                { catapult: 1 }
+            ]),
             fill_exact: SetttingsMapper.as_boolean(user_configuration["fill_exact"], false),
             fill_troops: SetttingsMapper.as_string(user_configuration["fill_troops"], "spear,sword,axe,archer,spy,light,marcher,heavy,ram,catapult"),
 
@@ -57,9 +62,9 @@ export class SetttingsMapper {
         return default_value;
     }
 
-    public static as_troops(provided_value: object, default_value: Troops): Troops {
+    public static as_troops(provided_value: object): Troops {
+        const troops: Troops = {};
         if (typeof (provided_value) === "object") {
-            const troops: Troops = {};
             for (const unit_name of ["spear", "sword", "axe", "archer", "spy", "light", "marcher", "heavy", "ram", "catapult", "knight", "snob"]) {
                 if (Object.prototype.hasOwnProperty.call(provided_value, unit_name)) {
                     const unit_count = SetttingsMapper.as_number(provided_value[unit_name], null);
@@ -68,22 +73,24 @@ export class SetttingsMapper {
                     }
                 }
             }
-            return troops;
         }
-        return default_value;
+        return troops;
     }
 
-    public static as_array<T>(provided_value: object, row_mapper: (provided_value: object, default_value: T) => T) {
-        const array: T[] = [];
+    public static as_array<T>(provided_value: object, row_mapper: (provided_value: object) => T | null, default_value = null) {
         if (Array.isArray(provided_value)) {
+            const array: T[] = [];
             for (let i = 0; i < provided_value.length; i++) {
-                const row = row_mapper(provided_value[i], null);
+                const row = row_mapper(provided_value[i]);
                 if (row != null) {
                     array.push(row);
                 }
             }
+            return array;
         }
-        return array;
+        return default_value != null
+            ? default_value
+            : [];
     }
 
     public static as_boolean(provided_value: object, default_value: boolean): boolean {
@@ -99,7 +106,7 @@ export class SetttingsMapper {
         return default_value;
     }
 
-    public static as_boundary_circle(provided_value: object, default_value: BoundaryCircle): BoundaryCircle {
+    public static as_boundary_circle(provided_value: object): BoundaryCircle {
         if (typeof (provided_value) === "object") {
             const x = SetttingsMapper.as_number(provided_value["x"], null);
             const y = SetttingsMapper.as_number(provided_value["y"], null);
@@ -108,10 +115,10 @@ export class SetttingsMapper {
                 return { x, y, r };
             }
         }
-        return default_value;
+        return null;
     }
 
-    public static as_boundary_box(provided_value: object, default_value: BoundaryBox): BoundaryBox {
+    public static as_boundary_box(provided_value: object): BoundaryBox {
         if (typeof (provided_value) === "object") {
             const min_x = SetttingsMapper.as_number(provided_value["min_x"], null);
             const max_x = SetttingsMapper.as_number(provided_value["max_x"], null);
@@ -121,33 +128,33 @@ export class SetttingsMapper {
                 return { min_x, max_x, min_y, max_y };
             }
         }
-        return default_value;
+        return null;
     }
 
-    public static as_date_range_part(provided_value: object | string, default_value: DateRangePart): DateRangePart {
+    public static as_date_range_part(provided_value: object | string): DateRangePart {
         if (typeof (provided_value) === "string") {
             const matches = (<string>provided_value).match(/\d+/g);
             if (matches != null && (matches.length === 2 || matches.length === 5)) {
                 return (<DateRangePart>[-1, -1, -1, ...matches.map(Number)].slice(-5));
             }
         }
-        return default_value;
+        return null;
     }
 
-    public static as_date_range(provided_value: object, default_value: DateRange): DateRange {
+    public static as_date_range(provided_value: object): DateRange {
         if (typeof (provided_value) === "string") {
             const parts = (<string>provided_value).split("-");
             if (parts.length === 2) {
                 const result = [
-                    SetttingsMapper.as_date_range_part(parts[0], null),
-                    SetttingsMapper.as_date_range_part(parts[1], null),
+                    SetttingsMapper.as_date_range_part(parts[0]),
+                    SetttingsMapper.as_date_range_part(parts[1]),
                 ];
                 if (result[0] != null && result[1] != null) {
                     return (<DateRange>result);
                 }
             }
         }
-        return default_value;
+        return null;
     }
 
     public static as_blocking_local(provided_value: object, default_value: BlockingLocal): BlockingLocal {
@@ -165,7 +172,7 @@ export class SetttingsMapper {
         return default_value;
     }
 
-    public static as_blocking_global(provided_value: object, default_value: BlockingGlobal): BlockingGlobal {
+    public static as_blocking_global(provided_value: object): BlockingGlobal {
         if (typeof (provided_value) === "object") {
             const time_s = SetttingsMapper.as_number(provided_value["time_s"], null);
             const count = SetttingsMapper.as_number(provided_value["count"], null);
@@ -175,6 +182,6 @@ export class SetttingsMapper {
                 return { time_s, count, block_players, name };
             }
         }
-        return default_value;
+        return null;
     }
 }

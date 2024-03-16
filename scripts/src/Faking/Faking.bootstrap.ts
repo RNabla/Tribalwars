@@ -24,7 +24,7 @@ declare const HermitowskieFejki: object;
         );
         return await script.main(typeof (HermitowskieFejki) === "object"
             ? HermitowskieFejki
-            : undefined
+            : {}
         );
     });
 })();
