@@ -62,6 +62,7 @@ export function assert(action: () => boolean, message?: string) {
 export async function assertException(action: () => any, message?: string) {
     try {
         await action();
+        throw `Expected: ${message}. Got no exception instead`
     }
     catch (ex) {
         if (ex instanceof (ScriptResult) && ex.message == message) {

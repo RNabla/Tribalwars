@@ -1,5 +1,6 @@
 export const Resources = {
-    ATTACK_TIME: "Wojsko dojdzie __DAY__.__MONTH__ na __HOURS__:__MINUTES__<br/>Cel: __TARGET__ __PLAYER_INFO__",
+    TROOPS_SELECTED: "Wybrano tylko wojsko",
+    TROOPS_AND_TARGET_SELECTED: "Wojsko dojdzie __DAY__.__MONTH__ na __HOURS__:__MINUTES__<br/>Cel: __TARGET__ __PLAYER_INFO__",
     ERROR_FORUM_CONFIG_THREAD_ID: "forum_config.thread_id jest nieprawidłowy",
     ERROR_FORUM_CONFIG_SPOILER_NAME: "forum_config.spoiler_name jest nieprawidłowy",
     ERROR_FORUM_CONFIG_TTL: "forum_config.ttl jest nieprawidłowy",

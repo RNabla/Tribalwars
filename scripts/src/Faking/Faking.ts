@@ -172,7 +172,7 @@ export class Faking {
         return troops_selector.select_troops();
     }
 
-    private async get_target(world_info: WorldInfo, settings: FakingSettings, troops: Troops): Promise<Target> {
+    private async get_target(world_info: WorldInfo, settings: FakingSettings, troops: Troops): Promise<Target | null> {
         const target_selector = new TargetSelector(
             world_info,
             this.map_files,
@@ -193,6 +193,12 @@ export class Faking {
                 : "";
         }
 
+        if (target == null) {
+            const notification = Resources.TROOPS_SELECTED;
+            this.logger.exit(notification);
+            return notification;
+        }
+
         const target_input: HTMLInputElement = this.document.querySelector(".target-input-field");
 
         if (target_input) {
@@ -211,7 +217,7 @@ export class Faking {
             player_info += ` [${target.ally_tag}]`;
         }
 
-        const notification = Resources.ATTACK_TIME
+        const notification = Resources.TROOPS_AND_TARGET_SELECTED
             .replace("__DAY__", two_digit_number(target.arrival_date.getDate()))
             .replace("__MONTH__", two_digit_number(target.arrival_date.getMonth() + 1))
             .replace("__HOURS__", two_digit_number(target.arrival_date.getHours()))

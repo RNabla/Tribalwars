@@ -14,7 +14,7 @@ export const PLAYER_ID_BARBARIAN = "0";
 export const ALLY_ID_NONE = "0";
 
 export interface ITargetSelector {
-    select_target(troops: Troops): Promise<Target>;
+    select_target(troops: Troops): Promise<Target | null>;
 }
 
 export interface Target {
@@ -48,7 +48,7 @@ export class TargetSelector implements ITargetSelector {
         this.game_data = game_data;
     }
 
-    public async select_target(troops: Troops): Promise<Target> {
+    public async select_target(troops: Troops): Promise<Target | null> {
         this.logger.entry(arguments);
 
         const pool_generator = new PoolGenerator(
@@ -58,6 +58,11 @@ export class TargetSelector implements ITargetSelector {
 
         let pool = await pool_generator.pool_get();
         this.logger.log("Initial pool", pool);
+
+        if (pool.length === 0) {
+            this.logger.exit(null);
+            return null;
+        }
 
         pool = await this.pool_apply_troops_constraints(pool, troops);
         this.logger.log("After applying troops constraints", pool);
@@ -95,16 +100,17 @@ export class TargetSelector implements ITargetSelector {
             pool_blocker.add_to_block_tables(target);
         }
 
-        this.logger.log("Returning", target);
-        this.logger.exit();
-
-        return {
+        const result = {
             x: target[LAYOUT_TARGET_X],
             y: target[LAYOUT_TARGET_Y],
             player_name: target[LAYOUT_TARGET_PLAYER_NAME],
             ally_tag: target[LAYOUT_TARGET_ALLY_TAG],
             arrival_date: TargetsHelper.calculate_arrival_time(this.game_data, target, troops_speed, this.data_provider.runtime_timestamp_s)
         };
+
+        this.logger.exit(result);
+
+        return result;
     }
 
 

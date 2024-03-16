@@ -24,7 +24,8 @@ import { get_default_settings } from './Faking';
     test_runner.test('pool empty', async function () {
         const settings = get_default_settings();
         const target = create_target(settings);
-        await assertEmptyPool(target);
+        const pool = await target.pool_get();
+        assert(() => pool.length === 0);
     });
 
     test_runner.test('pool coords', async function () {

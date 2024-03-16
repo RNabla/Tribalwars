@@ -44,7 +44,7 @@ export class PoolGenerator {
         this.map_files = map_files;
     }
 
-    public async pool_get() {
+    public async pool_get(): Promise<PoolTarget[]> {
         this.logger.entry();
 
         const args: PoolSettings = {
@@ -184,12 +184,33 @@ export class PoolGenerator {
             args
         );
 
-        if (pool.length === 0) {
+        if (this.has_non_empty_settings() && pool.length === 0) {
             throw new ScriptResult(Resources.ERROR_POOL_EMPTY);
         }
 
         this.logger.exit(pool);
         return pool;
+    }
+
+    private has_non_empty_settings(): boolean {
+        const magic = "" +
+            this.settings.allies +
+            this.settings.ally_tags +
+            this.settings.ally_ids +
+            this.settings.players +
+            this.settings.player_ids +
+            this.settings.exclude_allies +
+            this.settings.exclude_ally_tags +
+            this.settings.exclude_ally_ids +
+            this.settings.exclude_players +
+            this.settings.exclude_player_ids +
+            this.settings.include_barbarians +
+            this.settings.boundaries_box +
+            this.settings.boundaries_circle +
+            this.settings.coords +
+            "";
+
+        return magic != "false";
     }
 
     private get_village_as_target(world_info: WorldInfo, village: Village): PoolTarget {
