@@ -60,11 +60,13 @@ export function assert(action: () => boolean, message?: string) {
 }
 
 export async function assertException(action: () => any, message?: string) {
+    let exception = null;
+
     try {
         await action();
-        throw `Expected: ${message}. Got no exception instead`
     }
     catch (ex) {
+        exception = ex;
         if (ex instanceof (ScriptResult) && ex.message == message) {
 
         } else {
@@ -76,5 +78,9 @@ export async function assertException(action: () => any, message?: string) {
         for (var i = 0; i < 42; i++) {
             console.groupEnd();
         }
+    }
+
+    if (!exception) {
+        throw `Expected: ${message}. Got no exception instead`
     }
 }

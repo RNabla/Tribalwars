@@ -1,11 +1,11 @@
-import { assertException, TestRunner } from '../framework';
+import { assertException, assert, TestRunner } from '../framework';
 import { FakingSettings } from '../../src/Faking/Faking';
 import { WorldInfoType } from '../../src/inf/MapFiles';
 import { FakingMapFiles } from './mocks/MapFiles';
 import { TargetSelector } from '../../src/Faking/Faking.targets';
 import { DataProvider } from '../mocks/DataProvider';
 import { Resources } from '../../src/Faking/Faking.resources';
-import { get_default_settings, get_default_tribalwars_provider } from './Faking';
+import { get_default_settings } from './Faking';
 
 !(async function () {
     const test_runner = TestRunner.create('Faking');
@@ -14,11 +14,17 @@ import { get_default_settings, get_default_tribalwars_provider } from './Faking'
     const create_target = async function (settings: FakingSettings = null): Promise<TargetSelector> {
         const map_files = new FakingMapFiles(data_provider);
         const world_info = await map_files.get_world_info([WorldInfoType.unit_info, WorldInfoType.config]);
+        const game_data = {
+            screen: "place",
+            units: ["spear", "sword", "axe", "spy", "light", "heavy", "ram", "catapult", "knight", "snob", "militia"],
+            village: { x: 300, y: 300, id: 42, points: 9000 },
+            player: { id: 2137, ally: "ally" }
+        };
         return new TargetSelector(
             world_info,
             map_files,
             data_provider,
-            get_default_tribalwars_provider().game_data,
+            game_data,
             settings,
         );
     };
@@ -26,9 +32,11 @@ import { get_default_settings, get_default_tribalwars_provider } from './Faking'
     test_runner.test('targets snob max_distance', async function () {
         const settings = get_default_settings();
         settings.include_barbarians = true;
-        const target = await create_target(settings);
+        const sut = await create_target(settings);
+        const target = await sut.select_target({ spear: 1 });
+        assert(() => target != null)
         await assertException(async () => {
-            await target.select_target({ snob: 1 });
+            await sut.select_target({ snob: 1 });
         }, Resources.ERROR_POOL_EMPTY_SNOBS);
     });
 
