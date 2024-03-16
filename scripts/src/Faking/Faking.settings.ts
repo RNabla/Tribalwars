@@ -73,13 +73,7 @@ export class SettingsProvider {
                 "page": config.page
             });
 
-            const forum_content = [...document.querySelectorAll("div.forum-container")].pop();
-
-            if (!forum_content) {
-                throw new ScriptResult(Resources.ERROR_FORUM_CONFIG_THREAD_DOES_NOT_EXIST);
-            }
-
-            const spoiler_buttons = forum_content.querySelectorAll(`div.spoiler > input[value="${config.spoiler_name}"]`);
+            const spoiler_buttons = document.querySelectorAll(`div.spoiler > input[value="${config.spoiler_name}"]`);
 
             if (spoiler_buttons.length == 0) {
                 throw new ScriptResult(Resources.ERROR_FORUM_CONFIG_SPOILER_NONE);
