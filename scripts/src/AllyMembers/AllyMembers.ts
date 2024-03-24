@@ -5,7 +5,7 @@ import { GameData, ITribalWars } from "../inf/TribalWars";
 import { NodeDef } from "../inf/IUI";
 import { IUI } from "../inf/IUI";
 import { Resources } from "./AllyMembers.resources";
-import { Task, Throttler } from "../inf/Helper";
+import { Task, Throttler } from "../inf/Throttler";
 
 interface ExportOptions {
     members_troops: boolean
