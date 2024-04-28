@@ -304,7 +304,7 @@ export class AllyMembers {
             };
             const row = table.rows[i];
 
-            row_data.coords = row.cells[0].innerText.match(/\d+\|\d+/).pop();
+            row_data.coords = row.cells[0].innerText.match(/\d+\|\d+/g).pop();
             row_data.village_name = row.cells[0].innerText.trim();
 
             for (let j = 0; j < this.game_data.units.length; j++) {
@@ -342,7 +342,7 @@ export class AllyMembers {
             const row = table.rows[i];
 
             row_data.village_name = row.cells[0].innerText.trim();
-            row_data.coords = row.cells[0].innerText.match(/\d+\|\d+/).pop();
+            row_data.coords = row.cells[0].innerText.match(/\d+\|\d+/g).pop();
             row_data.points = Number(row.cells[1].innerText.replace(".", ""));
 
             for (const building_index in building_info) {
@@ -366,7 +366,7 @@ export class AllyMembers {
             const row_2 = table.rows[i + 1];
 
             row_data.village_name = row_1.cells[0].innerText.trim();
-            row_data.coords = row_1.cells[0].innerText.match(/\d+\|\d+/).pop();
+            row_data.coords = row_1.cells[0].innerText.match(/\d+\|\d+/g).pop();
 
             row_data.incoming = has_incomings
                 ? Number(row_1.cells[this.game_data.units.length + 2].innerText)
