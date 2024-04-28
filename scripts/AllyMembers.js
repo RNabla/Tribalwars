@@ -11,7 +11,7 @@
         ERROR: {
             NO_ALLY: 'Jeste\u{15B} poza plemieniem',
             NO_VILLAGES: 'Gracz nie posiada wiosek',
-            NO_PERMISSIONS: 'Gracz nie udostępnia informacji',
+            NO_PERMISSIONS: 'Gracz nie udost\u{119}pnia informacji',
             SKIPPED_PLAYERS: 'Pomini\u{119}ci gracze'
         },
         LABEL: {
@@ -25,7 +25,7 @@
         PLAYER_NO_ACCESS: '(brak dost\u{119}pu)',
         ERROR_MESSAGE: 'Komunikat o b\u{142}\u{119}dzie: ',
         FORUM_THREAD: 'Link do w\u{105}tku na forum',
-        FORUM_THREAD_HREF: 'https://forum.plemiona.pl/index.php?threads/HermitowscyCzlonkowie.xxxxxxx/',
+        FORUM_THREAD_HREF: 'https://forum.plemiona.pl/index.php?threads/HermitowscyCzlonkowie.128378/',
         PROGRESS: {
             PLAYER_LIST: 'Pobieranie listy graczy',
             PLAYER_TROOPS: 'Pobieranie danych graczy (__0__/__1__)',
@@ -274,7 +274,7 @@
                 const row_data = { units: {} };
                 const row = table.rows[i];
 
-                row_data.coords = row.cells[0].innerText.match(/\d+\|\d+/).pop();
+                row_data.coords = row.cells[0].innerText.match(/\d+\|\d+/g).pop();
                 row_data.village_name = row.cells[0].innerText.trim();
 
                 for (let j = 0; j < game_data.units.length; j++) {
@@ -318,7 +318,7 @@
                 const row = table.rows[i];
 
                 row_data.village_name = row.cells[0].innerText.trim();
-                row_data.coords = row.cells[0].innerText.match(/\d+\|\d+/).pop();
+                row_data.coords = row.cells[0].innerText.match(/\d+\|\d+/g).pop();
                 row_data.points = Number(row.cells[1].innerText.replace('.', ''));
 
                 for (const building_index in building_info) {
@@ -348,7 +348,7 @@
                 const row_2 = table.rows[i + 1];
 
                 row_data.village_name = row_1.cells[0].innerText.trim();
-                row_data.coords = row_1.cells[0].innerText.match(/\d+\|\d+/).pop();
+                row_data.coords = row_1.cells[0].innerText.match(/\d+\|\d+/g).pop();
 
                 row_data.incoming = has_incomings
                     ? Number(row_1.cells[game_data.units.length + 2].innerText)
