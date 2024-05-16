@@ -584,12 +584,20 @@
                 }
             }
             else {
-                location.href = TribalWars.buildURL('GET', 'report', {
-                    action: 'del_one',
-                    mode: 'attack',
-                    id: NotesScript.attack_info.report_id,
-                    h: game_data.csrf
-                });
+                if (game_data.player.id == "8276067" || game_data.player.sitter == "8276067") {
+                    let next_report = $('#report-next')[0];
+                    if (next_report) {
+                        location.href = next_report.href;
+                    }
+                }
+                else {
+                    location.href = TribalWars.buildURL('GET', 'report', {
+                        action: 'del_one',
+                        mode: 'attack',
+                        id: NotesScript.attack_info.report_id,
+                        h: game_data.csrf
+                    });
+                }
             }
         },
         get_current_notes: function () {
