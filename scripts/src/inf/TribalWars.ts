@@ -9,7 +9,9 @@ export interface GameData {
     units: string[],
     village: GameDataVillage,
     screen: string,
-    player: PlayerData
+    mode: string | null,
+    player: PlayerData,
+    csrf: string
 }
 
 export interface PlayerData {

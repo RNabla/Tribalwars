@@ -14,6 +14,7 @@ module.exports = {
     'XY': './src/XY/XY.bootstrap.ts',
     'TroopsCounter': './src/TroopsCounter/TroopsCounter.bootstrap.ts',
     'AllyMembers': './src/AllyMembers/AllyMembers.bootstrap.ts',
+    'PlaceWithdrawUnits': './src/PlaceWithdrawUnits/PlaceWithdrawUnits.bootstrap.ts',
   },
   module: {
     rules: [
