@@ -202,5 +202,19 @@ import { get_default_settings } from './Faking';
         assert(() => pool.length > 0 && pool.length < 100);
     });
 
+    test_runner.test('pool boundaries_box + boundaries_circle => union', async function () {
+        const settings = get_default_settings();
+        settings.include_barbarians = true;
+        settings.boundaries_circle = [
+            { x: 505, y: 505, r: 5 }
+        ];
+        settings.boundaries_box = [
+            { min_x: 495, max_x: 500, min_y: 495, max_y: 500 },
+        ];
+        const target = create_target(settings);
+        const pool = await target.pool_get();
+        assert(() => pool.length > 0 && pool.length < 100);
+    });
+
     await test_runner.run();
 })();

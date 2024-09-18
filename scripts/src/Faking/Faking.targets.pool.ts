@@ -135,12 +135,15 @@ export class PoolGenerator {
 
                 this.logger.log("Villages before applying boundaries", villages);
 
-                if (args.boundaries_box.length) {
+                if (args.boundaries_box.length > 0 && args.boundaries_circle.length > 0) {
+                    villages = villages
+                        .filter(village => this.is_in_any_boundary_box(village, args.boundaries_box) || this.is_in_any_boundary_circle(village, args.boundaries_circle));
+                }
+                else if (args.boundaries_box.length > 0) {
                     villages = villages
                         .filter(village => this.is_in_any_boundary_box(village, args.boundaries_box));
                 }
-
-                if (args.boundaries_circle.length) {
+                else if (args.boundaries_circle.length > 0) {
                     villages = villages
                         .filter(village => this.is_in_any_boundary_circle(village, args.boundaries_circle));
                 }

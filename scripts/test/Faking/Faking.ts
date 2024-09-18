@@ -54,7 +54,9 @@ export function get_default_tribalwars_provider(): TribalWarsProvider {
         screen: "place",
         units: ["spear", "sword", "axe", "spy", "light", "heavy", "ram", "catapult", "knight", "snob", "militia"],
         village: { x: 500, y: 500, id: 42, points: 9000 },
-        player: { id: 2137, ally: "ally" }
+        player: { id: 2137, ally: "ally" },
+        mode: "place",
+        csrf: ""
     });
 }
 

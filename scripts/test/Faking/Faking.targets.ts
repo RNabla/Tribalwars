@@ -6,6 +6,7 @@ import { TargetSelector } from '../../src/Faking/Faking.targets';
 import { DataProvider } from '../mocks/DataProvider';
 import { Resources } from '../../src/Faking/Faking.resources';
 import { get_default_settings } from './Faking';
+import { GameData } from '../../src/inf/TribalWars';
 
 !(async function () {
     const test_runner = TestRunner.create('Faking');
@@ -14,11 +15,13 @@ import { get_default_settings } from './Faking';
     const create_target = async function (settings: FakingSettings = null): Promise<TargetSelector> {
         const map_files = new FakingMapFiles(data_provider);
         const world_info = await map_files.get_world_info([WorldInfoType.unit_info, WorldInfoType.config]);
-        const game_data = {
+        const game_data: GameData = {
             screen: "place",
             units: ["spear", "sword", "axe", "spy", "light", "heavy", "ram", "catapult", "knight", "snob", "militia"],
             village: { x: 300, y: 300, id: 42, points: 9000 },
-            player: { id: 2137, ally: "ally" }
+            player: { id: 2137, ally: "ally" },
+            mode: "place",
+            csrf: ""
         };
         return new TargetSelector(
             world_info,
