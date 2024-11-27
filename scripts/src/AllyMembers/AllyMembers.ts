@@ -308,9 +308,9 @@ export class AllyMembers {
             row_data.village_name = row.cells[0].innerText.trim();
 
             for (let j = 0; j < this.game_data.units.length; j++) {
-                row_data.units[this.game_data.units[j]] = row.cells[j + 1].innerText.trim() === "?"
+                row_data.units[this.game_data.units[j]] = row.cells[j + 2].innerText.trim() === "?"
                     ? null
-                    : Number(row.cells[j + 1].innerText);
+                    : Number(row.cells[j + 2].innerText);
             }
 
             row_data.outgoing = commands_info["outgoing"] === -1
@@ -375,9 +375,9 @@ export class AllyMembers {
             row_data.village = {};
             row_data.transit = {};
             for (let j = 0; j < this.game_data.units.length; j++) {
-                row_data.village[this.game_data.units[j]] = row_1.cells[j + 2].innerText.trim() === "?"
+                row_data.village[this.game_data.units[j]] = row_1.cells[j + 3].innerText.trim() === "?"
                     ? null
-                    : Number(row_1.cells[j + 2].innerText);
+                    : Number(row_1.cells[j + 3].innerText);
                 row_data.transit[this.game_data.units[j]] = row_2.cells[j + 1].innerText.trim() === "?"
                     ? null
                     : Number(row_2.cells[j + 1].innerText);
@@ -472,7 +472,7 @@ export class AllyMembers {
             header.push(...this.game_data.units);
         }
 
-        if (export_options["members_buildings"]) {
+        if (export_options["members_buildings"] && Array.isArray(this.building_names)) {
             header.push("points", ...this.building_names);
         }
 
@@ -543,7 +543,7 @@ export class AllyMembers {
                         row.push(...new Array(this.game_data.units.length).fill(""));
                     }
                 }
-                if (export_options["members_buildings"]) {
+                if (export_options["members_buildings"] && Array.isArray(this.building_names)) {
                     if (member_metadata_info.access_granted["members_buildings"]) {
                         row.push(village_data.points);
                         for (const building_name of this.building_names) {
