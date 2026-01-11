@@ -1,8 +1,8 @@
 {
     "Infrastructure": "2.0.1",
-    "Faking": "4.2.8",
+    "Faking": "4.3.0",
     "XY": "2.0.0",
     "TroopsCounter": "2.0.0",
-    "AllyMembers": "2.0.1",
+    "AllyMembers": "2.0.2",
     "PlaceWithdrawUnits": "1.0.1"
 }

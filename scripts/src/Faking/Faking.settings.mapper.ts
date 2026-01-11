@@ -26,7 +26,6 @@ export class SetttingsMapper {
             exclude_ally_tags: SetttingsMapper.as_string(user_configuration["exclude_ally_tags"], ""),
             exclude_ally_ids: SetttingsMapper.as_string(user_configuration["exclude_ally_ids"], ""),
 
-
             include_barbarians: SetttingsMapper.as_boolean(user_configuration["include_barbarians"], false),
             boundaries_circle: SetttingsMapper.as_array(user_configuration["boundaries"], SetttingsMapper.as_boundary_circle),
             boundaries_box: SetttingsMapper.as_array(user_configuration["boundaries"], SetttingsMapper.as_boundary_box),
@@ -42,9 +41,16 @@ export class SetttingsMapper {
         };
     }
 
-    public static as_string(provided_value: object, default_value: string): string {
+    public static as_string<T extends string>(
+        provided_value: any,
+        default_value: T,
+        allowed_values: T[] = null
+    ): T {
         if (typeof (provided_value) === "string") {
-            return provided_value;
+            if (allowed_values != null && allowed_values.includes(provided_value as T)) {
+                return provided_value as T;
+            }
+            return provided_value as T;
         }
         return default_value;
     }

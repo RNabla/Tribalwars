@@ -6,11 +6,15 @@ import { FakingSettings } from "./Faking";
 import { Resources } from "./Faking.resources";
 import { SetttingsMapper } from "./Faking.settings.mapper";
 
+export type ForumConfigurationConfigMergeType = "forum+user" | "user+forum";
+
 export interface ForumConfiguration {
     thread_id: number,
     page: number,
     spoiler_name: string,
-    time_to_live_s: number
+    time_to_live_s: number,
+    config_merge: ForumConfigurationConfigMergeType,
+    config_keys: string[]
 }
 
 export class SettingsProvider {
@@ -34,15 +38,30 @@ export class SettingsProvider {
             throw new ScriptResult(Resources.ERROR_CONFIGURATION_MISSING);
         }
 
-        const forum_config = this.try_get_forum_config(user_configuration["forum_config"]);
+        let configuration = user_configuration;
 
-        if (forum_config != null) {
-            user_configuration = await this.load_config_from_forum(forum_config);
+        const user_forum_configuration = this.try_get_forum_config(user_configuration["forum_config"]);
+
+        if (user_forum_configuration != null) {
+            const forum_configuration = await this.load_config_from_forum(user_forum_configuration);
+
+            if (user_forum_configuration.config_merge === "forum+user") {
+                configuration = forum_configuration;
+                for (const config_key of Object.keys(user_configuration)) {
+                    configuration[config_key] = user_configuration[config_key];
+                }
+            }
+            else if (user_forum_configuration.config_merge === "user+forum") {
+                configuration = user_configuration;
+                for (const config_key of user_forum_configuration.config_keys) {
+                    configuration[config_key] = forum_configuration[config_key];
+                }
+            }
         }
 
-        const settings = SetttingsMapper.map_configuration(user_configuration);
+        const settings = SetttingsMapper.map_configuration(configuration);
 
-        this.logger.exit();
+        this.logger.exit(settings);
         return settings;
     }
 
@@ -58,7 +77,17 @@ export class SettingsProvider {
             }
             const page = SetttingsMapper.as_number(user_forum_configuration["page"], 0);
             const time_to_live_s = SetttingsMapper.as_number(user_forum_configuration["time_to_live_s"], 3600);
-            return { thread_id, page, spoiler_name, time_to_live_s };
+            const config_merge = SetttingsMapper.as_string<ForumConfigurationConfigMergeType>(
+                user_forum_configuration["config_merge"],
+                "forum+user",
+                ["forum+user", "user+forum"]
+            );
+            const config_keys = SetttingsMapper.as_array(
+                user_forum_configuration["config_keys"],
+                row => SetttingsMapper.as_string(row, null),
+                []
+            );
+            return { thread_id, page, spoiler_name, time_to_live_s, config_merge, config_keys };
         }
         return null;
     }

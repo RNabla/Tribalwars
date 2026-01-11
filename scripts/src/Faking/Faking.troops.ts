@@ -78,8 +78,8 @@ export class TroopsSelector implements ITroopsSelector {
             return troops;
         }
 
-        if (troops.spy == 5 && Object.keys(troops).filter(unit_name => unit_name !== "spy").every(unit_name => troops[unit_name] == 0)) {
-            this.logger.log("Special case. Only 5 spies");
+        if (troops.spy >= 5 && Object.keys(troops).filter(unit_name => unit_name !== "spy").every(unit_name => troops[unit_name] == 0)) {
+            this.logger.log("Special case. At least 5 spies");
             this.logger.exit();
             return troops;
         }
