@@ -575,12 +575,30 @@
                 id: NotesScript.context.village_id
             }, { note: new_note }, NotesScript.on_note_updated);
         },
+        navigate_to_the_next_report: function (next_report_element) {
+            TribalWars.get("report", {
+                ajax: "get_nav_id",
+                id: next_report_element.dataset.id,
+                date_forwarded: next_report_element.dataset.forwarded,
+                report_mode: next_report_element.dataset.mode,
+                group_id: next_report_element.dataset.group,
+                direction: next_report_element.dataset.direction,
+                important_only: next_report_element.dataset.importantOnly
+            }, function (e) {
+                e.id && (window.location.href = TribalWars.buildURL("GET", "report", {
+                    mode: next_report_element.dataset.mode,
+                    group_id: next_report_element.dataset.group,
+                    view: e.id,
+                    important_only: next_report_element.dataset.importantOnly
+                }))
+            });
+        },
         on_note_updated: function (response) {
             if (response.note_parsed) {
                 UI.SuccessMessage(`Notatka dodana do wioski ${NotesScript.context.side === 'def' ? 'atakuj\u{105}cego' : 'broni\u{105}cego'}`);
                 let next_report = $('#report-next')[0];
                 if (next_report) {
-                    location.href = next_report.href;
+                    navigate_to_the_next_report(next_report);
                 }
             }
             else {
